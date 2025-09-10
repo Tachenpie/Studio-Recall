@@ -1,0 +1,700 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AB07DFF72E70AD8400AF649F /* Black Plastic Switch_atlas_2x1.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07DFF12E70AD8400AF649F /* Black Plastic Switch_atlas_2x1.png */; };
+		AB07DFF82E70AD8400AF649F /* Chrome Toggle Small Atlas.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07DFF42E70AD8400AF649F /* Chrome Toggle Small Atlas.png */; };
+		AB07DFF92E70AD8400AF649F /* Flap Switch Large Black_atlas_2x1.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07DFF52E70AD8400AF649F /* Flap Switch Large Black_atlas_2x1.png */; };
+		AB07DFFA2E70AD8400AF649F /* Chrome Toggle Medium Atlas.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07DFF32E70AD8400AF649F /* Chrome Toggle Medium Atlas.png */; };
+		AB07DFFB2E70AD8400AF649F /* Padded Switch Small_atlas_2x1.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07DFF62E70AD8400AF649F /* Padded Switch Small_atlas_2x1.png */; };
+		AB07DFFC2E70AD8400AF649F /* Chrome Toggle Large Atlas.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07DFF22E70AD8400AF649F /* Chrome Toggle Large Atlas.png */; };
+		AB07E0092E70B3A000AF649F /* Padded Switch Small - Up.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07E0082E70B3A000AF649F /* Padded Switch Small - Up.png */; };
+		AB07E00A2E70B3A000AF649F /* Chrome Toggle Medium - Down.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07E0012E70B3A000AF649F /* Chrome Toggle Medium - Down.png */; };
+		AB07E00B2E70B3A000AF649F /* Black Plastic Switch - Up.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07DFFE2E70B3A000AF649F /* Black Plastic Switch - Up.png */; };
+		AB07E00C2E70B3A000AF649F /* Chrome Toggle Small - Up.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07E0042E70B3A000AF649F /* Chrome Toggle Small - Up.png */; };
+		AB07E00D2E70B3A000AF649F /* Chrome Toggle Medium - Up.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07E0022E70B3A000AF649F /* Chrome Toggle Medium - Up.png */; };
+		AB07E00E2E70B3A000AF649F /* Flap Switch Large Black - Down.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07E0052E70B3A000AF649F /* Flap Switch Large Black - Down.png */; };
+		AB07E00F2E70B3A000AF649F /* Padded Switch Small - Down.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07E0072E70B3A000AF649F /* Padded Switch Small - Down.png */; };
+		AB07E0102E70B3A000AF649F /* Black Plastic Switch - Down.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07DFFD2E70B3A000AF649F /* Black Plastic Switch - Down.png */; };
+		AB07E0112E70B3A000AF649F /* Chrome Toggle Large - Down.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07DFFF2E70B3A000AF649F /* Chrome Toggle Large - Down.png */; };
+		AB07E0122E70B3A000AF649F /* Chrome Toggle Large - Up.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07E0002E70B3A000AF649F /* Chrome Toggle Large - Up.png */; };
+		AB07E0132E70B3A000AF649F /* Flap Switch Large Black - Up.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07E0062E70B3A000AF649F /* Flap Switch Large Black - Up.png */; };
+		AB07E0142E70B3A000AF649F /* Chrome Toggle Small - Down.png in Resources */ = {isa = PBXBuildFile; fileRef = AB07E0032E70B3A000AF649F /* Chrome Toggle Small - Down.png */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AB0713CB2E6097DE00B7FE0B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB0713B22E6097DD00B7FE0B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AB0713B92E6097DD00B7FE0B;
+			remoteInfo = "Studio Recall";
+		};
+		AB0713D52E6097DE00B7FE0B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AB0713B22E6097DD00B7FE0B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AB0713B92E6097DD00B7FE0B;
+			remoteInfo = "Studio Recall";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		AB0713BA2E6097DD00B7FE0B /* Studio Recall.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Studio Recall.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB0713CA2E6097DE00B7FE0B /* Studio RecallTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Studio RecallTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB0713D42E6097DE00B7FE0B /* Studio RecallUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Studio RecallUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB07DFF12E70AD8400AF649F /* Black Plastic Switch_atlas_2x1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Black Plastic Switch_atlas_2x1.png"; sourceTree = "<group>"; };
+		AB07DFF22E70AD8400AF649F /* Chrome Toggle Large Atlas.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Chrome Toggle Large Atlas.png"; sourceTree = "<group>"; };
+		AB07DFF32E70AD8400AF649F /* Chrome Toggle Medium Atlas.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Chrome Toggle Medium Atlas.png"; sourceTree = "<group>"; };
+		AB07DFF42E70AD8400AF649F /* Chrome Toggle Small Atlas.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Chrome Toggle Small Atlas.png"; sourceTree = "<group>"; };
+		AB07DFF52E70AD8400AF649F /* Flap Switch Large Black_atlas_2x1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Flap Switch Large Black_atlas_2x1.png"; sourceTree = "<group>"; };
+		AB07DFF62E70AD8400AF649F /* Padded Switch Small_atlas_2x1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Padded Switch Small_atlas_2x1.png"; sourceTree = "<group>"; };
+		AB07DFFD2E70B3A000AF649F /* Black Plastic Switch - Down.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Black Plastic Switch - Down.png"; sourceTree = "<group>"; };
+		AB07DFFE2E70B3A000AF649F /* Black Plastic Switch - Up.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Black Plastic Switch - Up.png"; sourceTree = "<group>"; };
+		AB07DFFF2E70B3A000AF649F /* Chrome Toggle Large - Down.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Chrome Toggle Large - Down.png"; sourceTree = "<group>"; };
+		AB07E0002E70B3A000AF649F /* Chrome Toggle Large - Up.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Chrome Toggle Large - Up.png"; sourceTree = "<group>"; };
+		AB07E0012E70B3A000AF649F /* Chrome Toggle Medium - Down.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Chrome Toggle Medium - Down.png"; sourceTree = "<group>"; };
+		AB07E0022E70B3A000AF649F /* Chrome Toggle Medium - Up.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Chrome Toggle Medium - Up.png"; sourceTree = "<group>"; };
+		AB07E0032E70B3A000AF649F /* Chrome Toggle Small - Down.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Chrome Toggle Small - Down.png"; sourceTree = "<group>"; };
+		AB07E0042E70B3A000AF649F /* Chrome Toggle Small - Up.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Chrome Toggle Small - Up.png"; sourceTree = "<group>"; };
+		AB07E0052E70B3A000AF649F /* Flap Switch Large Black - Down.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Flap Switch Large Black - Down.png"; sourceTree = "<group>"; };
+		AB07E0062E70B3A000AF649F /* Flap Switch Large Black - Up.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Flap Switch Large Black - Up.png"; sourceTree = "<group>"; };
+		AB07E0072E70B3A000AF649F /* Padded Switch Small - Down.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Padded Switch Small - Down.png"; sourceTree = "<group>"; };
+		AB07E0082E70B3A000AF649F /* Padded Switch Small - Up.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Padded Switch Small - Up.png"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		ABC9C94B2E6A15BF003329DE /* Exceptions for "Studio Recall" folder in "Studio RecallTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Views/ControlEditorWindow/ControlImageRenderer.swift,
+			);
+			target = AB0713C92E6097DE00B7FE0B /* Studio RecallTests */;
+		};
+		ABC9C94C2E6A15BF003329DE /* Exceptions for "Studio Recall" folder in "Studio RecallUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Views/ControlEditorWindow/ControlImageRenderer.swift,
+			);
+			target = AB0713D32E6097DE00B7FE0B /* Studio RecallUITests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		AB0713BC2E6097DD00B7FE0B /* Studio Recall */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				ABC9C94B2E6A15BF003329DE /* Exceptions for "Studio Recall" folder in "Studio RecallTests" target */,
+				ABC9C94C2E6A15BF003329DE /* Exceptions for "Studio Recall" folder in "Studio RecallUITests" target */,
+			);
+			path = "Studio Recall";
+			sourceTree = "<group>";
+		};
+		AB0713CD2E6097DE00B7FE0B /* Studio RecallTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Studio RecallTests";
+			sourceTree = "<group>";
+		};
+		AB0713D72E6097DE00B7FE0B /* Studio RecallUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Studio RecallUITests";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AB0713B72E6097DD00B7FE0B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB0713C72E6097DE00B7FE0B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB0713D12E6097DE00B7FE0B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AB0713B12E6097DD00B7FE0B = {
+			isa = PBXGroup;
+			children = (
+				AB07DFF02E70AD5800AF649F /* SpriteBuiltins */,
+				AB0713BC2E6097DD00B7FE0B /* Studio Recall */,
+				AB0713CD2E6097DE00B7FE0B /* Studio RecallTests */,
+				AB0713D72E6097DE00B7FE0B /* Studio RecallUITests */,
+				AB0713BB2E6097DD00B7FE0B /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AB0713BB2E6097DD00B7FE0B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AB0713BA2E6097DD00B7FE0B /* Studio Recall.app */,
+				AB0713CA2E6097DE00B7FE0B /* Studio RecallTests.xctest */,
+				AB0713D42E6097DE00B7FE0B /* Studio RecallUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AB07DFF02E70AD5800AF649F /* SpriteBuiltins */ = {
+			isa = PBXGroup;
+			children = (
+				AB07DFF12E70AD8400AF649F /* Black Plastic Switch_atlas_2x1.png */,
+				AB07DFF22E70AD8400AF649F /* Chrome Toggle Large Atlas.png */,
+				AB07DFF32E70AD8400AF649F /* Chrome Toggle Medium Atlas.png */,
+				AB07DFF42E70AD8400AF649F /* Chrome Toggle Small Atlas.png */,
+				AB07DFF52E70AD8400AF649F /* Flap Switch Large Black_atlas_2x1.png */,
+				AB07DFF62E70AD8400AF649F /* Padded Switch Small_atlas_2x1.png */,
+				AB07DFFD2E70B3A000AF649F /* Black Plastic Switch - Down.png */,
+				AB07DFFE2E70B3A000AF649F /* Black Plastic Switch - Up.png */,
+				AB07DFFF2E70B3A000AF649F /* Chrome Toggle Large - Down.png */,
+				AB07E0002E70B3A000AF649F /* Chrome Toggle Large - Up.png */,
+				AB07E0012E70B3A000AF649F /* Chrome Toggle Medium - Down.png */,
+				AB07E0022E70B3A000AF649F /* Chrome Toggle Medium - Up.png */,
+				AB07E0032E70B3A000AF649F /* Chrome Toggle Small - Down.png */,
+				AB07E0042E70B3A000AF649F /* Chrome Toggle Small - Up.png */,
+				AB07E0052E70B3A000AF649F /* Flap Switch Large Black - Down.png */,
+				AB07E0062E70B3A000AF649F /* Flap Switch Large Black - Up.png */,
+				AB07E0072E70B3A000AF649F /* Padded Switch Small - Down.png */,
+				AB07E0082E70B3A000AF649F /* Padded Switch Small - Up.png */,
+			);
+			path = SpriteBuiltins;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AB0713B92E6097DD00B7FE0B /* Studio Recall */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AB0713DE2E6097DE00B7FE0B /* Build configuration list for PBXNativeTarget "Studio Recall" */;
+			buildPhases = (
+				AB0713B62E6097DD00B7FE0B /* Sources */,
+				AB0713B72E6097DD00B7FE0B /* Frameworks */,
+				AB0713B82E6097DD00B7FE0B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AB0713BC2E6097DD00B7FE0B /* Studio Recall */,
+			);
+			name = "Studio Recall";
+			packageProductDependencies = (
+			);
+			productName = "Studio Recall";
+			productReference = AB0713BA2E6097DD00B7FE0B /* Studio Recall.app */;
+			productType = "com.apple.product-type.application";
+		};
+		AB0713C92E6097DE00B7FE0B /* Studio RecallTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AB0713E12E6097DE00B7FE0B /* Build configuration list for PBXNativeTarget "Studio RecallTests" */;
+			buildPhases = (
+				AB0713C62E6097DE00B7FE0B /* Sources */,
+				AB0713C72E6097DE00B7FE0B /* Frameworks */,
+				AB0713C82E6097DE00B7FE0B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AB0713CC2E6097DE00B7FE0B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AB0713CD2E6097DE00B7FE0B /* Studio RecallTests */,
+			);
+			name = "Studio RecallTests";
+			packageProductDependencies = (
+			);
+			productName = "Studio RecallTests";
+			productReference = AB0713CA2E6097DE00B7FE0B /* Studio RecallTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		AB0713D32E6097DE00B7FE0B /* Studio RecallUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AB0713E42E6097DE00B7FE0B /* Build configuration list for PBXNativeTarget "Studio RecallUITests" */;
+			buildPhases = (
+				AB0713D02E6097DE00B7FE0B /* Sources */,
+				AB0713D12E6097DE00B7FE0B /* Frameworks */,
+				AB0713D22E6097DE00B7FE0B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AB0713D62E6097DE00B7FE0B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AB0713D72E6097DE00B7FE0B /* Studio RecallUITests */,
+			);
+			name = "Studio RecallUITests";
+			packageProductDependencies = (
+			);
+			productName = "Studio RecallUITests";
+			productReference = AB0713D42E6097DE00B7FE0B /* Studio RecallUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AB0713B22E6097DD00B7FE0B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					AB0713B92E6097DD00B7FE0B = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					AB0713C92E6097DE00B7FE0B = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = AB0713B92E6097DD00B7FE0B;
+					};
+					AB0713D32E6097DE00B7FE0B = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = AB0713B92E6097DD00B7FE0B;
+					};
+				};
+			};
+			buildConfigurationList = AB0713B52E6097DD00B7FE0B /* Build configuration list for PBXProject "Studio Recall" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AB0713B12E6097DD00B7FE0B;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = AB0713BB2E6097DD00B7FE0B /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AB0713B92E6097DD00B7FE0B /* Studio Recall */,
+				AB0713C92E6097DE00B7FE0B /* Studio RecallTests */,
+				AB0713D32E6097DE00B7FE0B /* Studio RecallUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AB0713B82E6097DD00B7FE0B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB07E0092E70B3A000AF649F /* Padded Switch Small - Up.png in Resources */,
+				AB07E00A2E70B3A000AF649F /* Chrome Toggle Medium - Down.png in Resources */,
+				AB07E00B2E70B3A000AF649F /* Black Plastic Switch - Up.png in Resources */,
+				AB07E00C2E70B3A000AF649F /* Chrome Toggle Small - Up.png in Resources */,
+				AB07E00D2E70B3A000AF649F /* Chrome Toggle Medium - Up.png in Resources */,
+				AB07E00E2E70B3A000AF649F /* Flap Switch Large Black - Down.png in Resources */,
+				AB07E00F2E70B3A000AF649F /* Padded Switch Small - Down.png in Resources */,
+				AB07E0102E70B3A000AF649F /* Black Plastic Switch - Down.png in Resources */,
+				AB07E0112E70B3A000AF649F /* Chrome Toggle Large - Down.png in Resources */,
+				AB07E0122E70B3A000AF649F /* Chrome Toggle Large - Up.png in Resources */,
+				AB07E0132E70B3A000AF649F /* Flap Switch Large Black - Up.png in Resources */,
+				AB07E0142E70B3A000AF649F /* Chrome Toggle Small - Down.png in Resources */,
+				AB07DFF72E70AD8400AF649F /* Black Plastic Switch_atlas_2x1.png in Resources */,
+				AB07DFF82E70AD8400AF649F /* Chrome Toggle Small Atlas.png in Resources */,
+				AB07DFF92E70AD8400AF649F /* Flap Switch Large Black_atlas_2x1.png in Resources */,
+				AB07DFFA2E70AD8400AF649F /* Chrome Toggle Medium Atlas.png in Resources */,
+				AB07DFFB2E70AD8400AF649F /* Padded Switch Small_atlas_2x1.png in Resources */,
+				AB07DFFC2E70AD8400AF649F /* Chrome Toggle Large Atlas.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB0713C82E6097DE00B7FE0B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB0713D22E6097DE00B7FE0B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AB0713B62E6097DD00B7FE0B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB0713C62E6097DE00B7FE0B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB0713D02E6097DE00B7FE0B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AB0713CC2E6097DE00B7FE0B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AB0713B92E6097DD00B7FE0B /* Studio Recall */;
+			targetProxy = AB0713CB2E6097DE00B7FE0B /* PBXContainerItemProxy */;
+		};
+		AB0713D62E6097DE00B7FE0B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AB0713B92E6097DD00B7FE0B /* Studio Recall */;
+			targetProxy = AB0713D52E6097DE00B7FE0B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		AB0713DC2E6097DE00B7FE0B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AB0713DD2E6097DE00B7FE0B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		AB0713DF2E6097DE00B7FE0B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Studio Recall/Studio_Recall.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 72RY55M3UT;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Studio-Recall-Info.plist";
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "GhostMath.Studio-Recall";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 2.5;
+			};
+			name = Debug;
+		};
+		AB0713E02E6097DE00B7FE0B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Studio Recall/Studio_Recall.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 72RY55M3UT;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Studio-Recall-Info.plist";
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "GhostMath.Studio-Recall";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 2.5;
+			};
+			name = Release;
+		};
+		AB0713E22E6097DE00B7FE0B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 72RY55M3UT;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "GhostMath.Studio-RecallTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Studio Recall.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Studio Recall";
+				XROS_DEPLOYMENT_TARGET = 2.5;
+			};
+			name = Debug;
+		};
+		AB0713E32E6097DE00B7FE0B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 72RY55M3UT;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "GhostMath.Studio-RecallTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Studio Recall.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Studio Recall";
+				XROS_DEPLOYMENT_TARGET = 2.5;
+			};
+			name = Release;
+		};
+		AB0713E52E6097DE00B7FE0B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 72RY55M3UT;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "GhostMath.Studio-RecallUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_TARGET_NAME = "Studio Recall";
+				XROS_DEPLOYMENT_TARGET = 2.5;
+			};
+			name = Debug;
+		};
+		AB0713E62E6097DE00B7FE0B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 72RY55M3UT;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "GhostMath.Studio-RecallUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_TARGET_NAME = "Studio Recall";
+				XROS_DEPLOYMENT_TARGET = 2.5;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AB0713B52E6097DD00B7FE0B /* Build configuration list for PBXProject "Studio Recall" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB0713DC2E6097DE00B7FE0B /* Debug */,
+				AB0713DD2E6097DE00B7FE0B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AB0713DE2E6097DE00B7FE0B /* Build configuration list for PBXNativeTarget "Studio Recall" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB0713DF2E6097DE00B7FE0B /* Debug */,
+				AB0713E02E6097DE00B7FE0B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AB0713E12E6097DE00B7FE0B /* Build configuration list for PBXNativeTarget "Studio RecallTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB0713E22E6097DE00B7FE0B /* Debug */,
+				AB0713E32E6097DE00B7FE0B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AB0713E42E6097DE00B7FE0B /* Build configuration list for PBXNativeTarget "Studio RecallUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB0713E52E6097DE00B7FE0B /* Debug */,
+				AB0713E62E6097DE00B7FE0B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AB0713B22E6097DD00B7FE0B /* Project object */;
+}
