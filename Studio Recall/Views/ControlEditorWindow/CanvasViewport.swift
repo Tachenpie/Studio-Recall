@@ -54,7 +54,7 @@ struct CanvasViewport<Content: View, Overlay: View>: View {
 				// INNER canvas (unscaled, centered box that we scale/offset)
 				content(canvasSize)
 					.frame(width: canvasSize.width, height: canvasSize.height)
-					.scaleEffect(zoom, anchor: .topLeading)
+					.scaleEffect(zoom, anchor: .center)
 					.offset(pan)
 					.contentShape(Rectangle()) // ensures whole canvas is hittable
 			}
@@ -149,13 +149,17 @@ struct CanvasViewport<Content: View, Overlay: View>: View {
 	private func toCanvas(pointInParent p: CGPoint,
 						  parentSize: CGSize,
 						  canvasSize: CGSize) -> CGPoint {
-		// Centering offset of the canvas inside the parent
+		// Center of the unscaled canvas in the parent
 		let originX = (parentSize.width  - canvasSize.width)  * 0.5
 		let originY = (parentSize.height - canvasSize.height) * 0.5
 		
-		// Undo centering, then pan, then zoom
-		let x = (p.x - originX - pan.width)  / zoom
-		let y = (p.y - originY - pan.height) / zoom
+		// Extra top-left shift when scaling around .center
+		let centerShiftX = canvasSize.width  * 0.5 * (1 - zoom)
+		let centerShiftY = canvasSize.height * 0.5 * (1 - zoom)
+		
+		// Undo centering, center shift, then pan, then zoom
+		let x = (p.x - originX - centerShiftX - pan.width)  / zoom
+		let y = (p.y - originY - centerShiftY - pan.height) / zoom
 		
 		return CGPoint(x: x, y: y).clamped(to: CGRect(origin: .zero, size: canvasSize))
 	}

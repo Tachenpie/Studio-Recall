@@ -17,6 +17,7 @@ struct RegionHitLayer: View {
 	let zoom: CGFloat
 	let pan: CGSize
 	var isPanMode: Bool = false
+	let shape: ImageRegionShape
 	
 	// ---- Tuning -------------------------------------------------------------
 	// Visual "screen-like" hit widths (we operate in local px; these feel similar)
@@ -63,10 +64,12 @@ struct RegionHitLayer: View {
 	}
 	
 	private func canvasOriginInParent() -> CGPoint {
-		// Center the UNscaled canvas; scale is applied around .topLeading later.
+		// Unscaled canvas centered in parent, then scaled around center → add centerShift
+		let centerShiftX = canvasSize.width  * 0.5 * (1 - zoom)
+		let centerShiftY = canvasSize.height * 0.5 * (1 - zoom)
 		return CGPoint(
-			x: (parentSize.width  - canvasSize.width)  * 0.5 + pan.width,
-			y: (parentSize.height - canvasSize.height) * 0.5 + pan.height
+			x: (parentSize.width  - canvasSize.width)  * 0.5 + pan.width  + centerShiftX,
+			y: (parentSize.height - canvasSize.height) * 0.5 + pan.height + centerShiftY
 		)
 	}
 	
@@ -94,13 +97,14 @@ struct RegionHitLayer: View {
 			.onChanged { g in
 				guard !isPanMode else { return }
 				
+				// Begin drag (allow just outside the border)
 				if mode == .idle {
-					// Must start inside the region; otherwise ignore this drag
-					guard regionFrame.contains(g.startLocation) else { return }
+					let startOK = regionFrame.insetBy(dx: -edgePx, dy: -edgePx).contains(g.startLocation)
+					guard startOK else { return }
 					mode = .dragging
-					dragStartRect  = rect
+					dragStartRect = rect
 					
-					// Convert start point from PARENT → RECT-LOCAL
+					// Parent → rect-local
 					let startLocal = CGPoint(x: g.startLocation.x - regionFrame.minX,
 											 y: g.startLocation.y - regionFrame.minY)
 					dragStartPoint = startLocal
@@ -111,50 +115,137 @@ struct RegionHitLayer: View {
 #endif
 				}
 				
-				// Parent-space translation is exactly what DragGesture gives us here
-				let dx = g.translation.width
-				let dy = g.translation.height
-				
-				// Convert parent px → normalized deltas
-				let (nx, ny) = parentDeltaToNormalized(dx: dx, dy: dy)
-				
+				// Parent px deltas → canvas-normalized deltas
+				let (nx, ny) = parentDeltaToNormalized(dx: g.translation.width, dy: g.translation.height)
 				var r = dragStartRect
-				if let h = activeHandle {
-					switch h {
-						case .left:
-							r.origin.x = r.origin.x + nx
-							r.size.width  = dragStartRect.maxX - r.origin.x
-						case .right:
-							r.size.width  = dragStartRect.width + nx
-						case .top:
-							r.origin.y = r.origin.y + ny
-							r.size.height = dragStartRect.maxY - r.origin.y
-						case .bottom:
-							r.size.height = dragStartRect.height + ny
-						case .topLeft:
-							r.origin.x = r.origin.x + nx
-							r.size.width  = dragStartRect.maxX - r.origin.x
-							r.origin.y = r.origin.y + ny
-							r.size.height = dragStartRect.maxY - r.origin.y
-						case .topRight:
-							r.size.width  = dragStartRect.width + nx
-							r.origin.y = r.origin.y + ny
-							r.size.height = dragStartRect.maxY - r.origin.y
-						case .bottomLeft:
-							r.origin.x = r.origin.x + nx
-							r.size.width  = dragStartRect.maxX - r.origin.x
-							r.size.height = dragStartRect.height + ny
-						case .bottomRight:
-							r.size.width  = dragStartRect.width + nx
-							r.size.height = dragStartRect.height + ny
-					}
-				} else {
+				
+				guard let h = activeHandle else {
 					// MOVE
-					r.origin.x = r.origin.x + nx
-					r.origin.y = r.origin.y + ny
+					r.origin.x += nx
+					r.origin.y += ny
+					// live clamp
+					r.origin.x = max(0, min(r.origin.x, 1 - r.size.width))
+					r.origin.y = max(0, min(r.origin.y, 1 - r.size.height))
+					rect = r
+					return
 				}
 				
-				// live clamp (no snap while dragging)
+				if shape == .circle {
+					// --- Circle behavior ---
+					let s = dragStartRect
+					let minS: CGFloat = 0.01
+					
+					// Edges: single-axis resize; keep the other axis fixed.
+					switch h {
+						case .top:
+							let newT = (s.minY + ny).clamped(to: 0...(s.maxY - minS))
+							r.origin.y    = newT
+							r.size.height = s.maxY - newT
+							r.origin.x    = s.minX       // keep width unchanged
+							r.size.width  = s.width
+							
+						case .bottom:
+							let newB = (s.maxY + ny).clamped(to: (s.minY + minS)...1)
+							r.size.height = newB - s.minY
+							r.origin.x    = s.minX
+							r.size.width  = s.width
+							
+						case .left:
+							let newL = (s.minX + nx).clamped(to: 0...(s.maxX - minS))
+							r.origin.x   = newL
+							r.size.width = s.maxX - newL
+							r.origin.y   = s.minY       // keep height unchanged
+							r.size.height = s.height
+							
+						case .right:
+							let newR = (s.maxX + nx).clamped(to: (s.minX + minS)...1)
+							r.size.width = newR - s.minX
+							r.origin.y   = s.minY
+							r.size.height = s.height
+							
+							// Corners: uniform (square) resize, anchored at opposite corner.
+						case .topLeft:
+							let newL = (s.minX + nx).clamped(to: 0...(s.maxX - minS))
+							let newT = (s.minY + ny).clamped(to: 0...(s.maxY - minS))
+							r.origin.x   = newL
+							r.size.width = s.maxX - newL
+							r.origin.y   = newT
+							r.size.height = s.maxY - newT
+							
+						case .topRight:
+							let newR = (s.maxX + nx).clamped(to: (s.minX + minS)...1)
+							let newT = (s.minY + ny).clamped(to: 0...(s.maxY - minS))
+							r.size.width  = newR - s.minX
+							r.origin.y    = newT
+							r.size.height = s.maxY - newT
+							
+						case .bottomLeft:
+							let newL = (s.minX + nx).clamped(to: 0...(s.maxX - minS))
+							let newB = (s.maxY + ny).clamped(to: (s.minY + minS)...1)
+							r.origin.x   = newL
+							r.size.width = s.maxX - newL
+							r.size.height = newB - s.minY
+							
+						case .bottomRight:
+							let newR = (s.maxX + nx).clamped(to: (s.minX + minS)...1)
+							let newB = (s.maxY + ny).clamped(to: (s.minY + minS)...1)
+							r.size.width  = newR - s.minX
+							r.size.height = newB - s.minY
+					}
+					
+				} else {
+						// ---- Rectangular anchored resizing (linear, no drift) ----
+						let minW: CGFloat = 0.01
+						let minH: CGFloat = 0.01
+						switch h {
+							case .left:
+								let newL = (dragStartRect.minX + nx).clamped(to: 0...(dragStartRect.maxX - minW))
+								r.origin.x   = newL
+								r.size.width = dragStartRect.maxX - newL
+								
+							case .right:
+								let newR = (dragStartRect.maxX + nx).clamped(to: (dragStartRect.minX + minW)...1)
+								r.size.width = newR - dragStartRect.minX
+								
+							case .top:
+								let newT = (dragStartRect.minY + ny).clamped(to: 0...(dragStartRect.maxY - minH))
+								r.origin.y    = newT
+								r.size.height = dragStartRect.maxY - newT
+								
+							case .bottom:
+								let newB = (dragStartRect.maxY + ny).clamped(to: (dragStartRect.minY + minH)...1)
+								r.size.height = newB - dragStartRect.minY
+								
+							case .topLeft:
+								let newL = (dragStartRect.minX + nx).clamped(to: 0...(dragStartRect.maxX - minW))
+								let newT = (dragStartRect.minY + ny).clamped(to: 0...(dragStartRect.maxY - minH))
+								r.origin.x   = newL
+								r.size.width = dragStartRect.maxX - newL
+								r.origin.y   = newT
+								r.size.height = dragStartRect.maxY - newT
+								
+							case .topRight:
+								let newR = (dragStartRect.maxX + nx).clamped(to: (dragStartRect.minX + minW)...1)
+								let newT = (dragStartRect.minY + ny).clamped(to: 0...(dragStartRect.maxY - minH))
+								r.size.width  = newR - dragStartRect.minX
+								r.origin.y    = newT
+								r.size.height = dragStartRect.maxY - newT
+								
+							case .bottomLeft:
+								let newL = (dragStartRect.minX + nx).clamped(to: 0...(dragStartRect.maxX - minW))
+								let newB = (dragStartRect.maxY + ny).clamped(to: (dragStartRect.minY + minH)...1)
+								r.origin.x   = newL
+								r.size.width = dragStartRect.maxX - newL
+								r.size.height = newB - dragStartRect.minY
+								
+							case .bottomRight:
+								let newR = (dragStartRect.maxX + nx).clamped(to: (dragStartRect.minX + minW)...1)
+								let newB = (dragStartRect.maxY + ny).clamped(to: (dragStartRect.minY + minH)...1)
+								r.size.width  = newR - dragStartRect.minX
+								r.size.height = newB - dragStartRect.minY
+						}
+					}
+				// Live clamp to 0…1 (safety)
 				r.size.width  = max(0.001, r.size.width)
 				r.size.height = max(0.001, r.size.height)
 				r.origin.x = max(0, min(r.origin.x, 1 - r.size.width))
@@ -180,36 +271,41 @@ struct RegionHitLayer: View {
 
 	}
 
-
-	
 	// MARK: - Hit testing (LOCAL to rect)
-	/// Pick handle based on distance to edges/corners. `nil` == center/move.
 	private func pickHandle(localPoint p: CGPoint, size s: CGSize) -> ResizeHandle? {
-		// Must be inside to resize; outside -> MOVE (nil)
-		guard p.x >= 0, p.y >= 0, p.x <= s.width, p.y <= s.height else { return nil }
+		// Distances to each edge (allow outside; negative means outside)
+		let dL = p.x - 0
+		let dR = s.width - p.x
+		let dT = p.y - 0
+		let dB = s.height - p.y
 		
-		// Distances to edges
-		let dL = p.x, dR = s.width - p.x, dT = p.y, dB = s.height - p.y
+		// Use absolute distance to the edge lines
+		let aL = abs(dL), aR = abs(dR), aT = abs(dT), aB = abs(dB)
 		
-		// Cap bands for tiny rects so corners don't cover whole edge
+		// Corner/edge bands (cap for tiny rects so corners don’t cover everything)
 		let e = min(edgePx,   min(s.width, s.height) * 0.50)
 		let c = min(cornerPx, min(s.width, s.height) * 0.40)
 		
-		// Corners first
-		if dL <= c && dT <= c { return .topLeft }
-		if dR <= c && dT <= c { return .topRight }
-		if dL <= c && dB <= c { return .bottomLeft }
-		if dR <= c && dB <= c { return .bottomRight }
+		// Are we near each edge?
+		let nearL = aL <= e, nearR = aR <= e, nearT = aT <= e, nearB = aB <= e
+		
+		// Corner priority (within corner band of both adjoining edges)
+		if nearL && nearT && aL <= c && aT <= c { return .topLeft }
+		if nearR && nearT && aR <= c && aT <= c { return .topRight }
+		if nearL && nearB && aL <= c && aB <= c { return .bottomLeft }
+		if nearR && nearB && aR <= c && aB <= c { return .bottomRight }
 		
 		// Then edges
-		if dL <= e { return .left }
-		if dR <= e { return .right }
-		if dT <= e { return .top }
-		if dB <= e { return .bottom }
+		if nearL { return .left }
+		if nearR { return .right }
+		if nearT { return .top }
+		if nearB { return .bottom }
 		
-		// Center -> move
+		// Otherwise: MOVE only if we started inside; if we started outside beyond the band, ignore
+		if p.x >= 0, p.y >= 0, p.x <= s.width, p.y <= s.height { return nil }
 		return nil
 	}
+
 	
 	// MARK: - Types
 	private enum DragMode { case idle, dragging }
@@ -291,6 +387,100 @@ struct RegionHitLayer: View {
 			case .top,  .bottom: return .resizeUpDown
 			case .topLeft, .bottomRight: return .resizeDiagonalNWSE
 			case .topRight, .bottomLeft: return .resizeDiagonalNESW
+		}
+	}
+	
+	private func resizeRect(from h: ResizeHandle, start s: CGRect, dx: CGFloat, dy: CGFloat) -> CGRect {
+		var r = s
+		let minW: CGFloat = 0.01
+		let minH: CGFloat = 0.01
+		switch h {
+			case .left:
+				let newL = (s.minX + dx).clamped(to: 0...(s.maxX - minW))
+				r.origin.x   = newL
+				r.size.width = s.maxX - newL
+			case .right:
+				let newR = (s.maxX + dx).clamped(to: (s.minX + minW)...1)
+				r.size.width = newR - s.minX
+			case .top:
+				let newT = (s.minY + dy).clamped(to: 0...(s.maxY - minH))
+				r.origin.y    = newT
+				r.size.height = s.maxY - newT
+			case .bottom:
+				let newB = (s.maxY + dy).clamped(to: (s.minY + minH)...1)
+				r.size.height = newB - s.minY
+			case .topLeft:
+				r = resizeRect(from: .left, start: r, dx: dx, dy: dy)
+				r = resizeRect(from: .top,  start: r, dx: dx, dy: dy)
+			case .topRight:
+				r = resizeRect(from: .right, start: r, dx: dx, dy: dy)
+				r = resizeRect(from: .top,   start: r, dx: dx, dy: dy)
+			case .bottomLeft:
+				r = resizeRect(from: .left,  start: r, dx: dx, dy: dy)
+				r = resizeRect(from: .bottom,start: r, dx: dx, dy: dy)
+			case .bottomRight:
+				r = resizeRect(from: .right, start: r, dx: dx, dy: dy)
+				r = resizeRect(from: .bottom,start: r, dx: dx, dy: dy)
+		}
+		return r
+	}
+	
+	private func resizeCircle(from h: ResizeHandle, start s: CGRect, dx: CGFloat, dy: CGFloat) -> CGRect {
+		// Build a square anchored at the opposite edge/corner.
+		let minS: CGFloat = max(0.01, min(s.width, s.height) * 0.2) // sensible floor
+		
+		func clampSquare(_ x: CGFloat, _ y: CGFloat, _ size: CGFloat) -> CGRect {
+			let size = max(minS, size)
+			var x0 = x, y0 = y
+			x0 = min(max(x0, 0), 1 - size)
+			y0 = min(max(y0, 0), 1 - size)
+			return CGRect(x: x0, y: y0, width: size, height: size)
+		}
+		
+		switch h {
+				// EDGES: keep the opposite edge and center along the perpendicular axis
+			case .left:   // anchor at right-edge & centerY
+				let xR = s.maxX, cY = s.midY
+				let size = max(minS, xR - (s.minX + dx))
+				return clampSquare(xR - size, cY - size/2, size)
+			case .right:  // anchor at left-edge & centerY
+				let xL = s.minX, cY = s.midY
+				let size = max(minS, (s.maxX + dx) - xL)
+				return clampSquare(xL, cY - size/2, size)
+			case .top:    // anchor at bottom-edge & centerX
+				let yB = s.maxY, cX = s.midX
+				let size = max(minS, yB - (s.minY + dy))
+				return clampSquare(cX - size/2, yB - size, size)
+			case .bottom: // anchor at top-edge & centerX
+				let yT = s.minY, cX = s.midX
+				let size = max(minS, (s.maxY + dy) - yT)
+				return clampSquare(cX - size/2, yT, size)
+				
+				// CORNERS: anchor at opposite corner; size from max of dx,dy
+			case .topLeft:
+				let xB = s.maxX, yB = s.maxY
+				let nx = xB - (s.minX + dx)
+				let ny = yB - (s.minY + dy)
+				let size = max(minS, max(nx, ny))
+				return clampSquare(xB - size, yB - size, size)
+			case .topRight:
+				let xL = s.minX, yB = s.maxY
+				let nx = (s.maxX + dx) - xL
+				let ny = yB - (s.minY + dy)
+				let size = max(minS, max(nx, ny))
+				return clampSquare(xL, yB - size, size)
+			case .bottomLeft:
+				let xR = s.maxX, yT = s.minY
+				let nx = xR - (s.minX + dx)
+				let ny = (s.maxY + dy) - yT
+				let size = max(minS, max(nx, ny))
+				return clampSquare(xR - size, yT, size)
+			case .bottomRight:
+				let xL = s.minX, yT = s.minY
+				let nx = (s.maxX + dx) - xL
+				let ny = (s.maxY + dy) - yT
+				let size = max(minS, max(nx, ny))
+				return clampSquare(xL, yT, size)
 		}
 	}
 }

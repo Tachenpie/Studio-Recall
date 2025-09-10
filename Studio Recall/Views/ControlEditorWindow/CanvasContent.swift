@@ -60,21 +60,24 @@ private struct ControlItemView: View {
 	
 	var body: some View {
 		ZStack {
-			if let region = control.region {
-				// Image patch placed by region rect
-				ControlImageRenderer(
-					control: $control,
-					faceplate: (editableDevice.device.imageData.flatMap { NSImage(data: $0) }),
-					canvasSize: geoSize,
-					resolveControl: { id in editableDevice.device.controls.first(where: { $0.id == id }) }
-				)
-				.clipShape(RegionClipShape(shape: region.shape))
-				.frame(width: region.rect.width * geoSize.width,
-					   height: region.rect.height * geoSize.height)
-				.position(x: region.rect.midX * geoSize.width,
-						  y: region.rect.midY * geoSize.height)
-				.onTapGesture { selectedControlId = control.id }
-				
+			if !control.regions.isEmpty {
+				ForEach(control.regions.indices, id: \.self) { idx in
+					let region = control.regions[idx]
+					ControlImageRenderer(
+						control: $control,
+						faceplate: (editableDevice.device.imageData.flatMap { NSImage(data: $0) }),
+						canvasSize: geoSize,
+						resolveControl: { id in editableDevice.device.controls.first(where: { $0.id == id }) },
+						onlyRegionIndex: idx   // <— draw just this region
+					)
+					.clipShape(RegionClipShape(shape: region.shape))
+					.frame(width: region.rect.width * geoSize.width,
+						   height: region.rect.height * geoSize.height)
+					.position(x: region.rect.midX * geoSize.width,
+							  y: region.rect.midY * geoSize.height)
+					.contentShape(Rectangle())
+					.onTapGesture { selectedControlId = control.id }
+				}
 			} else {
 				// Vector fallback; draggable
 				ControlImageRenderer(

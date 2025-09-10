@@ -13,66 +13,69 @@ struct ControlImageRenderer: View {
 	let canvasSize: CGSize
 	/// Resolver to look up other controls (for status light linkage)
 	var resolveControl: (UUID) -> Control?
+	var onlyRegionIndex: Int? = nil
 	
 	var body: some View {
 		// If we have an image region + faceplate, render the photo patch with effects
 		if let faceplate, !control.regions.isEmpty {
-			let imageSize = faceplate.size
+			// decide which regions to render
+			let items: [(Int, ImageRegion)] = {
+				if let i = onlyRegionIndex, control.regions.indices.contains(i) {
+					return [(i, control.regions[i])]
+				} else {
+					return Array(control.regions.enumerated())
+				}
+			}()
 			
-			ForEach(Array(control.regions.enumerated()), id: \.offset) { idx, region in
-				let srcRect = sourceCropRectForVisibleRegion(
-					regionNorm: region.rect,
-					canvasSize: canvasSize,
-					imageSize: imageSize
-				)
-				if !srcRect.isNull, !srcRect.isEmpty,
-				   let cg = faceplate.cgImage(forProposedRect: nil, context: nil, hints: nil),
-				   let cropped = cg.cropping(to: srcRect.integral) {
-					
-					let patch = NSImage(
-						cgImage: cropped,
-						size: NSSize(width: srcRect.width, height: srcRect.height)
+			// Get the CGImage once so we know true pixel dimensions
+			if let cg = faceplate.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+				let pixelSize = CGSize(width: cg.width, height: cg.height)
+				
+				ForEach(items, id: \.0) { idx, region in
+					let src = sourceCropRectForVisibleRegion(
+						regionNorm: region.rect,
+						canvasSize: canvasSize,
+						imagePixelSize: pixelSize   // pixels, not NSImage.size
 					)
 					
-//					Image(nsImage: patch)
-//						.resizable()
-//						.scaledToFill()
-//						.clipped()
-//						.modifier(
-//							VisualEffect(mapping: region.mapping,
-//										 control: control,
-//										 resolve: resolveControl,
-//										 region: region,
-//										 regionSize: CGSize(width: srcRect.width,
-//															height: srcRect.height),
-//										 regionIndex: idx)   // pass idx
-//						)
-					Image(nsImage: patch)
-						.resizable()
-						.scaledToFill()
-						.clipped()
-						.background(
+					Group {
+						if !src.isNull, !src.isEmpty, let cropped = cg.cropping(to: src.integral) {
+							let patch = NSImage(
+								cgImage: cropped,
+								size: NSSize(width: src.width, height: src.height)
+							)
+							
+							let stateKey = controlStateKey(control)   // recompute per pass
+							
 							GeometryReader { geo in
-								Color.clear
+								Image(nsImage: patch)
+									.resizable()
+									.interpolation(.high)
+									.scaledToFill()      // fills the region’s frame
+									.clipped()
 									.modifier(
 										VisualEffect(mapping: region.mapping,
 													 control: control,
 													 resolve: resolveControl,
 													 region: region,
-													 regionSize: geo.size,  // <- displayed size
-													regionIndex: idx)
+													 regionSize: geo.size,
+													 regionIndex: idx)
 									)
 							}
-						)
-
+							.id(renderKey(control, regionIndex: idx)) // <<— force this subtree to refresh when value/step/index changes
+						} else {
+							EmptyView()
+						}
+					}
 				}
+			} else {
+				EmptyView()
 			}
 		} else {
 			ControlView(control: $control)
 				.frame(width:  ImageRegion.defaultSize * canvasSize.width,
 					   height: ImageRegion.defaultSize * canvasSize.height)
 		}
-
 	}
 
 	private func rectInPixels(from normalized: CGRect) -> CGRect {
@@ -271,8 +274,10 @@ struct VisualEffect: ViewModifier {
 						GeometryReader { geo in
 							let H = geo.size.height
 							let sprH = H * scale
-							let aspect = CGFloat(cg.width) / CGFloat(cg.height)
-							let sprW = sprH * aspect
+							let rawAspect = CGFloat(cg.width) / CGFloat(cg.height)
+							// If rotated 90°/270°, swap aspect so the bounding frame matches the turned image
+							let effAspect = (turns % 2 == 0) ? rawAspect : 1.0 / rawAspect
+							let sprW = sprH * effAspect
 							
 							let anchorX = rPivot.x * geo.size.width
 							let anchorY = rPivot.y * geo.size.height
@@ -490,101 +495,104 @@ private struct PivotGizmo: View {
 	}
 }
 
-///// Map a canvas-normalized region (0–1 in canvas space) to a source-image rect,
-///// accounting for the image being drawn `scaledToFit` inside the canvas (letterboxed).
-//private func sourceCropRectForVisibleRegion(
-//	regionNorm: CGRect,           // 0…1 rect in *canvas* space
-//	canvasSize: CGSize,           // fitted canvas size on screen
-//	imageSize: CGSize             // original NSImage.size
-//) -> CGRect {
-//	// 1) Background is scaledToFit: compute the visible image rect inside canvas
-//	// scale = min(canvasW / imageW, canvasH / imageH)
-//	let scale = min(canvasSize.width / imageSize.width,
-//					canvasSize.height / imageSize.height)
-//	let visibleSize = CGSize(width: imageSize.width * scale,
-//							 height: imageSize.height * scale)
-//	let offsetX = (canvasSize.width  - visibleSize.width)  * 0.5
-//	let offsetY = (canvasSize.height - visibleSize.height) * 0.5
-//	let visibleInCanvas = CGRect(origin: CGPoint(x: offsetX, y: offsetY), size: visibleSize)
-//	
-//	// 2) Convert normalized canvas region → canvas pixels
-//	let regionInCanvasPx = CGRect(
-//		x: regionNorm.origin.x * canvasSize.width,
-//		y: regionNorm.origin.y * canvasSize.height,
-//		width: regionNorm.size.width * canvasSize.width,
-//		height: regionNorm.size.height * canvasSize.height
-//	)
-//	
-//	// 3) Intersect with the visible image area (clip out letterbox zones)
-//	guard let regionInsideVisible = regionInCanvasPx.intersection(visibleInCanvas).nonEmpty else {
-//		return .null  // nothing to sample
-//	}
-//	
-//	// 4) Translate into the visible image local coords, then unscale back to source pixels
-//	let localX = regionInsideVisible.origin.x - visibleInCanvas.origin.x
-//	let localY = regionInsideVisible.origin.y - visibleInCanvas.origin.y
-//	let src = CGRect(
-//		x: localX / scale,
-//		y: localY / scale,
-//		width: regionInsideVisible.size.width / scale,
-//		height: regionInsideVisible.size.height / scale
-//	)
-//	
-//	// Clamp to the actual image bounds (defensive)
-//	let imgBounds = CGRect(origin: .zero, size: imageSize)
-//	return src.intersection(imgBounds)
-//}
-
-/// Map a canvas-normalized region (0–1 in canvas space) to a source-image rect,
-/// accounting for the image being drawn `scaledToFit` inside the canvas (letterboxed).
+/// Convert a 0–1 canvas-space rect to a source-image crop,
+/// accounting for the faceplate being drawn `.scaledToFit` (letterboxed).
 private func sourceCropRectForVisibleRegion(
-	regionNorm: CGRect,           // 0…1 rect in *canvas* space
-	canvasSize: CGSize,           // fitted canvas size on screen
-	imageSize: CGSize             // original NSImage.size
+	regionNorm: CGRect,
+	canvasSize: CGSize,
+	imagePixelSize: CGSize   // use CGImage pixel size
 ) -> CGRect {
-	// 1) The background faceplate is drawn .scaledToFit in CanvasContent,
-	//    so compute the visible image rect inside the canvas.
-	let scale = min(canvasSize.width / imageSize.width,
-					canvasSize.height / imageSize.height)
-	let visibleSize = CGSize(width: imageSize.width * scale,
-							 height: imageSize.height * scale)
-	let visibleInCanvas = CGRect(
-		x: (canvasSize.width  - visibleSize.width)  * 0.5,
-		y: (canvasSize.height - visibleSize.height) * 0.5,
-		width: visibleSize.width,
-		height: visibleSize.height
+	// Scale from *pixels* to canvas points (same factor used to draw the background image)
+	let scale = min(canvasSize.width  / imagePixelSize.width,
+					canvasSize.height / imagePixelSize.height)
+	
+	// Letterboxed image rect in canvas points
+	let visSize = CGSize(width: imagePixelSize.width * scale,
+						 height: imagePixelSize.height * scale)
+	let visRect = CGRect(
+		x: (canvasSize.width  - visSize.width)  * 0.5,
+		y: (canvasSize.height - visSize.height) * 0.5,
+		width: visSize.width, height: visSize.height
 	)
 	
-	// 2) IMPORTANT: map the normalized region *into the visible rect*, not the full canvas.
-	let regionInVisiblePx = CGRect(
-		x: visibleInCanvas.minX + regionNorm.minX * visibleInCanvas.width,
-		y: visibleInCanvas.minY + regionNorm.minY * visibleInCanvas.height,
-		width:  regionNorm.width  * visibleInCanvas.width,
-		height: regionNorm.height * visibleInCanvas.height
+	// Region in canvas points
+	let regCanvas = CGRect(
+		x: regionNorm.minX * canvasSize.width,
+		y: regionNorm.minY * canvasSize.height,
+		width:  regionNorm.width  * canvasSize.width,
+		height: regionNorm.height * canvasSize.height
 	)
 	
-	// 3) Intersect with the visible image area (clip out letterbox zones)
-	guard let clipped = regionInVisiblePx.intersection(visibleInCanvas).nonEmpty else {
-		return .null
-	}
+	// Visible-local (canvas pts)
+	let localX = regCanvas.minX - visRect.minX
+	let localY = regCanvas.minY - visRect.minY
 	
-	// 4) Convert to source pixels by undoing the scale
-	let localX = clipped.minX - visibleInCanvas.minX
-	let localY = clipped.minY - visibleInCanvas.minY
-	let src = CGRect(
+	// Convert to pixel crop & flip Y for CGImage space
+	var src = CGRect(
 		x: localX / scale,
-		y: localY / scale,
-		width:  clipped.width  / scale,
-		height: clipped.height / scale
+//		y: (imagePixelSize.height) - ((localY / scale) + (regCanvas.height / scale)),
+		y: (localY / scale),
+		width:  regCanvas.width  / scale,
+		height: regCanvas.height / scale
 	)
 	
-	// 5) Clamp to image bounds for safety
-	return src.intersection(CGRect(origin: .zero, size: imageSize))
+	// Clamp to image bounds
+	let bounds = CGRect(origin: .zero, size: imagePixelSize)
+	src = src.intersection(bounds)
+	return (src.isNull || src.isEmpty) ? .null : src
 }
 
-private extension CGRect {
-	var nonEmpty: CGRect? { isNull || isEmpty ? nil : self }
+// Force the image patch subtree to refresh when the control's *semantic* state changes.
+// (Keeps the canvas in sync when you tweak Value/Index/etc. in the Inspector.)
+private func controlStateKey(_ c: Control) -> String {
+	switch c.type {
+		case .knob:
+			return "knob:\(c.value ?? -1)"
+			
+		case .steppedKnob:
+			return "stepped:\(c.stepIndex ?? -1)"
+			
+		case .multiSwitch:
+			return "switch:\(c.selectedIndex ?? -1)"
+			
+		case .button:
+			return "button:\(c.isPressed ?? false ? 1 : 0)"
+			
+		case .light:
+			// Lights can follow links; without the Device here we key off isPressed only.
+			// (If you want live updates when a linked target flips, we can thread Device into this view.)
+			return "light:\(c.isPressed ?? false ? 1 : 0)"
+			
+		case .concentricKnob:
+			// Include both rings so either ring change refreshes the patch.
+			return "concentric:\(c.outerValue ?? -1):\(c.innerValue ?? -1)"
+			
+		case .litButton:
+			// Include press + common link fields so lamp changes will refresh when local state changes.
+			// (Again, if it follows a different control via linkTarget, we can extend this later.)
+			return "lit:\(c.isPressed ?? false ? 1 : 0):\(c.lampOverrideOn ?? false ? 1 : 0):\(c.linkInverted ?? false ? 1 : 0):\(c.linkOnIndex ?? -1)"
+	}
 }
+
+private func renderKey(_ c: Control, regionIndex i: Int) -> String {
+	switch c.type {
+		case .knob:
+			return "knob:\(c.value ?? -1)"
+		case .steppedKnob:
+			return "step:\(c.stepIndex ?? -1)"
+		case .multiSwitch:
+			return "ms:\(c.selectedIndex ?? -1)"
+		case .button, .light, .litButton:
+			return "btn:\(c.isPressed ?? false)"
+		case .concentricKnob:
+			// differentiate outer vs inner by region index
+			let outer = c.outerValue ?? -1
+			let inner = c.innerValue ?? -1
+			return "ck:\(i):\(outer):\(inner)"
+	}
+}
+
+private extension CGRect { var nonEmpty: CGRect? { isNull || isEmpty ? nil : self } }
 
 // convenience (file-local)
 private extension Array {

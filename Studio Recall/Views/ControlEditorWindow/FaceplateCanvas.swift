@@ -79,7 +79,8 @@ struct FaceplateCanvas: View {
 								canvasSize: canvasSize,
 								zoom: zoom,
 								pan: pan,
-								isPanMode: isPanMode
+								isPanMode: isPanMode,
+								shape: sel.wrappedValue.regions[idx].shape   // NEW
 							)
 						}
 					)
@@ -143,36 +144,24 @@ struct FaceplateCanvas: View {
 	
 	private func updateRegionRect(of sel: Binding<Control>, to new: CGRect, idx: Int = 0) {
 		var r = new
-		// enforce min size
+		// min size
 		r.size.width  = max(minRegion, r.size.width)
 		r.size.height = max(minRegion, r.size.height)
-		// clamp to canvas bounds
+		// clamp to canvas 0…1
 		r.origin.x = min(max(r.origin.x, 0), 1 - r.size.width)
 		r.origin.y = min(max(r.origin.y, 0), 1 - r.size.height)
 		
 		var c = sel.wrappedValue
 		if c.regions.indices.contains(idx) {
-			// enforce square for circle shapes
-			if c.regions[idx].shape == .circle {
-				let s = min(r.size.width, r.size.height)
-				r.size = CGSize(width: s, height: s)
-			}
+			// NO aspect enforcement here
 			c.regions[idx].rect = r
 		} else {
-			// seed new region if missing
-			let shape: ImageRegionShape = .rect
-			var newRegion = ImageRegion(rect: r, mapping: nil, shape: shape)
-			if c.type == .concentricKnob && idx == 0 { newRegion.shape = .circle }
-			if c.type == .concentricKnob && idx == 1 { newRegion.shape = .circle }
-			if c.regions.count <= idx {
-				c.regions.append(newRegion)
-			} else {
-				c.regions[idx] = newRegion
-			}
+			c.regions.append(ImageRegion(rect: r, mapping: nil, shape: .rect))
 		}
 		sel.wrappedValue = c
 	}
-	
+
+
 	private func snap(_ v: CGFloat) -> CGFloat {
 		(v.clamped(to: 0...1) / gridStep).rounded() * gridStep
 	}

@@ -249,7 +249,17 @@ struct ControlInspector: View {
 						Text("Labels").font(.caption)
 						TextField("e.g. 20Hz, 50Hz", text: Binding(
 							get: { (binding.options.wrappedValue ?? []).joined(separator: ", ") },
-							set: { binding.options.wrappedValue = $0.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) } }
+							set: { text in
+								let labels = text
+									.split(separator: ",")
+									.map { $0.trimmingCharacters(in: .whitespaces) }
+									.filter { !$0.isEmpty }
+								binding.options.wrappedValue = labels
+								// Clamp step index to valid range (0…max(0, n-1))
+								let n = labels.count
+								let current = binding.stepIndex.wrappedValue ?? 0
+								binding.stepIndex.wrappedValue = min(current, max(0, n - 1))
+							}
 						))
 						.textFieldStyle(.roundedBorder)
 						
@@ -258,7 +268,7 @@ struct ControlInspector: View {
 							Stepper(value: Binding(
 								get: { binding.stepIndex.wrappedValue ?? 0 },
 								set: { binding.stepIndex.wrappedValue = $0 }
-							), in: 0...(binding.options.wrappedValue?.count ?? 1)-1) {
+							), in: safeIndexRange(binding.options.wrappedValue)) {
 								Text("\(binding.stepIndex.wrappedValue ?? 0)")
 							}
 						}
@@ -271,7 +281,17 @@ struct ControlInspector: View {
 						Text("Labels").font(.caption)
 						TextField("e.g. Slow, Fast", text: Binding(
 							get: { (binding.options.wrappedValue ?? []).joined(separator: ", ") },
-							set: { binding.options.wrappedValue = $0.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) } }
+							set: { text in
+								let labels = text
+									.split(separator: ",")
+									.map { $0.trimmingCharacters(in: .whitespaces) }
+									.filter { !$0.isEmpty }
+								binding.options.wrappedValue = labels
+								// Clamp selected index to valid range (0…max(0, n-1))
+								let n = labels.count
+								let current = binding.selectedIndex.wrappedValue ?? 0
+								binding.selectedIndex.wrappedValue = min(current, max(0, n - 1))
+							}
 						))
 						.textFieldStyle(.roundedBorder)
 						
@@ -280,7 +300,7 @@ struct ControlInspector: View {
 							Stepper(value: Binding(
 								get: { binding.selectedIndex.wrappedValue ?? 0 },
 								set: { binding.selectedIndex.wrappedValue = $0 }
-							), in: 0...(binding.options.wrappedValue?.count ?? 1)-1) {
+							), in: safeIndexRange(binding.options.wrappedValue)) {
 								Text("\(binding.selectedIndex.wrappedValue ?? 0)")
 							}
 						}
@@ -592,6 +612,11 @@ private struct MappingEditor: View {
 	}
 }
 
+private func safeIndexRange(_ options: [String]?) -> ClosedRange<Int> {
+	let n = max(1, options?.count ?? 0)   // empty → 1 so range becomes 0...0
+	return 0...(n - 1)
+}
+
 private extension Array {
 	subscript(safe i: Index) -> Element? { indices.contains(i) ? self[i] : nil }
 }
@@ -841,6 +866,8 @@ private struct SpriteEditor: View {
 	@Binding var control: Control
 	
 	@State private var showOpen = false
+	@State private var showLibrarySheet = false
+	
 	var body: some View {
 		VStack(alignment: .leading, spacing: 8) {
 			Text("Sprites show a pose image per switch position using a grid-based atlas. Set the pivot where the hinge meets the lever, then align the sprite’s pivot so the image sits correctly.")
@@ -860,6 +887,16 @@ private struct SpriteEditor: View {
 						}
 					}
 					.labelsHidden()
+					Button("Browse…") { showLibrarySheet = true }
+						.buttonStyle(.bordered)
+						.help("Choose from pre-installed and imported sprites")
+						.sheet(isPresented: $showLibrarySheet) {
+							LibraryBrowserSheet { assetId in
+								mapping.spriteAssetId = assetId
+								showLibrarySheet = false
+							}
+							.frame(width: 560, height: 420)
+						}
 				}
 				Picker("", selection: Binding(
 					get: { mapping.spriteMode ?? .atlasGrid },
@@ -1030,6 +1067,70 @@ private struct SpriteEditor: View {
 
 
 // MARK: - Small reusable controls
+private struct LibraryBrowserSheet: View {
+	@Environment(\.dismiss) private var dismiss
+	
+	var onPick: (UUID) -> Void
+	@State private var search = ""
+	let lib = SpriteLibrary.shared
+	private let cols = [GridItem(.adaptive(minimum: 120), spacing: 12)]
+	
+	var body: some View {
+		VStack(alignment: .leading, spacing: 12) {
+			HStack {
+				Text("Sprite Library").font(.headline)
+				Spacer()
+				Button("Cancel") { dismiss() }
+					.keyboardShortcut(.cancelAction)
+				TextField("Search", text: $search).textFieldStyle(.roundedBorder)
+					.frame(width: 220)
+			}
+			ScrollView {
+				LazyVGrid(columns: cols, spacing: 12) {
+					ForEach(filtered(), id: \.id) { asset in
+						Button {
+							onPick(asset.id)
+						} label: {
+							VStack(spacing: 6) {
+								ZStack {
+									Rectangle().fill(Color(nsColor: .windowBackgroundColor))
+										.cornerRadius(8)
+									if let thumb = firstFrame(of: asset) {
+										Image(nsImage: thumb).resizable().scaledToFit().padding(10)
+									}
+								}
+								.frame(height: 120)
+								Text(asset.name).lineLimit(1)
+									.font(.caption)
+							}
+						}
+						.buttonStyle(.plain)
+						.contextMenu {
+							if asset.isBuiltin { Text("Built-in") }
+							if !asset.tags.isEmpty { Text(asset.tags.joined(separator: ", ")) }
+						}
+					}
+				}
+				.padding(.top, 4)
+			}
+		}
+		.padding(16)
+	}
+	
+	private func filtered() -> [SpriteAsset] {
+		let assets = lib.allAssets()
+		guard !search.isEmpty else { return assets }
+		return assets.filter { $0.name.localizedCaseInsensitiveContains(search) || $0.tags.joined().localizedCaseInsensitiveContains(search) }
+	}
+	
+	private func firstFrame(of a: SpriteAsset) -> NSImage? {
+		if let cg = lib.cgImage(forFrame: 0, in: a.id) {
+			return NSImage(cgImage: cg, size: .zero)
+		}
+		return nil
+	}
+}
+
 
 private struct VSliderRow: View {
 	let title: String
