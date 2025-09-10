@@ -15,6 +15,7 @@ struct ControlInspector: View {
 	@ObservedObject var editableDevice: EditableDevice
 	@Binding var selectedControlId: UUID?
 	@Binding var isEditingRegion: Bool
+	@Binding var activeRegionIndex: Int?
 	
 	var body: some View {
 		VStack(alignment: .leading, spacing: 14) {
@@ -55,7 +56,6 @@ struct ControlInspector: View {
 							Button("Create") {
 								let s = ImageRegion.defaultSize
 								if binding.wrappedValue.type == .concentricKnob {
-									// Two concentric square regions, forced to circle shape
 									let outer = ImageRegion(
 										rect: CGRect(x: max(0, binding.wrappedValue.x - s*0.6),
 													 y: max(0, binding.wrappedValue.y - s*0.6),
@@ -92,6 +92,14 @@ struct ControlInspector: View {
 								
 								VStack(alignment: .leading, spacing: 6) {
 									HStack {
+										Picker("Edit region", selection: Binding(
+											get: { activeRegionIndex ?? 0 },   // default to outer
+											set: { activeRegionIndex = $0 }
+										)) {
+											Text("Outer").tag(0)
+											Text("Inner").tag(1)
+										}
+										.pickerStyle(.segmented)
 										Toggle("Edit \(binding.wrappedValue.type == .concentricKnob ? (idx == 0 ? "Outer" : "Inner") : "Region \(idx+1)")",
 											   isOn: $isEditingRegion)
 										Spacer()

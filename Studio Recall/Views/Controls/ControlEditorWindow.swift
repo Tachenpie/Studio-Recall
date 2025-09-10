@@ -87,7 +87,8 @@ struct ControlEditorWindow: View {
 									ControlInspector(
 										editableDevice: editableDevice,
 										selectedControlId: $selectedControlId,
-										isEditingRegion: $isEditingRegion
+										isEditingRegion: $isEditingRegion,
+										activeRegionIndex: $activeRegionIndex
 									)
 									.frame(maxWidth: .infinity, alignment: .leading)
 								}

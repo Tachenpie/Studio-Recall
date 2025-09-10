@@ -23,6 +23,7 @@ struct FaceplateCanvas: View {
 	
 	// local state just for canvas content
 	@State private var draggingControlId: UUID? = nil
+	@State private var activeRegionIndex: Int? = nil
 	
 	// tuning
 	private let gridStep: CGFloat = 0.0025
@@ -80,7 +81,8 @@ struct FaceplateCanvas: View {
 								zoom: zoom,
 								pan: pan,
 								isPanMode: isPanMode,
-								shape: sel.wrappedValue.regions[idx].shape   // NEW
+								shape: sel.wrappedValue.regions[idx].shape,
+								isEnabled: activeRegionIndex == idx
 							)
 						}
 					)

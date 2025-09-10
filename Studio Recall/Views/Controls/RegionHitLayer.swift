@@ -19,6 +19,8 @@ struct RegionHitLayer: View {
 	var isPanMode: Bool = false
 	let shape: ImageRegionShape
 	
+	var isEnabled: Bool = true
+	
 	// ---- Tuning -------------------------------------------------------------
 	// Visual "screen-like" hit widths (we operate in local px; these feel similar)
 	private let edgePx: CGFloat   = 14    // edges easier to catch
@@ -53,8 +55,8 @@ struct RegionHitLayer: View {
 				.fill(Color.clear)
 				.frame(width: parentSize.width, height: parentSize.height)
 				.contentShape(Rectangle())
-				.gesture(isPanMode ? nil : dragGesture(regionFrame: frame, localSize: regionSize))
-				.allowsHitTesting(!isPanMode)
+				.gesture(isPanMode || isEnabled ? nil : dragGesture(regionFrame: frame, localSize: regionSize))
+				.allowsHitTesting(isEnabled && !isPanMode)
 		}
 	}
 	
