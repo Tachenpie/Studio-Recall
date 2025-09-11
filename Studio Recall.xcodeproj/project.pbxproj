@@ -72,14 +72,14 @@
 		ABC9C94B2E6A15BF003329DE /* Exceptions for "Studio Recall" folder in "Studio RecallTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Views/ControlEditorWindow/ControlImageRenderer.swift,
+				Views/Controls/ControlImageRenderer.swift,
 			);
 			target = AB0713C92E6097DE00B7FE0B /* Studio RecallTests */;
 		};
 		ABC9C94C2E6A15BF003329DE /* Exceptions for "Studio Recall" folder in "Studio RecallUITests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Views/ControlEditorWindow/ControlImageRenderer.swift,
+				Views/Controls/ControlImageRenderer.swift,
 			);
 			target = AB0713D32E6097DE00B7FE0B /* Studio RecallUITests */;
 		};

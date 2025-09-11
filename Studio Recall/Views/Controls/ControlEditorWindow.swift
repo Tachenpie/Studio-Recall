@@ -20,6 +20,7 @@ struct ControlEditorWindow: View {
 	
 	@State private var selectedControlId: UUID? = nil
 	@State private var isEditingRegion: Bool = false
+	@State private var activeRegionIndex: Int = 0
 	@State private var sidebarTab: ControlSidebarTab = .palette
 	@State private var zoom: CGFloat = 1.0
 	@State private var pan:  CGSize  = .zero
@@ -33,6 +34,7 @@ struct ControlEditorWindow: View {
 					editableDevice: editableDevice,
 					selectedControlId: $selectedControlId,
 					isEditingRegion: $isEditingRegion,
+					activeRegionIndex: $activeRegionIndex,
 					zoom: $zoom,
 					pan: $pan
 				)

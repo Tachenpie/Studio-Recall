@@ -7,6 +7,15 @@
 
 import SwiftUI
 
+// --- Region-edit preview toggle (flows from Faceplate/Editor) ---
+private struct RegionEditingKey: EnvironmentKey { static let defaultValue: Bool = false }
+extension EnvironmentValues {
+	var isRegionEditing: Bool {
+		get { self[RegionEditingKey.self] }
+		set { self[RegionEditingKey.self] = newValue }
+	}
+}
+
 struct ControlImageRenderer: View {
 	@Binding var control: Control
 	let faceplate: NSImage?
@@ -44,8 +53,6 @@ struct ControlImageRenderer: View {
 								cgImage: cropped,
 								size: NSSize(width: src.width, height: src.height)
 							)
-							
-							let stateKey = controlStateKey(control)   // recompute per pass
 							
 							GeometryReader { geo in
 								Image(nsImage: patch)
@@ -87,6 +94,8 @@ struct ControlImageRenderer: View {
 }
 
 struct VisualEffect: ViewModifier {
+	@Environment(\.isRegionEditing) private var isRegionEditing
+	
 	let mapping: VisualMapping?
 	let control: Control
 	let resolve: (UUID) -> Control?
@@ -95,6 +104,10 @@ struct VisualEffect: ViewModifier {
 	let regionIndex: Int
 	
 	func body(content: Content) -> some View {
+		if isRegionEditing {
+			// While region editing, show the raw (unrotated/unmodified) patch
+			return AnyView(content)
+		}
 		// 1) Apply mapping (or none) to produce a base view
 		let base: AnyView = {
 			guard let mapping = mapping else { return AnyView(content) }
@@ -103,6 +116,13 @@ struct VisualEffect: ViewModifier {
 				case .rotate:
 					let pivot = mapping.pivot ?? CGPoint(x: 0.5, y: 0.5)
 					let angle: Double = {
+						if control.type == .knob {
+							let taper = mapping.taper
+							return mapping.rotationDegrees(for: control.value,
+														   lo: control.knobMin,
+														   hi: control.knobMax,
+														   taper: taper)
+						}
 						if control.type == .steppedKnob,
 						   let a = control.stepAngles, let i = control.stepIndex, i < a.count {
 							return a[i]
@@ -112,13 +132,14 @@ struct VisualEffect: ViewModifier {
 							return a[i]
 						}
 						if control.type == .concentricKnob {
+							let taper = mapping.taper // per-ring (per-region) taper from the Mapping editor
 							if regionIndex == 0 {
 								// Outer ring
 								return mapping.rotationDegrees(
 									for: control.outerValue,
 									lo: control.outerMin,
 									hi: control.outerMax,
-									taper: control.outerTaper
+									taper: taper
 								)
 							} else {
 								// Inner knob
@@ -126,7 +147,7 @@ struct VisualEffect: ViewModifier {
 									for: control.innerValue,
 									lo: control.innerMin,
 									hi: control.innerMax,
-									taper: control.innerTaper
+									taper: taper
 								)
 							}
 						}

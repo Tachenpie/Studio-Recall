@@ -13,4 +13,7 @@ struct Session: Identifiable, Codable {
     var name: String
     var racks: [Rack] = []
     var series500Chassis: [Series500Chassis] = []
+	
+	var canvasZoom: Double = 1.2
+	var canvasPan: CGPoint = .zero
 }

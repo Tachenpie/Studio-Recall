@@ -55,7 +55,7 @@ struct RegionHitLayer: View {
 				.fill(Color.clear)
 				.frame(width: parentSize.width, height: parentSize.height)
 				.contentShape(Rectangle())
-				.gesture(isPanMode || isEnabled ? nil : dragGesture(regionFrame: frame, localSize: regionSize))
+				.gesture(isPanMode || !isEnabled ? nil : dragGesture(regionFrame: frame, localSize: regionSize))
 				.allowsHitTesting(isEnabled && !isPanMode)
 		}
 	}

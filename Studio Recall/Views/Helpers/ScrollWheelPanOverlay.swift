@@ -1,3 +1,11 @@
+//
+//  ScrollWheelPanOverlay.swift
+//  Studio Recall
+//
+//  Created by True Jackie on 9/11/25.
+//
+
+import SwiftUI
 #if os(macOS)
 import AppKit
 

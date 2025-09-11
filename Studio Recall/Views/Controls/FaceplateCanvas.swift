@@ -18,12 +18,12 @@ struct FaceplateCanvas: View {
 	// Selection / region edit
 	@Binding var selectedControlId: UUID?
 	@Binding var isEditingRegion: Bool
+	@Binding var activeRegionIndex: Int
 	@Binding var zoom: CGFloat
 	@Binding var pan: CGSize
 	
 	// local state just for canvas content
 	@State private var draggingControlId: UUID? = nil
-	@State private var activeRegionIndex: Int? = nil
 	
 	// tuning
 	private let gridStep: CGFloat = 0.0025
@@ -102,6 +102,7 @@ struct FaceplateCanvas: View {
 				return true
 			}
 		)
+		.environment(\.isRegionEditing, isEditingRegion)
 #if os(macOS)
 		.overlay(
 			KeyCaptureLayer(

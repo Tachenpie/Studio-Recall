@@ -334,40 +334,175 @@ struct Control: Identifiable, Codable {
 	}
 	
 	enum CodingKeys: String, CodingKey {
-		case id, name, type, value, stepIndex, options, selectedIndex, isPressed
-		case knobMin, knobMax, stepAngles, stepValues, optionAngles, optionValues
-		case onColor, offColor, linkTarget, linkInverted, linkOnIndex
-		case sprites, spriteIndex, position, x, y
-		case regions   // new
-		case region    // legacy
+		// identity
+		case id, name, type
+		
+		// common value storage
+		case value, stepIndex, options, selectedIndex, isPressed
+		
+		// stepped/multiswitch metadata
+		case stepAngles, stepValues, optionAngles, optionValues
+		
+		// knob ranges/taper
+		case knobMin, knobMax
+		
+		// concentric values + ranges/tapers/mappings/labels
+		case outerValue, innerValue
+		case outerMin, outerMax, innerMin, innerMax
+		case outerTaper, innerTaper
+		case outerMapping, innerMapping
+		case outerLabel, innerLabel
+		
+		// light & lamp
+		case onColor, offColor
+		case linkTarget, linkInverted, linkOnIndex
+		case lampOnColor, lampOffColor, lampFollowsPress, lampOverrideOn
+		
+		// sprites
+		case sprites, spriteIndex
+		
+		// layout/position
+		case position, x, y
+		
+		// regions (new) + region (legacy)
+		case regions
+		case region
 	}
 	
 	// Custom decode to migrate old -> new
 	init(from decoder: Decoder) throws {
 		let c = try decoder.container(keyedBy: CodingKeys.self)
-		id = try c.decode(UUID.self, forKey: .id)
+		
+		// identity
+		id   = try c.decode(UUID.self, forKey: .id)
 		name = try c.decode(String.self, forKey: .name)
 		type = try c.decode(ControlType.self, forKey: .type)
-		// … decode all your other fields …
+		
+		// common values
+		value         = try c.decodeIfPresent(Double.self, forKey: .value)
+		stepIndex     = try c.decodeIfPresent(Int.self, forKey: .stepIndex)
+		options       = try c.decodeIfPresent([String].self, forKey: .options)
+		selectedIndex = try c.decodeIfPresent(Int.self, forKey: .selectedIndex)
+		isPressed     = try c.decodeIfPresent(Bool.self, forKey: .isPressed)
+		
+		// stepped/multi arrays
+		stepAngles    = try c.decodeIfPresent([Double].self, forKey: .stepAngles)
+		stepValues    = try c.decodeIfPresent([Double].self, forKey: .stepValues)
+		optionAngles  = try c.decodeIfPresent([Double].self, forKey: .optionAngles)
+		optionValues  = try c.decodeIfPresent([Double].self, forKey: .optionValues)
+		
+		// knob ranges
+		knobMin = try c.decodeIfPresent(Bound.self, forKey: .knobMin)
+		knobMax = try c.decodeIfPresent(Bound.self, forKey: .knobMax)
+		
+		// concentric
+		outerValue = try c.decodeIfPresent(Double.self, forKey: .outerValue)
+		innerValue = try c.decodeIfPresent(Double.self, forKey: .innerValue)
+		outerMin   = try c.decodeIfPresent(Bound.self,  forKey: .outerMin)
+		outerMax   = try c.decodeIfPresent(Bound.self,  forKey: .outerMax)
+		innerMin   = try c.decodeIfPresent(Bound.self,  forKey: .innerMin)
+		innerMax   = try c.decodeIfPresent(Bound.self,  forKey: .innerMax)
+		outerTaper = try c.decodeIfPresent(ValueTaper.self, forKey: .outerTaper)
+		innerTaper = try c.decodeIfPresent(ValueTaper.self, forKey: .innerTaper)
+		outerMapping = try c.decodeIfPresent(VisualMapping.self, forKey: .outerMapping)
+		innerMapping = try c.decodeIfPresent(VisualMapping.self, forKey: .innerMapping)
+		outerLabel   = try c.decodeIfPresent(String.self, forKey: .outerLabel)
+		innerLabel   = try c.decodeIfPresent(String.self, forKey: .innerLabel)
+		
+		// light & lamp
+		onColor        = try c.decodeIfPresent(CodableColor.self, forKey: .onColor)
+		offColor       = try c.decodeIfPresent(CodableColor.self, forKey: .offColor)
+		linkTarget     = try c.decodeIfPresent(UUID.self, forKey: .linkTarget)
+		linkInverted   = try c.decodeIfPresent(Bool.self, forKey: .linkInverted)
+		linkOnIndex    = try c.decodeIfPresent(Int.self, forKey: .linkOnIndex)
+		lampOnColor    = try c.decodeIfPresent(CodableColor.self, forKey: .lampOnColor)
+		lampOffColor   = try c.decodeIfPresent(CodableColor.self, forKey: .lampOffColor)
+		lampFollowsPress = try c.decodeIfPresent(Bool.self, forKey: .lampFollowsPress)
+		lampOverrideOn   = try c.decodeIfPresent(Bool.self, forKey: .lampOverrideOn)
+		
+		// sprites
+		sprites     = try c.decodeIfPresent(ControlSpriteSet.self, forKey: .sprites)
+		spriteIndex = try c.decodeIfPresent(Int.self, forKey: .spriteIndex)
+		
+		// layout
+		position = try c.decodeIfPresent(CGPoint.self, forKey: .position) ?? CGPoint(x: 0.5, y: 0.5)
+		x = try c.decodeIfPresent(CGFloat.self, forKey: .x) ?? position.x
+		y = try c.decodeIfPresent(CGFloat.self, forKey: .y) ?? position.y
+		
+		// regions (new) + region (legacy)
 		regions = try c.decodeIfPresent([ImageRegion].self, forKey: .regions) ?? []
 		if regions.isEmpty, let legacy = try c.decodeIfPresent(ImageRegion.self, forKey: .region) {
 			regions = [legacy]
 		}
 	}
+
 	
 	// Encode both (for backward compat, optional)
 	func encode(to encoder: Encoder) throws {
 		var c = encoder.container(keyedBy: CodingKeys.self)
+		
+		// identity
 		try c.encode(id, forKey: .id)
 		try c.encode(name, forKey: .name)
 		try c.encode(type, forKey: .type)
-		// … encode other fields …
+		
+		// common values
+		try c.encodeIfPresent(value, forKey: .value)
+		try c.encodeIfPresent(stepIndex, forKey: .stepIndex)
+		try c.encodeIfPresent(options, forKey: .options)
+		try c.encodeIfPresent(selectedIndex, forKey: .selectedIndex)
+		try c.encodeIfPresent(isPressed, forKey: .isPressed)
+		
+		// stepped/multi arrays
+		try c.encodeIfPresent(stepAngles, forKey: .stepAngles)
+		try c.encodeIfPresent(stepValues, forKey: .stepValues)
+		try c.encodeIfPresent(optionAngles, forKey: .optionAngles)
+		try c.encodeIfPresent(optionValues, forKey: .optionValues)
+		
+		// knob ranges
+		try c.encodeIfPresent(knobMin, forKey: .knobMin)
+		try c.encodeIfPresent(knobMax, forKey: .knobMax)
+		
+		// concentric
+		try c.encodeIfPresent(outerValue, forKey: .outerValue)
+		try c.encodeIfPresent(innerValue, forKey: .innerValue)
+		try c.encodeIfPresent(outerMin,   forKey: .outerMin)
+		try c.encodeIfPresent(outerMax,   forKey: .outerMax)
+		try c.encodeIfPresent(innerMin,   forKey: .innerMin)
+		try c.encodeIfPresent(innerMax,   forKey: .innerMax)
+		try c.encodeIfPresent(outerTaper, forKey: .outerTaper)
+		try c.encodeIfPresent(innerTaper, forKey: .innerTaper)
+		try c.encodeIfPresent(outerMapping, forKey: .outerMapping)
+		try c.encodeIfPresent(innerMapping, forKey: .innerMapping)
+		try c.encodeIfPresent(outerLabel, forKey: .outerLabel)
+		try c.encodeIfPresent(innerLabel, forKey: .innerLabel)
+		
+		// light & lamp
+		try c.encodeIfPresent(onColor,  forKey: .onColor)
+		try c.encodeIfPresent(offColor, forKey: .offColor)
+		try c.encodeIfPresent(linkTarget,   forKey: .linkTarget)
+		try c.encodeIfPresent(linkInverted, forKey: .linkInverted)
+		try c.encodeIfPresent(linkOnIndex,  forKey: .linkOnIndex)
+		try c.encodeIfPresent(lampOnColor,     forKey: .lampOnColor)
+		try c.encodeIfPresent(lampOffColor,    forKey: .lampOffColor)
+		try c.encodeIfPresent(lampFollowsPress, forKey: .lampFollowsPress)
+		try c.encodeIfPresent(lampOverrideOn,   forKey: .lampOverrideOn)
+		
+		// sprites
+		try c.encodeIfPresent(sprites,     forKey: .sprites)
+		try c.encodeIfPresent(spriteIndex, forKey: .spriteIndex)
+		
+		// layout
+		try c.encode(position, forKey: .position)
+		try c.encode(x, forKey: .x)
+		try c.encode(y, forKey: .y)
+		
+		// regions (new) + region (legacy one)
 		try c.encode(regions, forKey: .regions)
 		if let first = regions.first {
 			try c.encode(first, forKey: .region)
 		}
 	}
-
 }
 
 extension Control {
@@ -403,6 +538,17 @@ extension Control {
 		self.position = CGPoint(x: x, y: y)
 		self.x = x
 		self.y = y
+		
+		if type == .concentricKnob {
+			self.outerMin = .finite(0)
+			self.outerMax = .finite(10)
+			self.outerValue = 5.0
+			self.outerTaper = .linear
+			self.innerMin = .negInfinity
+			self.innerMax = .finite(16)
+			self.innerValue = 5.0
+			self.innerTaper = .decibel
+		}
 		
 		self.regions = []
 	}

@@ -15,7 +15,7 @@ struct ControlInspector: View {
 	@ObservedObject var editableDevice: EditableDevice
 	@Binding var selectedControlId: UUID?
 	@Binding var isEditingRegion: Bool
-	@Binding var activeRegionIndex: Int?
+	@Binding var activeRegionIndex: Int
 	
 	var body: some View {
 		VStack(alignment: .leading, spacing: 14) {
@@ -60,15 +60,13 @@ struct ControlInspector: View {
 										rect: CGRect(x: max(0, binding.wrappedValue.x - s*0.6),
 													 y: max(0, binding.wrappedValue.y - s*0.6),
 													 width: s*1.2, height: s*1.2),
-										mapping: nil,
-										shape: .circle
+										mapping: nil, shape: .circle
 									)
 									let inner = ImageRegion(
 										rect: CGRect(x: max(0, binding.wrappedValue.x - s*0.35),
 													 y: max(0, binding.wrappedValue.y - s*0.35),
 													 width: s*0.7, height: s*0.7),
-										mapping: nil,
-										shape: .circle
+										mapping: nil, shape: .circle
 									)
 									binding.regions.wrappedValue = [outer, inner]
 								} else {
@@ -76,54 +74,68 @@ struct ControlInspector: View {
 										rect: CGRect(x: max(0, binding.wrappedValue.x - s*0.5),
 													 y: max(0, binding.wrappedValue.y - s*0.5),
 													 width: s, height: s),
-										mapping: nil,
-										shape: .rect
+										mapping: nil, shape: .rect
 									)
 									binding.regions.wrappedValue = [r]
 								}
 								isEditingRegion = true
 							}
 						} else {
-							ForEach(binding.regions.wrappedValue.indices, id: \.self) { idx in
-								let regionBinding = Binding<ImageRegion>(
-									get: { binding.regions.wrappedValue[idx] },
-									set: { binding.regions.wrappedValue[idx] = $0 }
-								)
+							// Choose which ring to edit (concentric only)
+							if binding.wrappedValue.type == .concentricKnob,
+							   binding.regions.wrappedValue.count >= 2,
+							   let pair = concentricPairIndices(binding.wrappedValue) {
 								
-								VStack(alignment: .leading, spacing: 6) {
-									HStack {
-										Picker("Edit region", selection: Binding(
-											get: { activeRegionIndex ?? 0 },   // default to outer
-											set: { activeRegionIndex = $0 }
-										)) {
-											Text("Outer").tag(0)
-											Text("Inner").tag(1)
-										}
-										.pickerStyle(.segmented)
-										Toggle("Edit \(binding.wrappedValue.type == .concentricKnob ? (idx == 0 ? "Outer" : "Inner") : "Region \(idx+1)")",
-											   isOn: $isEditingRegion)
-										Spacer()
-										Button("Delete") {
-											binding.regions.wrappedValue.remove(at: idx)
-										}
-										.buttonStyle(.borderless)
-									}
-									
-									Picker("Shape", selection: Binding(
-										get: { regionBinding.wrappedValue.shape },
-										set: { regionBinding.wrappedValue.shape = $0 }
-									)) {
-										Text("Rectangle").tag(ImageRegionShape.rect)
-										Text("Circle").tag(ImageRegionShape.circle)
-									}
-									.pickerStyle(.segmented)
+								Picker("Edit region", selection: $activeRegionIndex) {
+									Text("Outer").tag(pair.outer)
+									Text("Inner").tag(pair.inner)
 								}
-								.padding(.vertical, 4)
+								.pickerStyle(.segmented)
+								.onAppear {
+									// Default to “Outer” the first time (or after create/delete)
+									if !binding.regions.wrappedValue.indices.contains(activeRegionIndex) {
+										activeRegionIndex = pair.outer
+									}
+								}
+								.onChange(of: binding.regions.wrappedValue) { _, _ in
+									// Keep selection valid if regions are added/removed
+									if !binding.regions.wrappedValue.indices.contains(activeRegionIndex) {
+										activeRegionIndex = pair.outer
+									}
+								}
 							}
+
+							
+							// Safety clamp (outer=0 or inner=1 if present)
+							let idxSel = min(max(activeRegionIndex, 0), max(0, binding.regions.wrappedValue.count - 1))
+							
+							// Selected region binding
+							let regionBinding = Binding<ImageRegion>(
+								get: { binding.regions.wrappedValue[idxSel] },
+								set: { binding.regions.wrappedValue[idxSel] = $0 }
+							)
+							
+							HStack {
+								Toggle("Edit", isOn: $isEditingRegion)
+								Spacer()
+								Button("Delete") {
+									binding.regions.wrappedValue.remove(at: idxSel)
+									activeRegionIndex = 0
+								}
+								.buttonStyle(.borderless)
+							}
+							
+							Picker("Shape", selection: Binding(
+								get: { regionBinding.wrappedValue.shape },
+								set: { regionBinding.wrappedValue.shape = $0 }
+							)) {
+								Text("Rectangle").tag(ImageRegionShape.rect)
+								Text("Circle").tag(ImageRegionShape.circle)
+							}
+							.pickerStyle(.segmented)
 						}
 					}
 				}
-
 				
 				// MARK: Per-type configuration
 				perTypeSection(binding: binding)
@@ -131,8 +143,18 @@ struct ControlInspector: View {
 				
 				// MARK: Mapping
 				GroupBox("Image Mapping") {
-					MappingEditor(control: binding)
+					if isEditingRegion {
+						VStack(alignment: .leading, spacing: 6) {
+							Text("Turn off “Edit Region” to adjust mapping.")
+								.font(.caption)
+								.foregroundStyle(.secondary)
+						}
+						.frame(maxWidth: .infinity, alignment: .leading)
+					} else {
+						MappingEditor(control: binding, activeRegionIndex: $activeRegionIndex)
+					}
 				}
+				.disabled(isEditingRegion)
 				
 				Spacer(minLength: 8)
 				
@@ -189,7 +211,21 @@ struct ControlInspector: View {
 		guard let v = binding.value.wrappedValue, let lo = minV, let hi = maxV, hi > lo else { return }
 		binding.value.wrappedValue = min(max(v, lo), hi)
 	}
-
+	
+	func clampOuter(_ binding: Binding<Control>) {
+		let lo = binding.outerMin.wrappedValue?.resolve(default: 0) ?? 0
+		let hi = binding.outerMax.wrappedValue?.resolve(default: 1) ?? 1
+		let v  = binding.outerValue.wrappedValue ?? lo
+		binding.outerValue.wrappedValue = min(max(v, min(lo, hi)), max(lo, hi))
+	}
+	
+	func clampInner(_ binding: Binding<Control>) {
+		let lo = binding.innerMin.wrappedValue?.resolve(default: 0) ?? 0
+		let hi = binding.innerMax.wrappedValue?.resolve(default: 1) ?? 1
+		let v  = binding.innerValue.wrappedValue ?? lo
+		binding.innerValue.wrappedValue = min(max(v, min(lo, hi)), max(lo, hi))
+	}
+	
 	// MARK: - Per-type section
 	@ViewBuilder
 	private func perTypeSection(binding: Binding<Control>) -> some View {
@@ -199,38 +235,41 @@ struct ControlInspector: View {
 					VStack(alignment: .leading, spacing: 8) {
 						// Min / Max
 						HStack {
-							Text("Range").frame(minWidth: 60, alignment: .leading)
-							NumberField(value: Binding(
-								get: { binding.knobMin.wrappedValue?.resolve(default: 0) ?? 0 },
-								set: { binding.knobMin.wrappedValue = .finite($0) }
-							))
+							Text("Range").frame(width: 80, alignment: .leading)
+							BoundField(bound: binding.knobMin, title: "Min", defaultFinite: 0)
 							Text("…")
-							NumberField(value: Binding(
-								get: { binding.knobMax.wrappedValue?.resolve(default: 1) ?? 1 },
-								set: { binding.knobMax.wrappedValue = .finite($0) }
-							))
+							BoundField(bound: binding.knobMax, title: "Max", defaultFinite: 1)
 						}
 						
-						// Value editor (slider if finite)
-						let lo = binding.knobMin.wrappedValue?.resolve(default: 0) ?? 0
-						let hi = binding.knobMax.wrappedValue?.resolve(default: 1) ?? 1
-						if hi > lo {
-							VSliderRow(
-								title: "Value",
-								value: Binding(
-									get: { binding.value.wrappedValue ?? lo },
-									set: { binding.value.wrappedValue = min(max($0, lo), hi) }
-								),
-								range: lo...hi,
-								step: (hi - lo) / 100
-							)
-						} else {
-							HStack {
-								Text("Value").frame(minWidth: 60, alignment: .leading)
-								NumberField(value: Binding(
-									get: { binding.value.wrappedValue ?? 0 },
-									set: { binding.value.wrappedValue = $0 }
-								))
+						// VALUE (slider only if range is finite)
+						do {
+							let lo = binding.knobMin.wrappedValue?.resolve(default: 0) ?? 0
+							let hi = binding.knobMax.wrappedValue?.resolve(default: 1) ?? 1
+							let hasInf: Bool = {
+								switch (binding.knobMin.wrappedValue, binding.knobMax.wrappedValue) {
+									case (.some(.negInfinity), _), (.some(.posInfinity), _),
+										(_, .some(.negInfinity)), (_, .some(.posInfinity)): return true
+									default: return false
+								}
+							}()
+							if hasInf || hi <= lo {
+								HStack {
+									Text("Value").frame(width: 80, alignment: .leading)
+									NumberField(value: Binding(
+										get: { binding.value.wrappedValue ?? lo },
+										set: { binding.value.wrappedValue = $0 }
+									))
+								}
+							} else {
+								VSliderRow(
+									title: "Value",
+									value: Binding(
+										get: { binding.value.wrappedValue ?? lo },
+										set: { v in binding.value.wrappedValue = min(max(v, lo), hi) }
+									),
+									range: lo...hi,
+									step: (hi - lo) / 100
+								)
 							}
 						}
 					}
@@ -270,16 +309,96 @@ struct ControlInspector: View {
 							}
 						))
 						.textFieldStyle(.roundedBorder)
-						
+						// Per-step table: Index • Label • Angle°
+						VStack(spacing: 8) {
+							HStack {
+								Text("Index").font(.caption).foregroundStyle(.secondary)
+									.frame(width: 44, alignment: .trailing)
+								Text("Label").font(.caption).foregroundStyle(.secondary)
+								Spacer()
+								Text("Angle°").font(.caption).foregroundStyle(.secondary)
+									.frame(width: 72, alignment: .trailing)
+							}
+							.padding(.horizontal, 6)
+							
+							// Hoist locals
+							let labelArray = binding.options.wrappedValue ?? []
+							let angleArray = binding.stepAngles.wrappedValue ?? []
+							let count = max(labelArray.count, angleArray.count)
+							
+							ForEach(0..<count, id: \.self) { i in
+								HStack {
+									Text("\(i)")
+										.frame(width: 44, alignment: .trailing)
+										.monospacedDigit()
+									
+									// Label at index i
+									TextField("Label #\(i)", text: Binding(
+										get: {
+											let labels = binding.options.wrappedValue ?? []
+											return (i < labels.count) ? labels[i] : ""      // PURE: no writes here
+										},
+										set: { new in
+											var labels = binding.options.wrappedValue ?? []
+											if i >= labels.count {                          // grow only on SET
+												labels += Array(repeating: "", count: i - labels.count + 1)
+											}
+											labels[i] = new
+											binding.options.wrappedValue = labels          // <- safe: called from user event
+										}
+									))
+									
+									// Angle at index i
+									TextField("0", value: Binding<Double>(
+										get: {
+											let angles = binding.stepAngles.wrappedValue ?? []
+											return (i < angles.count) ? angles[i] : 0.0     // PURE: no writes here
+										},
+										set: { (new: Double) in
+											var angles = binding.stepAngles.wrappedValue ?? []
+											if i >= angles.count {
+												angles += Array(repeating: 0.0, count: i - angles.count + 1)
+											}
+											angles[i] = new
+											binding.stepAngles.wrappedValue = angles        // <- safe: user event
+										}
+									), formatter: angleFormatter)
+									.frame(width: 72)
+									.multilineTextAlignment(.trailing)
+								}
+								.padding(.horizontal, 6)
+							}
+
+						}
+						.padding(.vertical, 4)
+
 						HStack {
-							Text("Index").frame(minWidth: 60, alignment: .leading)
+							Text("Value").frame(minWidth: 60, alignment: .leading)
 							Stepper(value: Binding(
 								get: { binding.stepIndex.wrappedValue ?? 0 },
 								set: { binding.stepIndex.wrappedValue = $0 }
 							), in: safeIndexRange(binding.options.wrappedValue)) {
 								Text("\(binding.stepIndex.wrappedValue ?? 0)")
 							}
+							
+//							let skLabels = binding.options.wrappedValue ?? []
+//							Picker("Value", selection: Binding(
+//								get: { binding.stepIndex.wrappedValue ?? 0 },
+//								set: { binding.stepIndex.wrappedValue = $0 }
+//							)) {
+//								ForEach(skLabels.indices, id: \.self) { i in
+//									Text(skLabels[i].isEmpty ? "#\(i)" : skLabels[i]).tag(i)
+//								}
+//							}
+//							.pickerStyle(.menu)
+							
+							let labels = binding.options.wrappedValue ?? []
+							Text("Current: \((labels.indices.contains(binding.stepIndex.wrappedValue ?? -1) ? labels[binding.stepIndex.wrappedValue ?? 0] : "#\(binding.stepIndex.wrappedValue ?? 0)"))")
+							.font(.caption)
+							.foregroundStyle(.secondary)
+
 						}
+						
 					}
 				}
 				
@@ -311,6 +430,21 @@ struct ControlInspector: View {
 							), in: safeIndexRange(binding.options.wrappedValue)) {
 								Text("\(binding.selectedIndex.wrappedValue ?? 0)")
 							}
+							
+							let msLabels = binding.options.wrappedValue ?? []
+//							Picker("Selected", selection: Binding(
+//								get: { binding.selectedIndex.wrappedValue ?? 0 },
+//								set: { binding.selectedIndex.wrappedValue = $0 }
+//							)) {
+//								ForEach(msLabels.indices, id: \.self) { i in
+//									Text(msLabels[i].isEmpty ? "#\(i)" : msLabels[i]).tag(i)
+//								}
+//							}
+//							.pickerStyle(.menu)
+							
+							Text("Current: \((msLabels.indices.contains(binding.selectedIndex.wrappedValue ?? -1) ? msLabels[binding.selectedIndex.wrappedValue ?? 0] : "#\(binding.selectedIndex.wrappedValue ?? 0)"))")
+							.font(.caption)
+							.foregroundStyle(.secondary)
 						}
 					}
 				}
@@ -332,6 +466,13 @@ struct ControlInspector: View {
 						))
 						
 						HStack {
+							// small preview swatch
+							RoundedRectangle(cornerRadius: 4)
+								.fill((binding.onColor.wrappedValue ?? CodableColor(.green)).color)
+								.overlay(RoundedRectangle(cornerRadius: 4).stroke(.separator, lineWidth: 1))
+								.frame(width: 22, height: 14)
+								.accessibilityHidden(true)
+							
 							Text("On Color").frame(minWidth: 60, alignment: .leading)
 							CompactColorEditor(color: Binding(
 								get: { binding.onColor.wrappedValue ?? CodableColor(.green) },
@@ -339,13 +480,48 @@ struct ControlInspector: View {
 							))
 						}
 						HStack {
+							// small preview swatch
+							RoundedRectangle(cornerRadius: 4)
+								.fill((binding.offColor.wrappedValue ?? CodableColor(.green)).color)
+								.overlay(RoundedRectangle(cornerRadius: 4).stroke(.separator, lineWidth: 1))
+								.frame(width: 22, height: 14)
+								.accessibilityHidden(true)
+							
 							Text("Off Color").frame(minWidth: 60, alignment: .leading)
 							CompactColorEditor(color: Binding(
-								get: { binding.offColor.wrappedValue ?? CodableColor(.gray) },
+								get: { binding.offColor.wrappedValue ?? CodableColor(.green) },
 								set: { binding.offColor.wrappedValue = $0 }
 							))
 						}
+						// Link this light to another control
+						Picker("Follow Control", selection: Binding(
+							get: { binding.linkTarget.wrappedValue ?? UUID?.none as UUID? },
+							set: { binding.linkTarget.wrappedValue = $0 }
+						)) {
+							Text("None").tag(UUID?.none as UUID?)
+							ForEach(editableDevice.device.controls.filter { $0.id != binding.wrappedValue.id }) { c in
+								Text(c.name.isEmpty ? c.type.displayName : c.name)
+									.tag(Optional.some(c.id))
+							}
+						}
+						.labelsHidden()
+						.pickerStyle(.menu)
 						
+						// Optional: only for multi-switch sources, choose which position turns the light on
+						if let target = editableDevice.device.controls.first(where: { $0.id == binding.linkTarget.wrappedValue }),
+						   target.type == .multiSwitch {
+							Picker("On when option", selection: Binding(
+								get: { binding.linkOnIndex.wrappedValue ?? 0 },
+								set: { binding.linkOnIndex.wrappedValue = $0 }
+							)) {
+								let labels = target.options ?? []
+								ForEach(labels.indices, id: \.self) { i in
+									Text(labels[i].isEmpty ? "#\(i)" : labels[i]).tag(i)
+								}
+							}
+							.pickerStyle(.menu)
+						}
+
 						Toggle("Invert Link", isOn: Binding(
 							get: { binding.linkInverted.wrappedValue ?? false },
 							set: { binding.linkInverted.wrappedValue = $0 }
@@ -375,51 +551,77 @@ struct ControlInspector: View {
 						
 						HStack {
 							Text("Outer Range").frame(minWidth: 60, alignment: .leading)
-							NumberField(value: Binding(
-								get: { binding.outerMin.wrappedValue?.resolve(default: 0) ?? 0 },
-								set: { binding.outerMin.wrappedValue = .finite($0) }
-							))
+							BoundField(bound: binding.outerMin,
+									   title: "Min", defaultFinite: 0)
 							Text("…")
-							NumberField(value: Binding(
-								get: { binding.outerMax.wrappedValue?.resolve(default: 1) ?? 1 },
-								set: { binding.outerMax.wrappedValue = .finite($0) }
-							))
+							BoundField(bound: binding.outerMax,
+									   title: "Max", defaultFinite: 1)
 						}
+						.onChange(of: binding.outerMin.wrappedValue) { _, _ in clampOuter(binding) }
+						.onChange(of: binding.outerMax.wrappedValue) { _, _ in clampOuter(binding) }
 						
 						HStack {
 							Text("Inner Range").frame(minWidth: 60, alignment: .leading)
-							NumberField(value: Binding(
-								get: { binding.innerMin.wrappedValue?.resolve(default: 0) ?? 0 },
-								set: { binding.innerMin.wrappedValue = .finite($0) }
-							))
+							BoundField(bound: binding.innerMin,
+									   title: "Min", defaultFinite: 0)
 							Text("…")
-							NumberField(value: Binding(
-								get: { binding.innerMax.wrappedValue?.resolve(default: 1) ?? 1 },
-								set: { binding.innerMax.wrappedValue = .finite($0) }
-							))
+							BoundField(bound: binding.innerMax,
+									   title: "Max", defaultFinite: 1)
+						}
+						.onChange(of: binding.innerMin.wrappedValue) { _, _ in clampInner(binding) }
+						.onChange(of: binding.innerMax.wrappedValue) { _, _ in clampInner(binding) }
+						
+						// OUTER value editor
+						do {
+							let lo = binding.outerMin.wrappedValue?.resolve(default: 0) ?? 0
+							let hi = binding.outerMax.wrappedValue?.resolve(default: 1) ?? 1
+							let hasInf = isInfinite(binding.outerMin.wrappedValue) || isInfinite(binding.outerMax.wrappedValue)
+							if hasInf || hi <= lo {
+								HStack {
+									Text("Outer").frame(width: 80, alignment: .leading)
+									NumberField(value: Binding(
+										get: { binding.outerValue.wrappedValue ?? lo },
+										set: { binding.outerValue.wrappedValue = $0 }
+									))
+								}
+							} else {
+								VSliderRow(
+									title: "Outer",
+									value: Binding(
+										get: { binding.outerValue.wrappedValue ?? lo },
+										set: { v in binding.outerValue.wrappedValue = min(max(v, lo), hi) }
+									),
+									range: lo...hi,
+									step: (hi - lo) / 100
+								)
+							}
 						}
 						
-						VSliderRow(
-							title: "Outer",
-							value: Binding(
-								get: { binding.outerValue.wrappedValue ?? 0 },
-								set: { binding.outerValue.wrappedValue = $0 }
-							),
-							range: (binding.outerMin.wrappedValue?.resolve(default: 0) ?? 0)
-							... (binding.outerMax.wrappedValue?.resolve(default: 1) ?? 1),
-							step: 0.01
-						)
-						
-						VSliderRow(
-							title: "Inner",
-							value: Binding(
-								get: { binding.innerValue.wrappedValue ?? 0 },
-								set: { binding.innerValue.wrappedValue = $0 }
-							),
-							range: (binding.innerMin.wrappedValue?.resolve(default: 0) ?? 0)
-							... (binding.innerMax.wrappedValue?.resolve(default: 1) ?? 1),
-							step: 0.01
-						)
+						// INNER value editor
+						do {
+							let lo = binding.innerMin.wrappedValue?.resolve(default: 0) ?? 0
+							let hi = binding.innerMax.wrappedValue?.resolve(default: 1) ?? 1
+							let hasInf = isInfinite(binding.innerMin.wrappedValue) || isInfinite(binding.innerMax.wrappedValue)
+							if hasInf || hi <= lo {
+								HStack {
+									Text("Inner").frame(width: 80, alignment: .leading)
+									NumberField(value: Binding(
+										get: { binding.innerValue.wrappedValue ?? lo },
+										set: { binding.innerValue.wrappedValue = $0 }
+									))
+								}
+							} else {
+								VSliderRow(
+									title: "Inner",
+									value: Binding(
+										get: { binding.innerValue.wrappedValue ?? lo },
+										set: { v in binding.innerValue.wrappedValue = min(max(v, lo), hi) }
+									),
+									range: lo...hi,
+									step: (hi - lo) / 100
+								)
+							}
+						}
 					}
 				}
 				
@@ -436,29 +638,74 @@ struct ControlInspector: View {
 						))
 						
 						HStack {
-							Text("Lamp On").frame(minWidth: 60, alignment: .leading)
+							// small preview swatch
+							RoundedRectangle(cornerRadius: 4)
+								.fill((binding.lampOnColor.wrappedValue ?? CodableColor(.green)).color)
+								.overlay(RoundedRectangle(cornerRadius: 4).stroke(.separator, lineWidth: 1))
+								.frame(width: 22, height: 14)
+								.accessibilityHidden(true)
+							
+							Text("On Color").frame(minWidth: 60, alignment: .leading)
 							CompactColorEditor(color: Binding(
 								get: { binding.lampOnColor.wrappedValue ?? CodableColor(.green) },
 								set: { binding.lampOnColor.wrappedValue = $0 }
 							))
 						}
 						HStack {
-							Text("Lamp Off").frame(minWidth: 60, alignment: .leading)
+							// small preview swatch
+							RoundedRectangle(cornerRadius: 4)
+								.fill((binding.lampOffColor.wrappedValue ?? CodableColor(.green)).color)
+								.overlay(RoundedRectangle(cornerRadius: 4).stroke(.separator, lineWidth: 1))
+								.frame(width: 22, height: 14)
+								.accessibilityHidden(true)
+							
+							Text("Off Color").frame(minWidth: 60, alignment: .leading)
 							CompactColorEditor(color: Binding(
-								get: { binding.lampOffColor.wrappedValue ?? CodableColor(.gray) },
+								get: { binding.lampOffColor.wrappedValue ?? CodableColor(.green) },
 								set: { binding.lampOffColor.wrappedValue = $0 }
 							))
 						}
+						// Link this light to another control
+						Picker("Follow Control", selection: Binding(
+							get: { binding.linkTarget.wrappedValue ?? UUID?.none as UUID? },
+							set: { binding.linkTarget.wrappedValue = $0 }
+						)) {
+							Text("None").tag(UUID?.none as UUID?)
+							ForEach(editableDevice.device.controls.filter { $0.id != binding.wrappedValue.id }) { c in
+								Text(c.name.isEmpty ? c.type.displayName : c.name)
+									.tag(Optional.some(c.id))
+							}
+						}
+						.labelsHidden()
+						.pickerStyle(.menu)
+						
+						// Optional: only for multi-switch sources, choose which position turns the light on
+						if let target = editableDevice.device.controls.first(where: { $0.id == binding.linkTarget.wrappedValue }),
+						   target.type == .multiSwitch {
+							Picker("On when option", selection: Binding(
+								get: { binding.linkOnIndex.wrappedValue ?? 0 },
+								set: { binding.linkOnIndex.wrappedValue = $0 }
+							)) {
+								let labels = target.options ?? []
+								ForEach(labels.indices, id: \.self) { i in
+									Text(labels[i].isEmpty ? "#\(i)" : labels[i]).tag(i)
+								}
+							}
+							.pickerStyle(.menu)
+						}
+
 					}
 				}
 		}
 	}
+	
 }
 
 // MARK: - Mapping editor
 
 private struct MappingEditor: View {
 	@Binding var control: Control
+	@Binding var activeRegionIndex: Int
 	
 	private enum Kind: String, CaseIterable, Identifiable {
 		case none = "None"
@@ -471,151 +718,230 @@ private struct MappingEditor: View {
 		var id: String { rawValue }
 	}
 	
-	// Two-way binding to the persisted mapping kind
+	private var hasRegions: Bool { !(control.regions.isEmpty) }
+	
+	private var regionIndexSafe: Int {
+		min(max(activeRegionIndex, 0), max(0, control.regions.count - 1))
+	}
+	
+	private var regionBinding: Binding<ImageRegion> {
+		Binding<ImageRegion>(
+			get: {
+				if control.regions.indices.contains(regionIndexSafe) {
+					return control.regions[regionIndexSafe]
+				} else {
+					// create a default region if missing
+					let s: CGFloat = 0.10
+					var r = CGRect(x: max(0, control.x - s*0.5),
+								   y: max(0, control.y - s*0.5),
+								   width: s, height: s)
+					r.origin.x = min(r.origin.x, 1 - r.size.width)
+					r.origin.y = min(r.origin.y, 1 - r.size.height)
+					let new = ImageRegion(rect: r, mapping: nil, shape: .rect)
+					var c = control; if c.regions.isEmpty { c.regions = [new] } else { c.regions.append(new) }
+					control = c
+					return control.regions[regionIndexSafe]
+				}
+			},
+			set: { new in
+				var c = control
+				if c.regions.indices.contains(regionIndexSafe) { c.regions[regionIndexSafe] = new }
+				control = c
+			}
+		)
+	}
+	
+	// Two-way binding to the *selected region’s* mapping kind
 	private var kindBinding: Binding<Kind> {
 		Binding(
 			get: {
-				guard let m = control.region?.mapping else { return .none }
+				let m = regionBinding.wrappedValue.mapping
+				guard let m else { return .none }
 				switch m.kind {
 					case .rotate:     return .rotate
 					case .brightness: return .brightness
 					case .opacity:    return .opacity
 					case .translate:  return .translate
 					case .flip3D:     return .flip3D
-					case .sprite:	  return .sprite
+					case .sprite:     return .sprite
 				}
 			},
 			set: { new in
-				ensureRegion()
-				let current = control.region?.mapping?.kind
-				// Only create a default mapping if the kind actually changed
+				var region = regionBinding.wrappedValue
+				let current = region.mapping?.kind
 				switch new {
 					case .none:
-						control.region?.mapping = nil
+						region.mapping = nil
+						
 					case .rotate:
 						if current != .rotate {
-							control.region?.mapping = .rotate(
-								min: -135, max: 135, pivot: CGPoint(x: 0.5, y: 0.5),
-								taper: (control.knobMin == .negInfinity ? .decibel : .linear)
+							region.mapping = .rotate(
+								min: -135, max: 135,
+								pivot: CGPoint(x: 0.5, y: 0.5),
+								taper: .linear
 							)
 						}
+						
 					case .brightness:
 						if current != .brightness {
-							control.region?.mapping = .brightness(RangeD(lower: 0.0, upper: 0.7))
+							region.mapping = .brightness(RangeD(lower: 0.0, upper: 0.7))
 						}
+						
 					case .opacity:
 						if current != .opacity {
-							control.region?.mapping = .opacity(RangeD(lower: 0.25, upper: 1.0))
+							region.mapping = .opacity(RangeD(lower: 0.25, upper: 1.0))
 						}
+						
 					case .translate:
-						ensureRegion()
-						// sensible default: small horizontal travel
-						control.region?.mapping = .translate(from: CGPoint(x: -0.15, y: 0),
-															 to:   CGPoint(x:  0.15, y: 0))
+						region.mapping = .translate(from: CGPoint(x: -0.15, y: 0),
+													to:   CGPoint(x:  0.15, y: 0))
+						
 					case .flip3D:
-						ensureRegion()
-						control.region?.mapping = .flip3D()  // defaults: axis .x, pivot at bottom-center
+						region.mapping = .flip3D()
+						
 					case .sprite:
-						ensureRegion()
 						if current != .sprite {
-							// Sensible defaults:
-							// - 2×1 grid (typical 2-position switch)
-							// - region pivot near the hinge
-							// - sprite pivot near the bottom of the lever
 							var m = VisualMapping.sprite(
-								atlasPNG: nil,                 // user will choose an image in the editor
+								atlasPNG: nil,
 								cols: (control.type == .multiSwitch || control.type == .button) ? 2 : 1,
 								rows: 1,
-								pivot: CGPoint(x: 0.5, y: 0.88),          // region (crop) pivot
-								spritePivot: CGPoint(x: 0.5, y: 0.92),    // pivot inside a sprite frame
+								pivot: CGPoint(x: 0.5, y: 0.88),
+								spritePivot: CGPoint(x: 0.5, y: 0.92),
 								scale: 1.0
 							)
-							// Optional: if it's a multiswitch and you want an explicit map,
-							// prefill indices 0..N-1 (renderer also works when this is nil).
 							if let n = control.options?.count, n > 0 {
 								m.spriteIndices = Array(0..<n)
 							}
-							control.region?.mapping = m
+							region.mapping = m
 						}
-
 				}
+				regionBinding.wrappedValue = region
 			}
 		)
 	}
 	
 	var body: some View {
 		VStack(alignment: .leading, spacing: 10) {
-			HStack {
-				Text("Kind").frame(width: 80, alignment: .leading)
-				Picker("", selection: kindBinding) {
-					ForEach(Kind.allCases) { k in Text(k.rawValue).tag(k) }
-				}
-				.labelsHidden()
-			}
-			
-			if let m = control.region?.mapping {
-				switch m.kind {
-					case .rotate:
-						RotateEditor(mapping: Binding(
-							get: { control.region!.mapping! },
-							set: { control.region!.mapping = $0 }
-						))
-					case .brightness, .opacity:
-						ScalarEditor(mapping: Binding(
-							get: { control.region!.mapping! },
-							set: { control.region!.mapping = $0 }
-						))
-					case .translate:
-						TranslateEditor(mapping: Binding(
-							get: { control.region!.mapping! },
-							set: { control.region!.mapping = $0 }
-						))
-					case .flip3D:
-						FlipEditor(mapping: Binding(
-							get: { control.region!.mapping! },
-							set: { control.region!.mapping = $0 }
-						), control: $control)
-					case .sprite:
-						SpriteEditor(mapping: Binding(
-							get: { control.region!.mapping! },
-							set: { control.region!.mapping = $0 }
-						), control: $control)
+			if !hasRegions {
+				Text("Create a region first, then choose a mapping.")
+					.font(.caption)
+					.foregroundStyle(.secondary)
+			} else {
+				HStack {
+					Text("Kind").frame(width: 80, alignment: .leading)
+					Picker("", selection: kindBinding) {
+						ForEach(Kind.allCases) { k in Text(k.rawValue).tag(k) }
+					}
+					.labelsHidden()
 				}
 				
-				HStack {
-					Button("Preset: Knob (Rotate)") {
-						kindBinding.wrappedValue = .rotate
+				if let m = regionBinding.wrappedValue.mapping {
+					switch m.kind {
+						case .rotate:
+							VStack(alignment: .leading, spacing: 8) {
+								// keep the sub-editor for Taper / Min° / Max° / Pivot
+								RotateEditor(mapping: Binding(
+									get: { regionBinding.wrappedValue.mapping! },
+									set: { var r = regionBinding.wrappedValue; r.mapping = $0; regionBinding.wrappedValue = r }
+								))
+								
+								Divider().padding(.vertical, 4)
+								
+								// NEW: Preview buttons (we are in MappingEditor so we have `control` and `activeRegionIndex`)
+								HStack(spacing: 8) {
+									Text("Preview").frame(width: 80, alignment: .leading)
+									
+									Button("Min") {
+										if control.type == .concentricKnob {
+											if regionIndexSafe == 0 {
+												let lo = control.outerMin?.resolve(default: 0) ?? 0
+												control.outerValue = lo
+											} else {
+												let lo = control.innerMin?.resolve(default: 0) ?? 0
+												control.innerValue = lo
+											}
+										} else { // regular knob
+											let lo = control.knobMin?.resolve(default: 0) ?? 0
+											control.value = lo
+										}
+									}
+									
+									Button("Max") {
+										if control.type == .concentricKnob {
+											if regionIndexSafe == 0 {
+												let hi = control.outerMax?.resolve(default: 1) ?? 1
+												control.outerValue = hi
+											} else {
+												let hi = control.innerMax?.resolve(default: 1) ?? 1
+												control.innerValue = hi
+											}
+										} else {
+											let hi = control.knobMax?.resolve(default: 1) ?? 1
+											control.value = hi
+										}
+									}
+									
+									Button("Center") {
+										if control.type == .concentricKnob {
+											if regionIndexSafe == 0 {
+												let lo = control.outerMin?.resolve(default: 0) ?? 0
+												let hi = control.outerMax?.resolve(default: 1) ?? 1
+												control.outerValue = (lo + hi) / 2
+											} else {
+												let lo = control.innerMin?.resolve(default: 0) ?? 0
+												let hi = control.innerMax?.resolve(default: 1) ?? 1
+												control.innerValue = (lo + hi) / 2
+											}
+										} else {
+											let lo = control.knobMin?.resolve(default: 0) ?? 0
+											let hi = control.knobMax?.resolve(default: 1) ?? 1
+											control.value = (lo + hi) / 2
+										}
+									}
+								}
+								.buttonStyle(.bordered)
+							}
+						case .brightness, .opacity:
+							ScalarEditor(mapping: Binding(
+								get: { regionBinding.wrappedValue.mapping! },
+								set: { var r = regionBinding.wrappedValue; r.mapping = $0; regionBinding.wrappedValue = r }
+							))
+						case .translate:
+							TranslateEditor(mapping: Binding(
+								get: { regionBinding.wrappedValue.mapping! },
+								set: { var r = regionBinding.wrappedValue; r.mapping = $0; regionBinding.wrappedValue = r }
+							))
+						case .flip3D:
+							FlipEditor(mapping: Binding(
+								get: { regionBinding.wrappedValue.mapping! },
+								set: { var r = regionBinding.wrappedValue; r.mapping = $0; regionBinding.wrappedValue = r }
+							), control: $control)
+						case .sprite:
+							SpriteEditor(mapping: Binding(
+								get: { regionBinding.wrappedValue.mapping! },
+								set: { var r = regionBinding.wrappedValue; r.mapping = $0; regionBinding.wrappedValue = r }
+							), control: $control)
 					}
-					Button("Preset: Lamp (Opacity)") {
-						kindBinding.wrappedValue = .opacity
+					
+					HStack {
+						Button("Preset: Knob (Rotate)") { kindBinding.wrappedValue = .rotate }
+						Button("Preset: Lamp (Opacity)") { kindBinding.wrappedValue = .opacity }
+						Button("Preset: Flip Toggle (3D)") { kindBinding.wrappedValue = .flip3D }
 					}
-					Button("Preset: Flip Toggle (3D)") {
-						kindBinding.wrappedValue = .flip3D
-					}
+					.buttonStyle(.bordered)
 				}
-				.buttonStyle(.bordered)
 			}
 		}
 		.onAppear { migrateIfNeeded() }
 		.onChange(of: control.id) { _, _ in migrateIfNeeded() }
 	}
 	
-	private func ensureRegion() {
-		if control.region == nil {
-			var r = CGRect(x: max(0, control.x - 0.05),
-						   y: max(0, control.y - 0.05),
-						   width: 0.10, height: 0.10)
-			r.origin.x = min(r.origin.x, 1 - r.size.width)
-			r.origin.y = min(r.origin.y, 1 - r.size.height)
-			control.region = ImageRegion(rect: r, mapping: nil)
-		}
-	}
-	
+	// Migrate any embedded sprites in the *selected* region
 	private func migrateIfNeeded() {
-		if var m = control.region?.mapping,
+		if var m = regionBinding.wrappedValue.mapping,
 		   (m.spriteAtlasPNG != nil) || ((m.spriteFrames?.isEmpty == false)) {
 			SpriteLibrary.shared.migrateEmbeddedSprites(in: &m, suggestedName: control.name)
-			control.region?.mapping = m
+			var r = regionBinding.wrappedValue; r.mapping = m; regionBinding.wrappedValue = r
 		}
 	}
 }
@@ -624,6 +950,25 @@ private func safeIndexRange(_ options: [String]?) -> ClosedRange<Int> {
 	let n = max(1, options?.count ?? 0)   // empty → 1 so range becomes 0...0
 	return 0...(n - 1)
 }
+
+private func concentricPairIndices(_ c: Control) -> (outer: Int, inner: Int)? {
+	guard c.type == .concentricKnob, c.regions.count >= 2 else { return nil }
+	// Pick the two largest regions and call the larger one “outer”
+	let sorted = c.regions.enumerated()
+		.sorted { ($0.element.rect.width * $0.element.rect.height) >
+			($1.element.rect.width * $1.element.rect.height) }
+	let first = sorted[0].offset
+	let second = sorted[1].offset
+	// outer = bigger, inner = the other of the first two
+	return (outer: first, inner: second)
+}
+
+private let angleFormatter: NumberFormatter = {
+	let f = NumberFormatter()
+	f.numberStyle = .decimal
+	f.maximumFractionDigits = 2
+	return f
+}()
 
 private extension Array {
 	subscript(safe i: Index) -> Element? { indices.contains(i) ? self[i] : nil }
@@ -664,6 +1009,7 @@ private struct RotateEditor: View {
 					set: { mapping.degMax = $0 }
 				))
 			}
+
 			HStack {
 				Text("Pivot X").frame(width: 80, alignment: .leading)
 				NumberField(value: Binding(
@@ -1225,14 +1571,14 @@ private struct CompactColorEditor: View {
 						.strokeBorder(.white, lineWidth: 2).opacity(0.8)
 						.frame(height: 2)
 						.position(x: geo.size.width/2,
-								  y: CGFloat(1 - h) * H)
+								  y: CGFloat(h) * H)
 						.allowsHitTesting(false)
 				}
 				.contentShape(Rectangle())
 				.gesture(
 					DragGesture(minimumDistance: 0).onChanged { g in
 						let y = max(0, min(H, g.location.y))
-						h = H == 0 ? 0 : 1 - Double(y / H)
+						h = H == 0 ? 0 : Double(y / H)
 						pushToBinding()
 					}
 				)
@@ -1317,5 +1663,51 @@ private struct ColorSwatch: View {
 				.overlay(RoundedRectangle(cornerRadius: 6).stroke(.separator, lineWidth: 1))
 		}
 		.frame(width: 40, height: 40)
+	}
+}
+
+// Lets the user choose Finite/−∞/+∞; shows a number field when "Finite" is selected.
+private struct BoundField: View {
+	@Binding var bound: Bound?
+	var title: String
+	var defaultFinite: Double
+	
+	private var currentFinite: Double {
+		bound?.resolve(default: defaultFinite) ?? defaultFinite
+	}
+	
+	private var isInfinite: Bool {
+		switch bound ?? .finite(defaultFinite) {
+			case .negInfinity, .posInfinity: return true
+			case .finite: return false
+		}
+	}
+	
+	var body: some View {
+		HStack(spacing: 6) {
+			Menu(title) {
+				Button("Finite") { bound = .finite(currentFinite) }
+				Button("−∞")     { bound = .negInfinity }
+				Button("+∞")     { bound = .posInfinity }
+			}
+			.menuStyle(.borderlessButton)
+			
+			NumberField(
+				value: Binding(
+					get: { currentFinite },
+					set: { bound = .finite($0) }
+				)
+			)
+			.disabled(isInfinite)
+			.opacity(isInfinite ? 0.5 : 1)
+		}
+	}
+}
+
+private func isInfinite(_ b: Bound?) -> Bool {
+	switch b {
+		case .negInfinity?: return true
+		case .posInfinity?: return true
+		default:            return false
 	}
 }

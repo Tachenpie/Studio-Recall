@@ -18,6 +18,8 @@ struct Studio_RecallApp: App {
     @State private var showingNewSession = false
     @State private var showingAddRack = false
     @State private var showingAddChassis = false
+	@State private var showingReviewChanges = false
+	@State private var showingSaveOptions = false
     
     #if os(macOS)
     @Environment(\.openWindow) private var openWindow
@@ -39,14 +41,18 @@ struct Studio_RecallApp: App {
                 RootView(
                     showingNewSession: $showingNewSession,
                     showingAddRack: $showingAddRack,
-                    showingAddChassis: $showingAddChassis
+                    showingAddChassis: $showingAddChassis,
+					showingReviewChanges: $showingReviewChanges,
+					showingSaveOptions: $showingSaveOptions
                 )
                 #else
                 RootView(
                     showingNewSession: $showingNewSession,
                     showingAddRack: $showingAddRack,
                     showingAddChassis: $showingAddChassis,
-                    showingLibraryEditor: $showingLibraryEditor
+                    showingLibraryEditor: $showingLibraryEditor,
+					showingReviewChanges: $showingReviewChanges,
+					showingSaveOptions: $showingSaveOptions
                 )
                 #endif
             }
@@ -54,13 +60,15 @@ struct Studio_RecallApp: App {
             .environmentObject(sessionManager)
             .environmentObject(library)
         }
-        .commands {
-            SessionCommands(
-                sessionManager: sessionManager,
-                showingNewSession: $showingNewSession,
-                showingAddRack: $showingAddRack,
-                showingAddChassis: $showingAddChassis
-            )
+		.commands {
+			SessionCommands(
+				sessionManager: sessionManager,
+				showingNewSession: $showingNewSession,
+				showingAddRack: $showingAddRack,
+				showingAddChassis: $showingAddChassis,
+				showingReviewChanges: $showingReviewChanges,
+				showingSaveOptions: $showingSaveOptions
+			)
             
             CommandMenu("Library") {
                     #if os(macOS)
@@ -124,6 +132,8 @@ struct RootView: View {
     @Binding var showingNewSession: Bool
     @Binding var showingAddRack: Bool
     @Binding var showingAddChassis: Bool
+	@Binding var showingReviewChanges: Bool
+	@Binding var showingSaveOptions: Bool
     
     #if !os(macOS)
     @Binding var showingLibraryEditor: Bool
@@ -148,5 +158,24 @@ struct RootView: View {
                     .environmentObject(library)
             }
             #endif
+			.sheet(isPresented: $showingReviewChanges) {
+				DiffReviewSheet().environmentObject(sessionManager)
+			}
+			.confirmationDialog("Save Session",
+								isPresented: $showingSaveOptions,
+								titleVisibility: .visible) {
+				Button("Save", role: .none) {
+					sessionManager.saveAll()    // persists sessions.json
+				}
+#if os(macOS)
+				Button("Save As…") {
+					sessionManager.saveCurrentSessionAs()
+				}
+				Button("Save As Template…") {
+					sessionManager.saveCurrentSessionAsTemplate()
+				}
+#endif
+				Button("Cancel", role: .cancel) { }
+			}
     }
 }

@@ -1,3 +1,11 @@
+//
+//  InstanceDiff.swift
+//  Studio Recall
+//
+//  Created by True Jackie on 9/10/25.
+//
+import Foundation
+
 struct InstanceDiff {
     let instanceID: UUID
     let deviceName: String
