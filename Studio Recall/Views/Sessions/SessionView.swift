@@ -46,35 +46,53 @@ struct SessionView: View {
 #endif
 					
 					GeometryReader { geo in
-						ZStack {
-							// Racks
-							ForEach(session.racks.indices, id: \.self) { idx in
-								RackChassisView(rack: session.racks[idx])
-									.position(session.racks[idx].position.wrappedValue)
-									.gesture(dragGesture(forRackAt: idx, in: sessionIndex))
+						if let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) {
+							// 1) Precompute rects & positions ONCE
+							let session = $sessionManager.sessions[i]
+							let unitRow = DeviceMetrics.rackSize(units: 1, scale: settings.pointsPerInch)
+							let unitMod = DeviceMetrics.moduleSize(units: 1, scale: settings.pointsPerInch)
+							let topBarH: CGFloat = 24
+							
+							let rackRects: [CGRect] = session.wrappedValue.racks.map { r in
+								let rows = r.slots.count
+								let h = CGFloat(rows) * unitRow.height
+								+ CGFloat(max(0, rows - 1)) * 4   // row spacing
+								+ 32                               // face padding (16 per side)
+								+ topBarH                          // tabletop above
+								let w = unitRow.width + 32
+								return CGRect(x: r.position.x - w/2, y: r.position.y - h/2, width: w, height: h)
 							}
 							
-							// 500 Series Chassis
-							ForEach(session.series500Chassis.indices, id: \.self) { idx in
-								Series500ChassisView(chassis: session.series500Chassis[idx])
-									.position(session.series500Chassis[idx].position.wrappedValue)
-									.gesture(dragGesture(forChassisAt: idx, in: sessionIndex))
+							let chassisRects: [CGRect] = session.wrappedValue.series500Chassis.map { c in
+								let slots = c.slots.count
+								let w = CGFloat(slots) * unitMod.width + CGFloat(max(0, slots - 1)) * 4
+								let h = unitMod.height + 8              // existing vertical padding on face
+								+ topBarH                         // tabletop above
+								return CGRect(x: c.position.x - w/2, y: c.position.y - h/2, width: w, height: h)
 							}
-						}
-						.scaleEffect(CGFloat(session.canvasZoom.wrappedValue))
-						.offset(CGSize(width: session.canvasPan.wrappedValue.x,
-									   height: session.canvasPan.wrappedValue.y))
-						Group {
-							if showMinimap, !(session.wrappedValue.racks.isEmpty && session.wrappedValue.series500Chassis.isEmpty) {
-								MinimapOverlay(
-									rackPositions: session.wrappedValue.racks.map(\.position),
-									chassisPositions: session.wrappedValue.series500Chassis.map(\.position),
-									zoom: session.canvasZoom,
-									pan: session.canvasPan,
-									canvasSize: geo.size
-								)
-								.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-								.allowsHitTesting(true)
+							let rackPositions   = session.wrappedValue.racks.map(\.position)
+							let chassisPositions = session.wrappedValue.series500Chassis.map(\.position)
+							
+							SessionCanvasLayer(session: session, canvasSize: geo.size)
+								.environment(\.canvasZoom, CGFloat(session.wrappedValue.canvasZoom))
+								.scaleEffect(session.wrappedValue.canvasZoom, anchor: .topLeading)
+								.offset(x: session.wrappedValue.canvasPan.x, y: session.wrappedValue.canvasPan.y)
+							
+							// 3) Minimap stays separate and short
+							Group {
+								if showMinimap, !(rackRects.isEmpty && chassisRects.isEmpty) {
+									MinimapOverlay(
+										rackRects: rackRects,
+										chassisRects: chassisRects,
+										rackPositions: rackPositions,
+										chassisPositions: chassisPositions,
+										zoom: session.canvasZoom,
+										pan: session.canvasPan,
+										canvasSize: geo.size
+									)
+									.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+									.allowsHitTesting(true)
+								}
 							}
 						}
 					}
@@ -125,7 +143,7 @@ struct SessionView: View {
 								set: { newZoom in
 									guard let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) else { return }
 									let oldZoom = sessionManager.sessions[i].canvasZoom
-									let clamped = min(max(newZoom, 0.6), 3.0)
+									let clamped = min(max(newZoom, 0.5), 4.0)
 									
 									// keep center stable
 									if let window = NSApp.keyWindow {
@@ -144,7 +162,7 @@ struct SessionView: View {
 									sessionManager.sessions[i].canvasZoom = clamped
 								}
 							),
-							in: 0.6...3.0
+							in: 0.5...4.0
 						)
 						.frame(width: 140)
 						Image(systemName: "plus.magnifyingglass")
@@ -190,7 +208,7 @@ struct SessionView: View {
 			                // incremental magnification
 			                let delta = value / lastMagnification
 						session.wrappedValue.canvasZoom = clamp(
-							session.wrappedValue.canvasZoom * delta, 0.6, 3.0
+							session.wrappedValue.canvasZoom * delta, 0.5, 4.0
 						)
 			                lastMagnification = value
 			            }
@@ -217,96 +235,51 @@ struct SessionView: View {
 	    private func clamp(_ v: Double, _ lo: Double, _ hi: Double) -> Double {
 		        min(max(v, lo), hi)
 		    }
-	
-	private func dragGesture(forRackAt idx: Int, in sessionIndex: Int) -> some Gesture {
-		DragGesture(minimumDistance: 1)
-			.onChanged { value in
-				let z = sessionManager.sessions[sessionIndex].canvasZoom
-				let id = sessionManager.sessions[sessionIndex].racks[idx].id
-				if rackDragStart[id] == nil {
-					rackDragStart[id] = sessionManager.sessions[sessionIndex].racks[idx].position
-				}
-				let start = rackDragStart[id]!
-				sessionManager.sessions[sessionIndex].racks[idx].position = CGPoint(
-					x: start.x + value.translation.width  / z,
-					y: start.y + value.translation.height / z
-				)
-			}
-			.onEnded { _ in
-				let id = sessionManager.sessions[sessionIndex].racks[idx].id
-				rackDragStart[id] = nil
-				sessionManager.saveSessions()
-			}
-	}
-	
-	private func dragGesture(forChassisAt idx: Int, in sessionIndex: Int) -> some Gesture {
-		DragGesture(minimumDistance: 1)
-			.onChanged { value in
-				let z = sessionManager.sessions[sessionIndex].canvasZoom
-				let id = sessionManager.sessions[sessionIndex].series500Chassis[idx].id
-				if chassisDragStart[id] == nil {
-					chassisDragStart[id] = sessionManager.sessions[sessionIndex].series500Chassis[idx].position
-				}
-				let start = chassisDragStart[id]!
-				sessionManager.sessions[sessionIndex].series500Chassis[idx].position = CGPoint(
-					x: start.x + value.translation.width  / z,
-					y: start.y + value.translation.height / z
-				)
-			}
-			.onEnded { _ in
-				let id = sessionManager.sessions[sessionIndex].series500Chassis[idx].id
-				chassisDragStart[id] = nil
-				sessionManager.saveSessions()
-			}
-	}
 }
 
 // MARK: - Mini-map
 private struct MinimapOverlay: View {
-	// World elements (positions are in the same space you pass to .position(_:))
+	// NEW: world-space bounds for each element
+	let rackRects: [CGRect]
+	let chassisRects: [CGRect]
+	let topBarHeight: CGFloat = 24
+	
+	// (keep these so we can still show dots)
 	let rackPositions: [CGPoint]
 	let chassisPositions: [CGPoint]
+	
 	@Binding var zoom: Double
 	@Binding var pan: CGPoint
-	
-	// Size of the visible canvas (pixels) – used to compute viewport box
 	let canvasSize: CGSize
 	
 	private let mapSize = CGSize(width: 180, height: 120)
 	private let padding: CGFloat = 8
 	
 	var body: some View {
-		// Derive world bounds from element positions (with padding)
-		let xs = (rackPositions + chassisPositions).map(\.x)
-		let ys = (rackPositions + chassisPositions).map(\.y)
-		var minX = (xs.min() ?? 0) - 80
-		var maxX = (xs.max() ?? 1000) + 80
-		var minY = (ys.min() ?? 0) - 80
-		var maxY = (ys.max() ?? 800) + 80
+		// Content bounds from REAL rectangles, not centers
+		let allRects = rackRects + chassisRects
+		// Safe default if something is empty (shouldn’t be, given your guard)
+		let contentRect = allRects.dropFirst().reduce(allRects.first ?? CGRect(x: 0, y: 0, width: 1000, height: 800)) { $0.union($1) }
 		
-		// Compute the current viewport (in world coords)
+		// Viewport in world coords
 		let viewW = canvasSize.width / zoom
 		let viewH = canvasSize.height / zoom
 		let viewOriginWorld = CGPoint(x: -pan.x / zoom, y: -pan.y / zoom)
 		let viewRectWorld = CGRect(origin: viewOriginWorld, size: CGSize(width: viewW, height: viewH))
 		
-		// IMPORTANT: include the viewport in bounds BEFORE computing worldW/H
-		minX = min(minX, viewRectWorld.minX)
-		maxX = max(maxX, viewRectWorld.maxX)
-		minY = min(minY, viewRectWorld.minY)
-		maxY = max(maxY, viewRectWorld.maxY)
-		
-		// Now compute final world span
-		let worldW = max(maxX - minX, 1)
-		let worldH = max(maxY - minY, 1)
+		// World rect: use content as the baseline; only grow if viewport extends past it
+		var worldRect = contentRect
+		if !worldRect.contains(viewRectWorld) {
+			worldRect = worldRect.union(viewRectWorld)
+		}
+		worldRect = worldRect.insetBy(dx: -8, dy: -8) // small buffer
 		
 		func mapPoint(_ p: CGPoint) -> CGPoint {
-			let nx = (p.x - minX) / worldW
-			let ny = (p.y - minY) / worldH
+			let nx = (p.x - worldRect.minX) / worldRect.width
+			let ny = (p.y - worldRect.minY) / worldRect.height
 			return CGPoint(x: nx * mapSize.width, y: ny * mapSize.height)
 		}
 		
-		// Map viewport rect to minimap coords
 		let tl = mapPoint(viewRectWorld.origin)
 		let br = mapPoint(CGPoint(x: viewRectWorld.maxX, y: viewRectWorld.maxY))
 		let viewRectMini = CGRect(x: min(tl.x, br.x),
@@ -315,54 +288,43 @@ private struct MinimapOverlay: View {
 								  height: abs(br.y - tl.y))
 		
 		return ZStack(alignment: .topLeading) {
-			// map background
+			// background
 			RoundedRectangle(cornerRadius: 10)
 				.fill(Color.black.opacity(0.55))
-				.overlay(
-					RoundedRectangle(cornerRadius: 10)
-						.stroke(Color.white.opacity(0.25), lineWidth: 1)
-				)
+				.overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.25), lineWidth: 1))
 				.frame(width: mapSize.width + 2*padding, height: mapSize.height + 2*padding)
 			
-			// world layer
+			// world layer (inside padding)
 			ZStack {
-				// elements
+				// dots
 				ForEach(Array(rackPositions.enumerated()), id: \.offset) { _, p in
-					let mp = mapPoint(p)
-					Circle().fill(Color.blue.opacity(0.9))
-						.frame(width: 5, height: 5)
-						.position(mp)
+					Circle().fill(Color.blue.opacity(0.9)).frame(width: 5, height: 5).position(mapPoint(p))
 				}
 				ForEach(Array(chassisPositions.enumerated()), id: \.offset) { _, p in
-					let mp = mapPoint(p)
-					Rectangle().fill(Color.green.opacity(0.9))
-						.frame(width: 6, height: 6)
-						.position(mp)
+					Rectangle().fill(Color.green.opacity(0.9)).frame(width: 5, height: 5).position(mapPoint(p))
 				}
-				
-				// viewport rectangle
-				RoundedRectangle(cornerRadius: 2)
-					.stroke(Color.yellow, lineWidth: 1)
-					.frame(width: viewRectMini.width, height: viewRectMini.height)
-					.position(x: viewRectMini.midX, y: viewRectMini.midY)
+				// viewport
+				Path { $0.addRect(viewRectMini) }
+					.stroke(Color.yellow.opacity(0.9), lineWidth: 2)
 			}
 			.frame(width: mapSize.width, height: mapSize.height)
+			.clipped()
 			.padding(padding)
 		}
-		// Click to center the canvas on that world point
+		// your existing drag-to-center mapping stays correct (it already uses worldRect)
 		.contentShape(Rectangle())
 		.gesture(
 			DragGesture(minimumDistance: 0)
-				.onEnded { value in
-					// Convert click point in minimap back to world point
-					let loc = value.location - CGPoint(x: padding, y: padding)
-					let nx = min(max(loc.x / mapSize.width, 0), 1)
-					let ny = min(max(loc.y / mapSize.height, 0), 1)
-					let worldX = minX + nx * worldW
-					let worldY = minY + ny * worldH
-					// Set pan so that clicked world point moves to canvas center
-					pan.x = canvasSize.width  / 2 - worldX * zoom
-					pan.y = canvasSize.height / 2 - worldY * zoom
+				.onChanged { value in
+					let loc = CGPoint(x: value.location.x - padding, y: value.location.y - padding)
+					let clampedX = max(0, min(mapSize.width, loc.x))
+					let clampedY = max(0, min(mapSize.height, loc.y))
+					let nx = clampedX / mapSize.width
+					let ny = clampedY / mapSize.height
+					let worldX = worldRect.minX + nx * worldRect.width
+					let worldY = worldRect.minY + ny * worldRect.height
+					pan.x = canvasSize.width/2  - worldX * zoom
+					pan.y = canvasSize.height/2 - worldY * zoom
 				}
 		)
 		.shadow(radius: 3)

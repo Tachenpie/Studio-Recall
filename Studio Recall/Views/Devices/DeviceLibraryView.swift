@@ -56,20 +56,6 @@ struct DeviceLibraryView: View {
                             .onTapGesture {
                                 activeSheet = .editor(EditableDevice(device: device))
                             }
-                            .onDrag {
-                                let payload = DragPayload(deviceId: device.id)
-                                DragContext.shared.beginDrag(payload: payload)
-                                if let data = try? JSONEncoder().encode(payload) {
-                                    return NSItemProvider(item: data as NSData, typeIdentifier: UTType.deviceDragPayload.identifier)
-                                }
-                                return NSItemProvider()
-                            }
-                        preview: {
-                            DeviceView(device: device)
-                                .frame(width: 80, height: 40)
-                                .shadow(radius: 4)
-                        }
-                        
                     }
                     .onDelete { indexSet in
                         indexSet.map { library.devices[$0] }
@@ -156,22 +142,25 @@ struct DeviceLibraryView: View {
         .background(HoverHighlight())
         .cornerRadius(8)
         .contentShape(Rectangle())
-        .onDrag {
-            let payload = DragPayload(deviceId: device.id)
-            DragContext.shared.beginDrag(payload: payload)
-                if let data = try? JSONEncoder().encode(payload) {
-                let provider = NSItemProvider()
-                provider.registerDataRepresentation(
-                    forTypeIdentifier: UTType.deviceDragPayload.identifier,
-                    visibility: .all
-                ) { completion in
-                    completion(data, nil)
-                    return nil
-                }
-                return provider
-            }
-            return NSItemProvider()
-        } preview: {
+		.onDrag {
+			let payload = DragPayload(deviceId: device.id)       // or (instanceId:, deviceId:)
+			DragContext.shared.beginDrag(payload: payload)
+			
+			let provider = NSItemProvider()
+			provider.registerDataRepresentation(
+				forTypeIdentifier: UTType.deviceDragPayload.identifier,
+				visibility: .all
+			) { completion in
+				do {
+					let data = try JSONEncoder().encode(payload)
+					completion(data, nil)
+				} catch {
+					completion(nil, error)
+				}
+				return nil
+			}
+			return provider
+		} preview: {
             DeviceView(device: device)
                 .frame(width: 80, height: 40)
                 .shadow(radius: 4)

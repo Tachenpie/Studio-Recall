@@ -214,7 +214,7 @@ extension SessionManager {
 		guard let rIdx = sessions[sIdx].racks.firstIndex(where: { $0.id == rackID }) else { return }
 		guard sessions[sIdx].racks[rIdx].slots.indices.contains(slot) else { return }
 		
-		var instance = DeviceInstance(deviceID: device.id, device: device)
+		let instance = DeviceInstance(deviceID: device.id, device: device)
 		sessions[sIdx].racks[rIdx].slots[slot] = instance
 		currentSession = sessions[sIdx]
 		saveSessions()

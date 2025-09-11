@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct DeviceSidebarRow: View {
     let device: Device
@@ -33,5 +34,24 @@ struct DeviceSidebarRow: View {
             Spacer()
         }
         .padding(.vertical, 4)
+		.contentShape(Rectangle())
+		.onDrag {
+			let payload = DragPayload(deviceId: device.id)
+			DragContext.shared.beginDrag(payload: payload)
+			if let data = try? JSONEncoder().encode(payload) {
+				let provider = NSItemProvider()
+				provider.registerDataRepresentation(forTypeIdentifier: UTType.deviceDragPayload.identifier,
+													visibility: .all) { completion in
+					completion(data, nil)
+					return nil
+				}
+				return provider
+			}
+			return NSItemProvider()
+		} preview: {
+			FaceplatePreview(device: device)
+				.frame(width: 120, height: 60)
+				.shadow(radius: 4)
+		}
     }
 }

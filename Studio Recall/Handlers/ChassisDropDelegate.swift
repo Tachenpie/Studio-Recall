@@ -19,7 +19,9 @@ struct ChassisDropDelegate: DropDelegate {
     let kind: DeviceType
 
     func validateDrop(info: DropInfo) -> Bool {
-        info.hasItemsConforming(to: [UTType.deviceDragPayload])
+		print("validate drop")
+		print(info)
+        return info.hasItemsConforming(to: [UTType.deviceDragPayload])
     }
 
     func dropEntered(info: DropInfo) {
