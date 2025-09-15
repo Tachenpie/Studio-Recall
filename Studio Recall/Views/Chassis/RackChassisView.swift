@@ -17,6 +17,8 @@ struct RackChassisView: View {
     @State private var hoveredValid: Bool = false
     @State private var hoveredRange: Range<Int>? = nil
 	@State private var dragStart: CGPoint? = nil
+	@State private var showEdit = false
+	@State private var editUnits: Int = 0
 	
 	var onDelete: (() -> Void)? = nil
     
@@ -39,7 +41,17 @@ struct RackChassisView: View {
 					rack.position = CGPoint(x: origin.x + worldDelta.width,
 											y: origin.y + worldDelta.height)
 				},
-				onEnded: { dragStart = nil }
+				onEnded: { dragStart = nil },
+				onEditRequested: {
+					editUnits = max(1, rack.slots.count)
+					showEdit = true
+				},
+				onClearRequested: {
+					clearAllRackDevices()
+				},
+				onDeleteRequested: {
+					onDelete?()
+				}
 			)
 			.frame(width: faceWidth)            // <<< exact match
 			.zIndex(2)
@@ -63,6 +75,7 @@ struct RackChassisView: View {
 				)
 				.zIndex(1)
 		}
+		.sheet(isPresented: $showEdit) { editSheet }
 	}
     
     private var chassisContent: some View {
@@ -112,6 +125,58 @@ struct RackChassisView: View {
         }
     }
 }
+	// MARK: - Rack edit / helpers
+	
+	private func clearAllRackDevices() {
+		for i in rack.slots.indices { rack.slots[i] = nil }
+	}
+	
+	@ViewBuilder
+	private var editSheet: some View {
+		VStack(alignment: .leading, spacing: 12) {
+			Text("Edit Rack").font(.headline)
+			Stepper("Rack Units: \(editUnits)", value: $editUnits, in: 1...200)
+			HStack {
+				Spacer()
+				Button("Cancel") { showEdit = false }
+				Button("Save") {
+					applyRackResize(to: editUnits)
+					showEdit = false
+				}.keyboardShortcut(.defaultAction)
+			}
+		}
+		.padding(20)
+		.frame(width: 320)
+	}
+	
+	private func applyRackResize(to newUnits: Int) {
+		let oldUnits = rack.slots.count
+		guard newUnits != oldUnits else { return }
+		
+		if newUnits < oldUnits {
+			// trim devices that extend into the truncated bottom
+			var i = 0
+			while i < oldUnits {
+				if let inst = rack.slots[i] {
+					// top of this device span?
+					if i == 0 || rack.slots[i - 1]?.id != inst.id {
+						let deviceUnits = (library.device(for: inst.deviceID)?.rackUnits ?? 1)
+						let span = i ..< min(i + deviceUnits, oldUnits)
+						if span.upperBound > newUnits {
+							for j in span { rack.slots[j] = nil }
+						}
+						i = span.upperBound
+						continue
+					}
+				}
+				i += 1
+			}
+			rack.slots = Array(rack.slots.prefix(newUnits))
+		} else {
+			// grow by appending empty slots at the bottom
+			rack.slots.append(contentsOf: Array(repeating: nil, count: newUnits - oldUnits))
+		}
+	}
 }
 
 // MARK: - Catch All Drop Delegate
@@ -225,5 +290,8 @@ private struct RackCatchAllDropDelegate: DropDelegate {
 		}
 		return true
 	}
+	
 }
+
+
 

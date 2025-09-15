@@ -1,20 +1,34 @@
 //
-//  AnyShape.swift
+//  RegionClipShape.swift
 //  Studio Recall
 //
 //  Created by True Jackie on 9/4/25.
 //
+
 import SwiftUI
 
-// Clips a view to either a rectangle or a circle, decided at runtime.
-struct RegionClipShape: Shape {
-	let shape: ImageRegionShape   // .rect or .circle
+/// Clips a view to either a rectangle or a circle at runtime.
+struct RegionClipShape: InsettableShape {
+	var shape: ImageRegionShape        // .rect or .circle
+	private var insetAmount: CGFloat = 0
+	
+	init(shape: ImageRegionShape) { self.shape = shape }
+	
 	func path(in rect: CGRect) -> Path {
+		let r = rect.insetBy(dx: insetAmount, dy: insetAmount)
 		switch shape {
 			case .rect:
-				return Path(rect)                  // rectangle path
+				var p = Path()
+				p.addRect(r)
+				return p
 			case .circle:
-				return Path(ellipseIn: rect)       // perfect circle in rect
+				return Path(ellipseIn: r)
 		}
+	}
+	
+	func inset(by amount: CGFloat) -> some InsettableShape {
+		var s = self
+		s.insetAmount += amount
+		return s
 	}
 }

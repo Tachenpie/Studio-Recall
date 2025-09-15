@@ -37,7 +37,7 @@ enum ControlValue: Codable, Equatable, CustomStringConvertible {
 	case button(Bool)
 	case light(Bool)
 	case concentricKnob(outer: Double, inner: Double)
-	case litButton(isPressed: Bool, isLit: Bool)
+	case litButton(isPressed: Bool)
 	
 	static func initialValue(for control: Control) -> ControlValue {
 		switch control.type {
@@ -47,7 +47,7 @@ enum ControlValue: Codable, Equatable, CustomStringConvertible {
 			case .button:         return .button(false)
 			case .light:          return .light(false)
 			case .concentricKnob: return .concentricKnob(outer: 0.0, inner: 0.0)
-			case .litButton:      return .litButton(isPressed: false, isLit: false)
+			case .litButton:      return .litButton(isPressed: false)
 		}
 	}
 	
@@ -66,8 +66,8 @@ enum ControlValue: Codable, Equatable, CustomStringConvertible {
 				return lit ? "Light ON" : "Light OFF"
 			case .concentricKnob(let outer, let inner):
 				return String(format: "Concentric outer %.2f / inner %.2f", outer, inner)
-			case .litButton(let pressed, let lit):
-				return "LitButton [pressed: \(pressed ? "ON" : "OFF"), light: \(lit ? "ON" : "OFF")]"
+			case .litButton(let pressed):
+				return "LitButton [pressed: \(pressed ? "ON" : "OFF")]"
 		}
 	}
 }

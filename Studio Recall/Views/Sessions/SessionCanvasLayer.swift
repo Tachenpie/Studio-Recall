@@ -18,19 +18,32 @@ struct SessionCanvasLayer: View {
         let racks = session.racks
         let chassis = session.series500Chassis
 
-        ZStack {
+		ZStack(alignment: .topLeading) {
             // Racks
             ForEach(racks.indices, id: \.self) { idx in
-				RackChassisView(rack: $session.racks[idx])
+				RackChassisView(
+					rack: $session.racks[idx],
+					onDelete: {
+						let id = session.racks[idx].id
+						session.racks.removeAll { $0.id == id }
+					}
+				)
                 .position(session.racks[idx].position)
             }
 
             // Series 500 chassis
             ForEach(chassis.indices, id: \.self) { idx in
-				Series500ChassisView(chassis: $session.series500Chassis[idx])
+				Series500ChassisView(
+					chassis: $session.series500Chassis[idx],
+					onDelete: {
+						let id = session.series500Chassis[idx].id
+						session.series500Chassis.removeAll { $0.id == id }
+					}
+				)
                 .position(session.series500Chassis[idx].position)
             }
         }
         .frame(width: canvasSize.width, height: canvasSize.height)
+		.environment(\.canvasZoom, CGFloat(session.canvasZoom))
     }
 }

@@ -36,7 +36,7 @@ struct CanvasViewport<Content: View, Overlay: View>: View {
 	var onDropString: ((String, CGPoint, CGSize) -> Bool)? = nil
 	
 	/// Optional hover HUD
-	var showHoverHUD: Bool = true
+	var showHoverHUD: Bool = false
 	
 	// Internal
 	@State private var panStart: CGSize = .zero

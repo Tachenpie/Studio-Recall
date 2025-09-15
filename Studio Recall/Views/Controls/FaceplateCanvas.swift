@@ -48,6 +48,37 @@ struct FaceplateCanvas: View {
 						showBadges: showBadges
 					)
 					
+					// Live preview of control patches (rotate/translate/flip/sprites) in the editor
+					let faceplate = editableDevice.device.imageData.flatMap { NSImage(data: $0) }
+					
+					ForEach(editableDevice.device.controls.indices, id: \.self) { i in
+						let control = editableDevice.device.controls[i]
+						
+						ForEach(Array(control.regions.enumerated()), id: \.0) { idx, region in
+							ControlImageRenderer(
+								control: $editableDevice.device.controls[i],
+								faceplate: faceplate,
+								canvasSize: canvasSize,
+								resolveControl: { id in
+									editableDevice.device.controls.first(where: { $0.id == id })
+								},
+								onlyRegionIndex: idx
+							)
+//							.frame(
+//								width:  region.rect.width  * canvasSize.width,
+//								height: region.rect.height * canvasSize.height
+//							)
+//							.position(
+//								x: region.rect.midX * canvasSize.width,
+//								y: region.rect.midY * canvasSize.height
+//							)
+							.compositingGroup()
+							.mask { RegionClipShape(shape: region.shape) }
+							.allowsHitTesting(false)
+							.id(editableDevice.device.controls[i].renderKey)
+						}
+					}
+					
 					// Visual-only overlay stays in canvas space
 					if let sel = selectedControlBinding, isEditingRegion {
 						ForEach(sel.wrappedValue.regions.indices, id: \.self) { idx in
@@ -159,7 +190,8 @@ struct FaceplateCanvas: View {
 			// NO aspect enforcement here
 			c.regions[idx].rect = r
 		} else {
-			c.regions.append(ImageRegion(rect: r, mapping: nil, shape: .rect))
+			let fallbackShape = c.regions.first?.shape ?? .circle
+			c.regions.append(ImageRegion(rect: r, mapping: nil, shape: fallbackShape))
 		}
 		sel.wrappedValue = c
 	}

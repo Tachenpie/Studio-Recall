@@ -429,6 +429,38 @@ extension SessionManager {
 }
 #endif
 
+// MARK: - Immediate, visible update + persist
+extension SessionManager {
+	func updateValueAndSave(instanceID: UUID, controlID: UUID, to newValue: ControlValue) {
+		// Try racks
+		for s in sessions.indices {
+			for r in sessions[s].racks.indices {
+				for i in sessions[s].racks[r].slots.indices {
+					if var inst = sessions[s].racks[r].slots[i], inst.id == instanceID {
+						inst.controlStates[controlID] = newValue
+						sessions[s].racks[r].slots[i] = inst
+						if sessions[s].id == currentSession?.id { currentSession = sessions[s] }
+						saveSessions()
+						return
+					}
+				}
+			}
+			// Try 500-series
+			for c in sessions[s].series500Chassis.indices {
+				for i in sessions[s].series500Chassis[c].slots.indices {
+					if var inst = sessions[s].series500Chassis[c].slots[i], inst.id == instanceID {
+						inst.controlStates[controlID] = newValue
+						sessions[s].series500Chassis[c].slots[i] = inst
+						if sessions[s].id == currentSession?.id { currentSession = sessions[s] }
+						saveSessions()
+						return
+					}
+				}
+			}
+		}
+	}
+}
+
 
 // MARK: - Session Commands
 struct SessionCommands: Commands {

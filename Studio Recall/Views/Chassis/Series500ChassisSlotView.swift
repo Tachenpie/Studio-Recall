@@ -36,60 +36,48 @@ struct Series500ChassisSlotView: View {
 		let units = device.slotWidth ?? 1
 		let moduleSize = DeviceMetrics.moduleSize(units: units, scale: settings.pointsPerInch)
 		
-		return ZStack(alignment: .topLeading) {
+		guard let topIndex = indexOfInstance(instance) else {
+			return AnyView(EmptyView())
+		}
+		
+		let instanceBinding = Binding<DeviceInstance>(
+			get: { slots[topIndex]! },
+			set: { newVal in
+				let span = topIndex ..< min(topIndex + max(1, units), slots.count)
+				for i in span { slots[i] = newVal }
+			}
+		)
+		
+		let body = ZStack(alignment: .topLeading) {
 			EditableDeviceView(device: .constant(device))
 				.frame(width: moduleSize.width, height: moduleSize.height)
-				.padding(.vertical, 4)
-				.overlay(
-					RoundedRectangle(cornerRadius: 6)
-						.stroke(highlightColor(), lineWidth: 3)
-				)
-			// NOTE: no `.onDrop` here — occupied slots should not accept drops
+				.allowsHitTesting(false)
+			
+			RuntimeControlsOverlay(device: device, instance: instanceBinding)
+				.frame(width: moduleSize.width, height: moduleSize.height)
+				.zIndex(1)
 		}
-		// include the vertical padding in the container height so top/bottom overlays align
-		.frame(width: moduleSize.width, height: moduleSize.height + 8)
+			.frame(width: moduleSize.width, height: moduleSize.height)
+			.clipShape(RoundedRectangle(cornerRadius: 6))
+			.padding(.vertical, 4)
+			.onDrag {
+				let payload = DragPayload(instanceId: instance.id, deviceId: device.id)
+				DragContext.shared.beginDrag(payload: payload)
+				if let data = try? JSONEncoder().encode(payload) {
+					return NSItemProvider(item: data as NSData,
+										  typeIdentifier: UTType.deviceDragPayload.identifier)
+				}
+				return NSItemProvider()
+			} preview: {
+				DeviceView(device: device).frame(width: 60, height: 80).shadow(radius: 4)
+			}
+			.overlay(
+				RoundedRectangle(cornerRadius: 6)
+					.stroke(highlightColor(), lineWidth: 3)
+					.allowsHitTesting(false)
+			)
 		
-		// TOP rail
-		.overlay(alignment: .top) {
-			RailH()
-				.frame(width: moduleSize.width)
-				.contentShape(Rectangle())
-				.opacity(slotHover ? 1 : 0.35)
-				.onHover { inside in
-					slotHover = inside
-					if inside { NSCursor.openHand.push() } else { NSCursor.pop() }
-				}
-				.onDrag { deviceDragProvider(instance: instance, device: device) }
-				.contextMenu {
-					Button(role: .destructive) {
-						removeInstance(instance, of: device)
-					} label: {
-						Label("Remove from Chassis", systemImage: "trash")
-					}
-				}
-				.padding(.top, 1)
-		}
-		
-		// BOTTOM rail
-		.overlay(alignment: .bottom) {
-			RailH()
-				.frame(width: moduleSize.width)
-				.contentShape(Rectangle())
-				.opacity(slotHover ? 1 : 0.35)
-				.onHover { inside in
-					slotHover = inside
-					if inside { NSCursor.openHand.push() } else { NSCursor.pop() }
-				}
-				.onDrag { deviceDragProvider(instance: instance, device: device) }
-				.contextMenu {
-					Button(role: .destructive) {
-						removeInstance(instance, of: device)
-					} label: {
-						Label("Remove from Chassis", systemImage: "trash")
-					}
-				}
-				.padding(.bottom, 1)
-		}
+		return AnyView(body)
 	}
 
 	private func emptySlotView(units: Int = 1) -> some View {
@@ -125,7 +113,11 @@ struct Series500ChassisSlotView: View {
         }
         return .clear
     }
-
+	
+	private func indexOfInstance(_ instance: DeviceInstance) -> Int? {
+		slots.firstIndex(where: { $0?.id == instance.id })
+	}
+	
 	private func removeInstance(_ instance: DeviceInstance, of device: Device) {
 		guard let start = slots.firstIndex(where: { $0?.id == instance.id }) else { return }
 		let count = max(1, device.slotWidth ?? 1)

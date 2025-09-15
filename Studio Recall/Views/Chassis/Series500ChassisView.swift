@@ -18,6 +18,8 @@ struct Series500ChassisView: View {
     @State private var hoveredValid: Bool = false
     @State private var hoveredRange: Range<Int>? = nil
 	@State private var dragStart: CGPoint? = nil
+	@State private var showEdit = false
+	@State private var editSlots: Int = 0
 	
 	var onDelete: (() -> Void)? = nil
     
@@ -40,7 +42,17 @@ struct Series500ChassisView: View {
 					chassis.position = CGPoint(x: origin.x + worldDelta.width,
 											   y: origin.y + worldDelta.height)
 				},
-				onEnded: { dragStart = nil }
+				onEnded: { dragStart = nil },
+				onEditRequested: {
+					editSlots = max(1, chassis.slots.count)
+					showEdit = true
+				},
+				onClearRequested: {
+					clearAll500Devices()
+				},
+				onDeleteRequested: {
+					onDelete?()
+				}
 			)
 			.frame(width: faceWidth)            // <<< exact match
 			.zIndex(2)
@@ -63,6 +75,7 @@ struct Series500ChassisView: View {
 				)
 				.zIndex(1)
 		}
+		.sheet(isPresented: $showEdit) { editSheet }
 	}
     
     private var chassisContent: some View {
@@ -112,6 +125,58 @@ struct Series500ChassisView: View {
             }
         }
     }
+	
+	// MARK: - 500-series edit / helpers
+	
+	private func clearAll500Devices() {
+		for i in chassis.slots.indices { chassis.slots[i] = nil }
+	}
+	
+	@ViewBuilder
+	private var editSheet: some View {
+		VStack(alignment: .leading, spacing: 12) {
+			Text("Edit 500-Series Chassis").font(.headline)
+			Stepper("Slots: \(editSlots)", value: $editSlots, in: 1...48)
+			HStack {
+				Spacer()
+				Button("Cancel") { showEdit = false }
+				Button("Save") {
+					apply500Resize(to: editSlots)
+					showEdit = false
+				}.keyboardShortcut(.defaultAction)
+			}
+		}
+		.padding(20)
+		.frame(width: 320)
+	}
+	
+	private func apply500Resize(to newSlots: Int) {
+		let oldSlots = chassis.slots.count
+		guard newSlots != oldSlots else { return }
+		
+		if newSlots < oldSlots {
+			// trim devices that extend into the truncated RIGHT edge
+			var i = 0
+			while i < oldSlots {
+				if let inst = chassis.slots[i] {
+					if i == 0 || chassis.slots[i - 1]?.id != inst.id {
+						let width = (library.device(for: inst.deviceID)?.slotWidth ?? 1)
+						let span = i ..< min(i + width, oldSlots)
+						if span.upperBound > newSlots {
+							for j in span { chassis.slots[j] = nil }
+						}
+						i = span.upperBound
+						continue
+					}
+				}
+				i += 1
+			}
+			chassis.slots = Array(chassis.slots.prefix(newSlots))
+		} else {
+			chassis.slots.append(contentsOf: Array(repeating: nil, count: newSlots - oldSlots))
+		}
+	}
+
 }
 
 // MARK: - Catch All Drop Delegate

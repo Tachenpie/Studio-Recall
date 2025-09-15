@@ -74,7 +74,7 @@ struct ControlInspector: View {
 										rect: CGRect(x: max(0, binding.wrappedValue.x - s*0.5),
 													 y: max(0, binding.wrappedValue.y - s*0.5),
 													 width: s, height: s),
-										mapping: nil, shape: .rect
+										mapping: nil, shape: .circle
 									)
 									binding.regions.wrappedValue = [r]
 								}

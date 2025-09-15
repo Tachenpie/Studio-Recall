@@ -34,64 +34,52 @@ struct RackChassisSlotView: View {
 	private func deviceView(_ device: Device, instance: DeviceInstance) -> some View {
 		let units = device.rackUnits ?? 1
 		let rackSize = DeviceMetrics.rackSize(units: units, scale: settings.pointsPerInch)
-		let topIndex = indexOfInstance(instance)
 		
-		return ZStack(alignment: .topLeading) {
+		guard let topIndex = indexOfInstance(instance) else {
+			return AnyView(EmptyView())
+		}
+		
+		// Bind the top of the span; write back across the span
+		let instanceBinding = Binding<DeviceInstance>(
+			get: { slots[topIndex]! },
+			set: { newVal in
+				let span = topIndex ..< min(topIndex + max(1, units), slots.count)
+				for i in span { slots[i] = newVal }
+			}
+		)
+		
+		let body = ZStack(alignment: .topLeading) {
+			// faceplate image only
 			DeviceView(device: device)
 				.frame(width: rackSize.width, height: rackSize.height)
-				.overlay(
-					RoundedRectangle(cornerRadius: 6)
-						.stroke(highlightColor(forTopIndex: topIndex), lineWidth: 3)
-				)
-			// NOTE: no `.onDrop` here — occupied slots should not accept drops
+				.allowsHitTesting(false)
+			
+			// runtime controls (reads/writes instance.controlStates)
+			RuntimeControlsOverlay(device: device, instance: instanceBinding)
+				.frame(width: rackSize.width, height: rackSize.height)
+				.zIndex(1)
 		}
-		.frame(width: rackSize.width, height: rackSize.height) // needed for overlay placement
+			.frame(width: rackSize.width, height: rackSize.height)
+			.clipShape(RoundedRectangle(cornerRadius: 6))
+			.onDrag {
+				let payload = DragPayload(instanceId: instance.id, deviceId: device.id)
+				DragContext.shared.beginDrag(payload: payload)
+				if let data = try? JSONEncoder().encode(payload) {
+					return NSItemProvider(item: data as NSData,
+										  typeIdentifier: UTType.deviceDragPayload.identifier)
+				}
+				return NSItemProvider()
+			} preview: {
+				DeviceView(device: device).frame(width: 80, height: 40).shadow(radius: 4)
+			}
+			.overlay(
+				RoundedRectangle(cornerRadius: 6)
+					.stroke(highlightColor(forTopIndex: topIndex), lineWidth: 3)
+					.allowsHitTesting(false)
+			)
 		
-		// LEFT rail
-		.overlay(alignment: .leading) {
-			RailV()
-				.frame(height: rackSize.height)
-				.contentShape(Rectangle())
-				.opacity(railHover ? 1 : 0.35)
-				.onHover { inside in
-					railHover = inside
-					if inside { NSCursor.openHand.push() } else { NSCursor.pop() }
-				}
-				.onDrag { deviceDragProvider(instance: instance, device: device) }
-				.contextMenu {
-					Button(role: .destructive) {
-						removeInstance(instance, of: device)
-					} label: {
-						Label("Remove from Rack", systemImage: "trash")
-					}
-				}
-
-				.padding(.leading, 2)
-		}
-		
-		// RIGHT rail
-		.overlay(alignment: .trailing) {
-			RailV()
-				.frame(height: rackSize.height)
-				.contentShape(Rectangle())
-				.opacity(railHover ? 1 : 0.35)
-				.onHover { inside in
-					railHover = inside
-					if inside { NSCursor.openHand.push() } else { NSCursor.pop() }
-				}
-				.onDrag { deviceDragProvider(instance: instance, device: device) }
-				.contextMenu {
-					Button(role: .destructive) {
-						removeInstance(instance, of: device)
-					} label: {
-						Label("Remove from Rack", systemImage: "trash")
-					}
-				}
-
-				.padding(.trailing, 2)
-		}
+		return AnyView(body)
 	}
-
 
 	private func emptySlotView(units: Int = 1) -> some View {
 		let rackSize = DeviceMetrics.rackSize(units: units, scale: settings.pointsPerInch)

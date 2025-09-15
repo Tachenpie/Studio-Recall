@@ -174,7 +174,7 @@ struct ImageRegion: Codable, Equatable {
 	var rect: CGRect
 	/// How to transform the cropped patch as the control changes
 	var mapping: VisualMapping?
-	var shape: ImageRegionShape = .rect
+	var shape: ImageRegionShape = .circle
 }
 
 extension ImageRegion {
@@ -689,6 +689,29 @@ extension Control {
 			return on
 		}
 		return isPressed ?? false
+	}
+}
+
+extension Control {
+	/// Bumps when any UI-affecting value changes.
+	var renderKey: String {
+		switch type {
+			case .knob:
+				return "knob:\(id)-\(value ?? 0)"
+			case .steppedKnob:
+				return "step:\(id)-\(stepIndex ?? 0)"
+			case .multiSwitch:
+				return "msw:\(id)-\(selectedIndex ?? 0)"
+			case .button:
+				return "btn:\(id)-\((isPressed ?? false) ? 1 : 0)"
+			case .light:
+				// If you prefer lamp logic, you can use `lightIsOn(given:)` at call-sites.
+				return "lit:\(id)-\((isPressed ?? false) ? 1 : 0)"
+			case .concentricKnob:
+				return "ck:\(id)-\(outerValue ?? 0)-\(innerValue ?? 0)"
+			case .litButton:
+				return "lbtn:\(id)-\((isPressed ?? false) ? 1 : 0)"
+		}
 	}
 }
 

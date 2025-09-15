@@ -6,6 +6,9 @@
 //
 
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 // --- Region-edit preview toggle (flows from Faceplate/Editor) ---
 private struct RegionEditingKey: EnvironmentKey { static let defaultValue: Bool = false }
@@ -49,16 +52,27 @@ struct ControlImageRenderer: View {
 					
 					Group {
 						if !src.isNull, !src.isEmpty, let cropped = cg.cropping(to: src.integral) {
-							let patch = NSImage(
-								cgImage: cropped,
-								size: NSSize(width: src.width, height: src.height)
-							)
+							
+							// ----- Hi-DPI aware SwiftUI Image from CGImage -----
+#if os(macOS)
+							let scale = NSScreen.main?.backingScaleFactor ?? 2.0
+#else
+							let scale = UIScreen.main.scale
+#endif
+							let patchImage = Image(decorative: cropped, scale: scale, orientation: .up)
+							
+							// Region-local size/position in canvas points
+							let regionW = region.rect.width  * canvasSize.width
+							let regionH = region.rect.height * canvasSize.height
+							let regionPosX = region.rect.midX * canvasSize.width
+							let regionPosY = region.rect.midY * canvasSize.height
 							
 							GeometryReader { geo in
-								Image(nsImage: patch)
+								patchImage
 									.resizable()
 									.interpolation(.high)
-									.scaledToFill()      // fills the region’s frame
+									.antialiased(true)
+									.scaledToFill()
 									.clipped()
 									.modifier(
 										VisualEffect(mapping: region.mapping,
@@ -69,10 +83,50 @@ struct ControlImageRenderer: View {
 													 regionIndex: idx)
 									)
 							}
-							.id(renderKey(control, regionIndex: idx)) // <<— force this subtree to refresh when value/step/index changes
+							.frame(width: regionW, height: regionH)
+							.position(x: regionPosX, y: regionPosY)
+							.compositingGroup()
+							.clipShape(RegionClipShape(shape: region.shape))
+							.id(renderKey(control, regionIndex: idx))
 						} else {
 							EmptyView()
 						}
+//						if !src.isNull, !src.isEmpty, let cropped = cg.cropping(to: src.integral) {
+//							let patch = NSImage(
+//								cgImage: cropped,
+//								size: NSSize(width: src.width, height: src.height)
+//							)
+//							
+//							// Region-local size/position in canvas points
+//							let regionW = region.rect.width  * canvasSize.width
+//							let regionH = region.rect.height * canvasSize.height
+//							let regionPosX = region.rect.midX * canvasSize.width
+//							let regionPosY = region.rect.midY * canvasSize.height
+//							
+//							// Give the modifier the *region size* via a GeometryReader whose size IS the region’s frame
+//							GeometryReader { geo in
+//								Image(nsImage: patch)
+//									.resizable()
+//									.interpolation(.high)
+//									.scaledToFill()
+//									.clipped()
+//									.modifier(
+//										VisualEffect(mapping: region.mapping,
+//													 control: control,
+//													 resolve: resolveControl,
+//													 region: region,
+//													 regionSize: geo.size,
+//													 regionIndex: idx)
+//									)
+//							}
+//							.frame(width: regionW, height: regionH)
+//							.position(x: regionPosX, y: regionPosY)
+//							.compositingGroup()
+//							.mask(RegionClipShape(shape: region.shape))
+//							.id(renderKey(control, regionIndex: idx)) // keep refreshing on value/index changes
+//						} else {
+//							EmptyView()
+//						}
 					}
 				}
 			} else {
