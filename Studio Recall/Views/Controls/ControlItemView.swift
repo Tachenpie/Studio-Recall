@@ -153,6 +153,8 @@ private struct FallbackVectorView: View {
 		)
 		.frame(width: 30, height: 30)
 		.position(x: control.x * geoSize.width, y: control.y * geoSize.height)
+		.mask { RegionClipShape(shape: control.region?.shape ?? .circle) }
+		.contentShape(RegionClipShape(shape: control.region?.shape ?? .circle))
 		.onTapGesture { onTap() }
 		.gesture(
 			DragGesture()

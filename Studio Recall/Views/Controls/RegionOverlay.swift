@@ -51,10 +51,16 @@ struct RegionOverlay: View {
 					.allowsHitTesting(false)
 				
 				// 1b) SINGLE hit surface (visual overlay is non-interactive)
-				Rectangle()
-					.fill(.clear)
+//				Rectangle()
+//					.fill(.clear)
+//					.frame(width: w, height: h)
+//					.contentShape(Rectangle())
+//					.zIndex(1)
+				RegionClipShape(shape: shape)
+					.strokeBorder(Color.accentColor, lineWidth: hair)
 					.frame(width: w, height: h)
-					.contentShape(Rectangle())
+					.position(x: x + w/2, y: y + h/2)
+					.contentShape(RegionClipShape(shape: shape)) // ensures hit area matches shape
 					.zIndex(1)
 				
 				// 1c) Handles — tiny white squares with black hairline stroke

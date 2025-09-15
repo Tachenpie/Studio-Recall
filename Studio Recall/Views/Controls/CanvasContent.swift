@@ -31,17 +31,17 @@ struct CanvasContent: View {
             }
 
             // Controls
-//            ForEach($editableDevice.device.controls) { $control in
-//                ControlItemView(
-//                    control: $control,
-//                    geoSize: canvasSize,
-//                    editableDevice: editableDevice,
-//                    selectedControlId: $selectedControlId,
-//                    draggingControlId: $draggingControlId,
-//                    gridStep: gridStep,
-//					showBadges: showBadges
-//                )
-//            }
+            ForEach($editableDevice.device.controls) { $control in
+                ControlItemView(
+                    control: $control,
+                    geoSize: canvasSize,
+                    editableDevice: editableDevice,
+                    selectedControlId: $selectedControlId,
+                    draggingControlId: $draggingControlId,
+                    gridStep: gridStep,
+					showBadges: showBadges
+                )
+            }
         }
         .frame(width: canvasSize.width, height: canvasSize.height)
         .clipped()

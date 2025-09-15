@@ -18,7 +18,27 @@ struct ControlEditorView: View {
                     Text(type.displayName).tag(type)
                 }
             }
-            
+			// Shape selector (Circle vs Rectangle)
+			Picker("Shape", selection: Binding(
+				get: { control.region?.shape ?? .circle },
+				set: { newShape in
+					if control.region == nil {
+						// Create a default region if one doesn't exist yet
+						control.region = ImageRegion(
+							rect: .init(x: 0, y: 0, width: ImageRegion.defaultSize, height: ImageRegion.defaultSize),
+							mapping: nil,
+							shape: newShape
+						)
+					} else {
+						control.region?.shape = newShape
+					}
+				}
+			)) {
+				Text("Circle").tag(ImageRegionShape.circle)
+				Text("Rectangle").tag(ImageRegionShape.rect)
+			}
+			.pickerStyle(SegmentedPickerStyle())
+
             if control.type == .multiSwitch {
                 TextField("Options (comma separated)", text: Binding(
                     get: { control.options?.joined(separator: ", ") ?? "" },

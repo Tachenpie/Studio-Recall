@@ -8,15 +8,27 @@
 import SwiftUI
 
 struct ControlView: View {
-    @Binding var control: Control
-    
-    var body: some View {
-        Circle()
-            .fill(Color.blue)
-            .frame(width: 40, height: 40)
-            .overlay(Text(control.name.prefix(1)).foregroundColor(.white))
-            .help(control.name)
-    }
+	@Binding var control: Control
+	
+	var body: some View {
+		Group {
+			if let region = control.region {
+				RegionClipShape(shape: region.shape)
+					.fill(Color.blue)
+					.frame(
+						width: region.rect.width * 200,   // scale normalized rect
+						height: region.rect.height * 200
+					)
+			} else {
+				// fallback if no region is defined yet
+				Circle()
+					.fill(Color.blue)
+					.frame(width: 30, height: 30)
+			}
+		}
+		.overlay(Text(control.name.prefix(1)).foregroundColor(.white))
+		.help(control.name)
+	}
 }
 
 struct DemoView: View {
