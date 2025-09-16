@@ -96,8 +96,12 @@ struct RuntimeControlsOverlay: View {
 					.highPriorityGesture(doubleTap)
 				
 			case .multiSwitch:
-				MultiSwitchHit(frame: frame, value: value, count: max(2, def.options?.count ?? def.optionAngles?.count ?? 2))
-					.highPriorityGesture(doubleTap)
+				MultiSwitchHit(
+					frame: frame,
+					value: value,   // ✅ use original binding
+					count: max(2, def.options?.count ?? def.optionAngles?.count ?? 2)
+				)
+				.highPriorityGesture(doubleTap)
 				
 			case .button:
 				ButtonHit(frame: frame, value: value)

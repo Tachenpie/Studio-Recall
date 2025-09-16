@@ -51,10 +51,16 @@ struct RegionHitLayer: View {
 		
 		ZStack(alignment: .topLeading) {
 			// FULL-PARENT hit surface (no offset/position → no coord drift)
-			Rectangle()
+//			Rectangle()
+//				.fill(Color.clear)
+//				.frame(width: parentSize.width, height: parentSize.height)
+//				.contentShape(Rectangle())
+//				.gesture(isPanMode || !isEnabled ? nil : dragGesture(regionFrame: frame, localSize: regionSize))
+//				.allowsHitTesting(isEnabled && !isPanMode)
+			RegionClipShape(shape: shape)
 				.fill(Color.clear)
 				.frame(width: parentSize.width, height: parentSize.height)
-				.contentShape(Rectangle())
+				.contentShape(RegionClipShape(shape: shape))   // ✅ hit testing matches shape
 				.gesture(isPanMode || !isEnabled ? nil : dragGesture(regionFrame: frame, localSize: regionSize))
 				.allowsHitTesting(isEnabled && !isPanMode)
 		}

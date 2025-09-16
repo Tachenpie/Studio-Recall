@@ -145,13 +145,29 @@ private struct FallbackVectorView: View {
 			editableDevice.device.controls.first(where: { $0.id == id })
 		}
 		
-		return ControlImageRenderer(
-			control: $control,
-			faceplate: faceplate,
-			canvasSize: geoSize,
-			resolveControl: resolver
-		)
-		.frame(width: 30, height: 30)
+//		return ControlImageRenderer(
+//			control: $control,
+//			faceplate: faceplate,
+//			canvasSize: geoSize,
+//			resolveControl: resolver
+//		)
+//		.frame(width: 30, height: 30)
+		Group {
+			if control.type == .light || control.type == .litButton {
+				// Lights and lit buttons may be circular OR rectangular
+				RegionClipShape(shape: control.region?.shape ?? .circle)
+					.fill(fillColor)
+					.frame(width: 20, height: 20) // tweak as needed
+			} else {
+				ControlImageRenderer(
+					control: $control,
+					faceplate: faceplate,
+					canvasSize: geoSize,
+					resolveControl: resolver
+				)
+				.frame(width: 30, height: 30)
+			}
+		}
 		.position(x: control.x * geoSize.width, y: control.y * geoSize.height)
 		.mask { RegionClipShape(shape: control.region?.shape ?? .circle) }
 		.contentShape(RegionClipShape(shape: control.region?.shape ?? .circle))
@@ -180,6 +196,25 @@ private struct FallbackVectorView: View {
 					_ = editableDevice.device.controls.remove(at: i)
 				}
 			} label: { Label("Delete", systemImage: "trash") }
+		}
+	}
+	
+	private var maskShape: some InsettableShape {
+		if control.type == .light || control.type == .litButton {
+			return RegionClipShape(shape: control.region?.shape ?? .circle)
+		} else {
+			return RegionClipShape(shape: control.region?.shape ?? .circle)
+		}
+	}
+	
+	private var fillColor: Color {
+		switch control.type {
+			case .light:
+				return (control.isPressed ?? false) ? .yellow : .gray.opacity(0.4)
+			case .litButton:
+				return (control.isPressed ?? false) ? .green : .red.opacity(0.4)
+			default:
+				return .blue
 		}
 	}
 }

@@ -77,6 +77,21 @@ final class SpriteLibrary {
 		}
 	}
 	
+	/// Update an existing SpriteAsset in the index and save to disk
+	func update(_ asset: SpriteAsset) {
+		// Replace or insert
+		index[asset.id] = asset
+		
+		// Save back to disk
+		do {
+			let url = indexURL
+			let data = try JSONEncoder().encode(index)
+			try data.write(to: url, options: [.atomic])
+		} catch {
+			print("❌ Failed to update asset \(asset.id): \(error)")
+		}
+	}
+
 	/// Import a grid atlas; returns existing asset if identical content is already present.
 	func importAtlas(name: String, data: Data, cols: Int, rows: Int,
 					 spritePivot: CGPoint = CGPoint(x: 0.5, y: 0.9),
@@ -101,29 +116,108 @@ final class SpriteLibrary {
 	}
 	
 	/// Import N frames; de-duplicates using combined hash.
-	func importFrames(name: String, frames: [Data],
-					  spritePivot: CGPoint = CGPoint(x: 0.5, y: 0.9),
-					  defaultScale: Double = 1.0,
-					  tags: [String] = [], isBuiltin: Bool = false) throws -> SpriteAsset
-	{
-		let digest = Self.sha256Hex(frames.reduce(into: Data()) { $0.append($1) })
-		if let existing = index.values.first(where: { $0.digestHex == digest }) { return existing }
-		let id = UUID()
-		var rels: [String] = []
-		for (i, d) in frames.enumerated() {
-			let fn = "\(id.uuidString)_\(i).png"
-			let url = imagesDir.appendingPathComponent(fn)
-			try d.write(to: url, options: .atomic)
-			rels.append("img/\(fn)")
+	func importFrames(
+		name: String,
+		frames: [Data],
+		spritePivot: CGPoint? = nil,
+		defaultScale: Double = 1.0,
+		tags: [String] = [],
+		isBuiltin: Bool = false
+	) throws -> SpriteAsset {
+		guard !frames.isEmpty else {
+			throw NSError(domain: "SpriteLibrary", code: -1, userInfo: [NSLocalizedDescriptionKey: "No frames provided"])
 		}
-		let a = SpriteAsset(id: id, name: name, source: .frames,
-							atlasPath: nil, framePaths: rels,
-							cols: frames.count, rows: 1,
-							spritePivot: spritePivot, defaultScale: defaultScale,
-							digestHex: digest, tags: tags, isBuiltin: isBuiltin)
-		index[id] = a; saveIndex()
-		return a
+		
+		// Write files to disk
+		var relPaths: [String] = []
+		for (_, data) in frames.enumerated() {
+			let idStr = UUID().uuidString
+			let filename = "\(idStr).png"
+			let url = imagesDir.appendingPathComponent(filename)
+			try data.write(to: url, options: .atomic)
+			relPaths.append("img/\(filename)")
+		}
+		
+		// Compute digest over all frame data concatenated
+		let digest = frames.reduce(into: Data()) { $0.append($1) }
+		let digestHex = Self.sha256Hex(digest)
+		
+		// Auto-detect pivot if not provided
+		var autoPivot = spritePivot
+		if spritePivot == nil {
+			var commonRect: CGRect?
+			for data in frames {
+				if let nsImage = NSImage(data: data),
+				   let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil),
+				   let bbox = opaqueBoundingBox(cgImage: cgImage) {
+					commonRect = commonRect.map { $0.intersection(bbox) } ?? bbox
+				}
+			}
+			if let rect = commonRect,
+			   let nsImage = NSImage(data: frames[0]),
+			   let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+				autoPivot = CGPoint(x: rect.midX / CGFloat(cgImage.width),
+									y: rect.midY / CGFloat(cgImage.height))
+				print("Auto-detected pivot: \(autoPivot!) for \(name)")
+			}
+		}
+		print("Auto-detected pivot for \(name): \(autoPivot ?? .zero)")
+
+		
+		// Create asset
+		let id = UUID()
+		let asset = SpriteAsset(
+			id: id,
+			name: name,
+			source: .frames,
+			atlasPath: nil,
+			framePaths: relPaths,
+			cols: 1,
+			rows: frames.count,
+			spritePivot: autoPivot ?? CGPoint(x: 0.5, y: 0.9),
+			defaultScale: defaultScale,
+			digestHex: digestHex,
+			tags: tags,
+			isBuiltin: isBuiltin
+		)
+		
+		index[id] = asset
+		saveIndex()
+		return asset
 	}
+
+
+	private func opaqueBoundingBox(cgImage: CGImage) -> CGRect? {
+		guard let data = cgImage.dataProvider?.data,
+			  let ptr = CFDataGetBytePtr(data) else { return nil }
+		
+		let bytesPerPixel = cgImage.bitsPerPixel / 8
+		let width = cgImage.width
+		let height = cgImage.height
+		
+		var minX = width, maxX = 0, minY = height, maxY = 0
+		
+		for y in 0..<height {
+			for x in 0..<width {
+				let offset = (y * cgImage.bytesPerRow) + (x * bytesPerPixel)
+				let alpha = ptr[offset + (bytesPerPixel - 1)]
+				if alpha > 0 {
+					minX = min(minX, x)
+					maxX = max(maxX, x)
+					minY = min(minY, y)
+					maxY = max(maxY, y)
+				}
+			}
+		}
+		
+		if minX <= maxX && minY <= maxY {
+			return CGRect(x: minX, y: minY,
+						  width: maxX - minX + 1,
+						  height: maxY - minY + 1)
+		}
+		return nil
+	}
+
 	
 	/// Migrate embedded sprite data from a mapping into the library and rewrite the mapping to reference it.
 	func migrateEmbeddedSprites(in mapping: inout VisualMapping, suggestedName: String) {
@@ -261,3 +355,41 @@ final class SpriteLibrary {
 		return digest.compactMap { String(format: "%02x", $0) }.joined()
 	}
 }
+
+extension SpriteLibrary {
+	/// Convenience wrapper for importing a grid atlas.
+	func importAtlasGrid(
+		name: String,
+		data: Data,
+		cols: Int = 1,
+		rows: Int = 1,
+		spritePivot: CGPoint = CGPoint(x: 0.5, y: 0.9),
+		defaultScale: Double = 1.0,
+		tags: [String] = [],
+		isBuiltin: Bool = false
+	) throws -> SpriteAsset {
+		return try importAtlas(
+			name: name,
+			data: data,
+			cols: cols,
+			rows: rows,
+			spritePivot: spritePivot,
+			defaultScale: defaultScale,
+			tags: tags,
+			isBuiltin: isBuiltin
+		)
+	}
+}
+
+extension SpriteLibrary {
+	/// Load raw frame data for a given asset
+	func loadFrameData(for asset: SpriteAsset) -> [Data]? {
+		guard let paths = asset.framePaths else { return nil }
+		return paths.compactMap {
+			let filename = URL(fileURLWithPath: $0).lastPathComponent
+			let url = imagesDir.appendingPathComponent(filename)
+			return try? Data(contentsOf: url)
+		}
+	}
+}
+

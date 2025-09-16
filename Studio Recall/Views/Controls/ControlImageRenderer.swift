@@ -21,6 +21,9 @@ extension EnvironmentValues {
 
 struct ControlImageRenderer: View {
 	@Binding var control: Control
+	
+	@State private var isDragging = false
+	
 	let faceplate: NSImage?
 	let canvasSize: CGSize
 	/// Resolver to look up other controls (for status light linkage)
@@ -47,7 +50,8 @@ struct ControlImageRenderer: View {
 					let src = sourceCropRectForVisibleRegion(
 						regionNorm: region.rect,
 						canvasSize: canvasSize,
-						imagePixelSize: pixelSize   // pixels, not NSImage.size
+						imagePixelSize: pixelSize,   // pixels, not NSImage.size
+						mapping: region.mapping
 					)
 					
 					Group {
@@ -68,65 +72,51 @@ struct ControlImageRenderer: View {
 							let regionPosY = region.rect.midY * canvasSize.height
 							
 							GeometryReader { geo in
-								patchImage
-									.resizable()
-									.interpolation(.high)
-									.antialiased(true)
-									.scaledToFill()
-									.clipped()
-									.modifier(
-										VisualEffect(mapping: region.mapping,
-													 control: control,
-													 resolve: resolveControl,
-													 region: region,
-													 regionSize: geo.size,
-													 regionIndex: idx)
-									)
+								ZStack {
+									patchImage
+										.resizable()
+										.interpolation(.high)
+										.antialiased(true)
+										.scaledToFill()
+										.modifier(
+											VisualEffect(mapping: region.mapping,
+														 control: control,
+														 resolve: resolveControl,
+														 region: region,
+														 regionSize: geo.size,
+														 regionIndex: idx)
+										)
+									// ✅ Overlay text if dragging or flagged by double-click
+									if isDragging || control.showLabel {
+										Text(displayLabel(for: control))
+											.font(.caption)
+											.padding(4)
+											.background(Color.black.opacity(0.7))
+											.cornerRadius(4)
+											.foregroundColor(.white)
+											.offset(y: -40) // float above control
+											.transition(.opacity)
+									}
+								}
+								.mask {
+									if region.mapping?.kind == .sprite {
+										// For sprites (multiSwitch etc.), no mask — let lever extend
+										Rectangle()
+									} else {
+										// Keep normal region clipping for knobs, lights, etc.
+										RegionClipShape(shape: region.shape)
+											.frame(width: geo.size.width, height: geo.size.height)
+									}
+								}
 							}
 							.frame(width: regionW, height: regionH)
 							.position(x: regionPosX, y: regionPosY)
 							.compositingGroup()
-							.clipShape(RegionClipShape(shape: region.shape))
+							.contentShape(RegionClipShape(shape: region.shape))
 							.id(renderKey(control, regionIndex: idx))
 						} else {
 							EmptyView()
 						}
-//						if !src.isNull, !src.isEmpty, let cropped = cg.cropping(to: src.integral) {
-//							let patch = NSImage(
-//								cgImage: cropped,
-//								size: NSSize(width: src.width, height: src.height)
-//							)
-//							
-//							// Region-local size/position in canvas points
-//							let regionW = region.rect.width  * canvasSize.width
-//							let regionH = region.rect.height * canvasSize.height
-//							let regionPosX = region.rect.midX * canvasSize.width
-//							let regionPosY = region.rect.midY * canvasSize.height
-//							
-//							// Give the modifier the *region size* via a GeometryReader whose size IS the region’s frame
-//							GeometryReader { geo in
-//								Image(nsImage: patch)
-//									.resizable()
-//									.interpolation(.high)
-//									.scaledToFill()
-//									.clipped()
-//									.modifier(
-//										VisualEffect(mapping: region.mapping,
-//													 control: control,
-//													 resolve: resolveControl,
-//													 region: region,
-//													 regionSize: geo.size,
-//													 regionIndex: idx)
-//									)
-//							}
-//							.frame(width: regionW, height: regionH)
-//							.position(x: regionPosX, y: regionPosY)
-//							.compositingGroup()
-//							.mask(RegionClipShape(shape: region.shape))
-//							.id(renderKey(control, regionIndex: idx)) // keep refreshing on value/index changes
-//						} else {
-//							EmptyView()
-//						}
 					}
 				}
 			} else {
@@ -145,6 +135,36 @@ struct ControlImageRenderer: View {
 			   width: normalized.size.width * canvasSize.width,
 			   height: normalized.size.height * canvasSize.height)
 	}
+	
+	private func displayLabel(for control: Control) -> String {
+		switch control.type {
+			case .steppedKnob:
+				if let opts = control.options,
+				   let idx = control.stepIndex,
+				   idx < opts.count {
+					return opts[idx]
+				}
+				return "\(control.stepIndex ?? 0)"
+			case .multiSwitch:
+				if let opts = control.options,
+				   let idx = control.selectedIndex,
+				   idx < opts.count {
+					return opts[idx]
+				}
+				return "\(control.selectedIndex ?? 0)"
+			case .knob:
+				return String(format: "%.2f", control.value ?? 0)
+			case .button, .litButton:
+				return (control.isPressed ?? false) ? "On" : "Off"
+			case .light:
+				return (control.isPressed ?? false) ? "Lit" : "Dark"
+			case .concentricKnob:
+				return String(format: "Outer %.2f / Inner %.2f",
+							  control.outerValue ?? 0,
+							  control.innerValue ?? 0)
+		}
+	}
+
 }
 
 struct VisualEffect: ViewModifier {
@@ -178,8 +198,11 @@ struct VisualEffect: ViewModifier {
 														   taper: taper)
 						}
 						if control.type == .steppedKnob,
-						   let a = control.stepAngles, let i = control.stepIndex, i < a.count {
-							return a[i]
+//						   let a = control.stepAngles, let i = control.stepIndex, i < a.count {
+//							return a[i]
+							let a = control.stepAngles, let i = control.stepIndex {
+							let clamped = min(max(i, 0), a.count - 1)
+							return a[clamped]
 						}
 						if control.type == .multiSwitch,
 						   let a = control.optionAngles, let i = control.selectedIndex, i < a.count {
@@ -303,71 +326,75 @@ struct VisualEffect: ViewModifier {
 							}
 						}
 					)
-					// in switch mapping.kind { case .sprite: ... }
+					
 				case .sprite:
-					// 1) which frame?
-					let frameIndex: Int = {
-						if control.type == .multiSwitch {
-							if let i = control.selectedIndex {
-								if let map = mapping.spriteIndices, i < map.count { return map[i] }
-								return i
-							}
-							return 0
-						} else if control.type == .button {
-							let pressed = control.isPressed ?? false
-							if let map = mapping.spriteIndices, map.count >= 2 { return pressed ? map[1] : map[0] }
-							return pressed ? 1 : 0
-						} else { return 0 }
+					let logicalIndex = control.selectedIndex ?? control.stepIndex ?? 0
+					let frameIndex = control.frameMapping?[logicalIndex] ?? logicalIndex
+					
+					let resolvedIndex: Int = {
+						if let map = mapping.spriteIndices, frameIndex < map.count {
+							return map[frameIndex]
+						}
+						if let map = mapping.spriteIndices, map.count >= 2 {
+							let isPressed = control.isPressed ?? false
+							return isPressed ? map[1] : map[0]
+						}
+						return frameIndex
 					}()
-					
-					// Prefer library; fall back to embedded atlas/frames
-					var cgOpt: CGImage? = nil
-					if let id = mapping.spriteAssetId {
-						cgOpt = SpriteLibrary.shared.cgImage(forFrame: frameIndex, in: id)
-					}
-					if cgOpt == nil {
-						cgOpt = spriteCGImage(for: frameIndex, mapping: mapping)
-					}
-					guard let cg = cgOpt else {
-						return AnyView(content) // nothing to draw yet
-					}
-					
-					let sprite = Image(decorative: cg, scale: 1, orientation: .up)
-					
-					// 2) pivots + optional per-frame pivot/offset
-					let asset = mapping.spriteAssetId.flatMap { SpriteLibrary.shared.asset($0) }
-					let sPivot = (mapping.spritePivots?[safe: frameIndex])
-					?? (mapping.spritePivot ?? asset?.spritePivot ?? CGPoint(x: 0.5, y: 0.9))
-					let rPivot = mapping.pivot ?? CGPoint(x: 0.5, y: 0.88)
-					let perOffset = (mapping.spriteOffsets?[safe: frameIndex]) ?? .zero
-					let scale = CGFloat(mapping.spriteScale ?? (asset?.defaultScale ?? 1.0))
-					
-					let turns = (mapping.spriteQuarterTurns ?? 0) % 4
-					let angleDeg = Double(turns * 90)
 					
 					return AnyView(
 						GeometryReader { geo in
-							let H = geo.size.height
-							let sprH = H * scale
-							let rawAspect = CGFloat(cg.width) / CGFloat(cg.height)
-							// If rotated 90°/270°, swap aspect so the bounding frame matches the turned image
-							let effAspect = (turns % 2 == 0) ? rawAspect : 1.0 / rawAspect
-							let sprW = sprH * effAspect
-							
-							let anchorX = rPivot.x * geo.size.width
-							let anchorY = rPivot.y * geo.size.height
-							let posX = anchorX - (sPivot.x * sprW) + sprW/2 + perOffset.x * geo.size.width
-							let posY = anchorY - (sPivot.y * sprH) + sprH/2 + perOffset.y * geo.size.height
-							
-							ZStack {
-								content
-								sprite
+							if let image = spriteCGImage(for: resolvedIndex, mapping: mapping, layout: control.spriteLayout) {
+								
+								// Sprite hinge (within the sprite itself)
+								let spriteAnchor = UnitPoint(
+									x: mapping.spritePivot?.x ?? 0.5,
+									y: mapping.spritePivot?.y ?? 0.5
+								)
+								
+								// Region hinge (where it should sit in the cropped patch)
+								let controlAnchor = CGPoint(
+									x: (mapping.pivot?.x ?? 0.5) * geo.size.width,
+									y: (mapping.pivot?.y ?? 0.5) * geo.size.height
+								)
+								
+								let offset = (mapping.spriteOffsets?.indices.contains(resolvedIndex) == true) ? mapping.spriteOffsets![resolvedIndex] : .zero
+								let dx = -offset.x * regionSize.width //geo.size.width
+								let dy = -offset.y * regionSize.height //geo.size.height
+								
+								let _ = print("""
+	🎨 Sprite Render Debug:
+	- resolvedIndex = \(resolvedIndex)
+	- geo.size = \(geo.size)
+	- spriteAnchor = \(spriteAnchor)
+	- controlAnchor = \(controlAnchor)
+	- offset = \(offset) → (\(dx), \(dy))
+	""")
+								
+								Image(decorative: image, scale: 1.0)
 									.resizable()
-									.interpolation(.high)
-									.frame(width: sprW, height: sprH)
-									.rotationEffect(.degrees(angleDeg),
-													anchor: UnitPoint(x: sPivot.x, y: sPivot.y))
-									.position(x: posX, y: posY)
+									.scaledToFill() //t()
+									.rotationEffect(
+										.degrees(Double(mapping.spriteQuarterTurns ?? 0) * 90.0),
+										anchor: spriteAnchor
+									)
+//									.offset({
+//										if let offsets = mapping.spriteOffsets, resolvedIndex < offsets.count {
+//											let off = offsets[resolvedIndex]
+//											return CGSize(width: off.x * geo.size.width,
+//														  height: off.y * geo.size.height)
+//										}
+//										return .zero
+//									}())
+								// Move so sprite’s hinge aligns to region’s pivot
+									.position(
+										x: controlAnchor.x + dx,
+										y: controlAnchor.y + dy
+									)
+									.frame(width: geo.size.width, height: geo.size.height)
+							} else {
+								let _ = print("❌ Failed to load sprite for index \(resolvedIndex)")
+								EmptyView()
 							}
 						}
 					)
@@ -420,14 +447,22 @@ struct VisualEffect: ViewModifier {
 				return ((v - minV) / (maxV - minV)).clamped(to: 0...1)
 				
 			case .steppedKnob:
-				let idx = Double(c.stepIndex ?? 0)
-				let max = Double(max((c.options?.count ?? 1) - 1, 1))
-				return (idx / max).clamped(to: 0...1)
+				let steps = c.options?.count ?? 1
+				let maxIndex = max(steps - 1, 1)
+				let idx = min(max(c.stepIndex ?? 0, 0), maxIndex)
+				return Double(idx) / Double(maxIndex)
+//				let idx = Double(c.stepIndex ?? 0)
+//				let max = Double(max((c.options?.count ?? 1) - 1, 1))
+//				return (idx / max).clamped(to: 0...1)
 				
 			case .multiSwitch:
-				let idx = Double(c.selectedIndex ?? 0)
-				let max = Double(max((c.options?.count ?? 1) - 1, 1))
-				return (idx / max).clamped(to: 0...1)
+				let steps = c.options?.count ?? 1
+				let maxIndex = max(steps - 1, 1)
+				let idx = min(max(c.selectedIndex ?? 0, 0), maxIndex)
+				return Double(idx) / Double(maxIndex)
+//				let idx = Double(c.selectedIndex ?? 0)
+//				let max = Double(max((c.options?.count ?? 1) - 1, 1))
+//				return (idx / max).clamped(to: 0...1)
 				
 			case .button, .light, .litButton:
 				return booleanState(for: c, resolve: resolve) ? 1.0 : 0.0
@@ -438,6 +473,83 @@ struct VisualEffect: ViewModifier {
 
 		}
 	}
+	
+	private func spriteCGImage(
+		for frameIndex: Int,
+		mapping: VisualMapping,
+		layout: Control.SpriteLayout
+	) -> CGImage? {
+		// 0. Library asset (preferred)
+		if let assetId = mapping.spriteAssetId,
+		   let cg = SpriteLibrary.shared.cgImage(forFrame: frameIndex, in: assetId) {
+//			print("🎨 Rendering frame \(frameIndex) from SpriteLibrary asset \(assetId)")
+			return cg
+		}
+		
+		// 1. Embedded frames (legacy)
+		if let frames = mapping.spriteFrames, frameIndex < frames.count {
+#if os(iOS)
+			if let uiImage = UIImage(data: frames[frameIndex]),
+			   let cg = uiImage.cgImage {
+//				print("🎨 Rendering frame \(frameIndex) from embedded spriteFrames")
+				return cg
+			}
+#elseif os(macOS)
+			if let nsImage = NSImage(data: frames[frameIndex]),
+			   let cg = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+//				print("🎨 Rendering frame \(frameIndex) from embedded spriteFrames")
+				return cg
+			}
+#endif
+//			print("⚠️ Failed to decode spriteFrames[\(frameIndex)]")
+		}
+		
+		// 2. Embedded atlas (legacy)
+#if os(iOS)
+		guard
+			let data = mapping.spriteAtlasPNG,
+			let uiImage = UIImage(data: data),
+			let atlas = uiImage.cgImage
+		else {
+//			print("⚠️ Could not decode spriteAtlasPNG (iOS)")
+			return nil
+		}
+#elseif os(macOS)
+		guard
+			let data = mapping.spriteAtlasPNG,
+			let nsImage = NSImage(data: data),
+			let atlas = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil)
+		else {
+//			print("⚠️ Could not decode spriteAtlasPNG (macOS)")
+			return nil
+		}
+#endif
+		
+		let cols = mapping.spriteCols ?? 1
+		let rows = mapping.spriteRows ?? 1
+		let frameWidth = atlas.width / cols
+		let frameHeight = atlas.height / rows
+		
+		var rect: CGRect
+		switch layout {
+			case .vertical:
+				let row = frameIndex % rows
+				rect = CGRect(x: 0, y: row * frameHeight, width: frameWidth, height: frameHeight)
+			case .horizontal:
+				let col = frameIndex % cols
+				rect = CGRect(x: col * frameWidth, y: 0, width: frameWidth, height: frameHeight)
+		}
+		
+		if let cropped = atlas.cropping(to: rect) {
+//			print("🎨 Cropped atlas frame \(frameIndex)")
+			return cropped
+		} else {
+//			print("⚠️ Failed to crop atlas at rect \(rect)")
+			return nil
+		}
+	}
+
+
 	
 	// Resolve on/off — supports linkTarget for .light
 	private func booleanState(for c: Control, resolve: (UUID) -> Control?) -> Bool {
@@ -502,7 +614,6 @@ struct VisualEffect: ViewModifier {
 		}
 		return nil
 	}
-
 }
 
 private struct PivotGizmo: View {
@@ -575,7 +686,8 @@ private struct PivotGizmo: View {
 private func sourceCropRectForVisibleRegion(
 	regionNorm: CGRect,
 	canvasSize: CGSize,
-	imagePixelSize: CGSize   // use CGImage pixel size
+	imagePixelSize: CGSize,   // use CGImage pixel size
+	mapping: VisualMapping? = nil
 ) -> CGRect {
 	// Scale from *pixels* to canvas points (same factor used to draw the background image)
 	let scale = min(canvasSize.width  / imagePixelSize.width,
@@ -605,15 +717,23 @@ private func sourceCropRectForVisibleRegion(
 	// Convert to pixel crop & flip Y for CGImage space
 	var src = CGRect(
 		x: localX / scale,
-//		y: (imagePixelSize.height) - ((localY / scale) + (regCanvas.height / scale)),
 		y: (localY / scale),
 		width:  regCanvas.width  / scale,
 		height: regCanvas.height / scale
 	)
 	
+	// ✅ Add padding for sprites
+	let padding: CGFloat = 0.5
+	if mapping?.kind == .sprite {
+		let padX = src.width * padding
+		let padY = src.height * padding
+		src = src.insetBy(dx: -padX, dy: -padY)
+	}
+	
 	// Clamp to image bounds
 	let bounds = CGRect(origin: .zero, size: imagePixelSize)
 	src = src.intersection(bounds)
+	
 	return (src.isNull || src.isEmpty) ? .null : src
 }
 

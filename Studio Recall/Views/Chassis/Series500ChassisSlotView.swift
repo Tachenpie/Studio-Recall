@@ -21,6 +21,8 @@ struct Series500ChassisSlotView: View {
     @Binding var hoveredValid: Bool
 	
 	@State private var slotHover = false
+	@State private var editingDevice: Device?
+	@State private var isPresentingEditor = false
 
     var body: some View {
         Group {
@@ -56,9 +58,46 @@ struct Series500ChassisSlotView: View {
 			RuntimeControlsOverlay(device: device, instance: instanceBinding)
 				.frame(width: moduleSize.width, height: moduleSize.height)
 				.zIndex(1)
+			
+			// ✅ Draggable rails with screws (500-series: top & bottom)
+			VStack {
+				RailH()
+					.contentShape(Rectangle())
+					.onDrag {
+						deviceDragProvider(instance: instance, device: device) // top rail drag
+					}
+					.contextMenu {
+						Button("Edit Device...") {
+							editingDevice = device
+							isPresentingEditor = true
+						}
+						Button("Remove from rack", role: .destructive) {
+							removeInstance(instance, of: device)
+						}
+					}
+				
+				Spacer()
+				
+				RailH()
+					.contentShape(Rectangle())
+					.onDrag {
+						deviceDragProvider(instance: instance, device: device) // bottom rail drag
+					}
+					.contextMenu {
+						Button("Edit Device...") {
+							editingDevice = device
+							isPresentingEditor = true
+						}
+						Button("Remove from rack", role: .destructive) {
+							removeInstance(instance, of: device)
+						}
+					}
+			}
+
 		}
 			.frame(width: moduleSize.width, height: moduleSize.height)
-			.clipShape(RoundedRectangle(cornerRadius: 6))
+//			.clipShape(RoundedRectangle(cornerRadius: 6))
+			.clipShape(Rectangle())
 			.padding(.vertical, 4)
 			.onDrag {
 				let payload = DragPayload(instanceId: instance.id, deviceId: device.id)
@@ -72,11 +111,24 @@ struct Series500ChassisSlotView: View {
 				DeviceView(device: device).frame(width: 60, height: 80).shadow(radius: 4)
 			}
 			.overlay(
-				RoundedRectangle(cornerRadius: 6)
+//				RoundedRectangle(cornerRadius: 6)
+				Rectangle()
 					.stroke(highlightColor(), lineWidth: 3)
 					.allowsHitTesting(false)
 			)
-		
+			.sheet(item: $editingDevice) { device in
+				DeviceEditorView(
+					editableDevice: EditableDevice(device: device),
+					onCommit: { updated in
+						// Save updated device back into your devices array / library
+						library.update(updated)
+						editingDevice = nil
+					},
+					onCancel: {
+						editingDevice = nil
+					}
+				)
+			}
 		return AnyView(body)
 	}
 
@@ -142,13 +194,15 @@ struct Series500ChassisSlotView: View {
 	
 	private struct RailH: View {
 		var body: some View {
-			RoundedRectangle(cornerRadius: 3)
+//			RoundedRectangle(cornerRadius: 3)
+			Rectangle()
 				.fill(.ultraThinMaterial)
 				.overlay(
-					RoundedRectangle(cornerRadius: 3)
+//					RoundedRectangle(cornerRadius: 3)
+					Rectangle()
 						.stroke(.secondary.opacity(0.35), lineWidth: 1)
 				)
-				.frame(height: 6)
+				.frame(height: 5)
 				.opacity(0.9)
 				.help("Drag to move this module")
 				.overlay( // screw dots
@@ -159,12 +213,10 @@ struct Series500ChassisSlotView: View {
 	
 	private struct RailScrewsH: View {
 		var body: some View {
-			HStack(spacing: 10) {
-				Circle().fill(.secondary).frame(width: 3.5, height: 3.5)
-				Circle().fill(.secondary).frame(width: 3.5, height: 3.5)
-				Circle().fill(.secondary).frame(width: 3.5, height: 3.5)
-			}
-			.padding(.horizontal, 6)
+			Circle()
+				.fill(.secondary)
+				.frame(width: 3, height: 3)
+				.padding(.horizontal, 6)
 		}
 	}
 }

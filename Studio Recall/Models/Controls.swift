@@ -96,20 +96,24 @@ struct VisualMapping: Codable, Equatable {
 	var spritePivot: CGPoint? = CGPoint(x: 0.5, y: 0.9) // 0…1 within the sprite frame (e.g., 0.9 ~ near bottom)
 	var spriteQuarterTurns: Int? = 0
 	
-	enum SpriteMode: String, Codable { case atlasGrid, frames }
-	var spriteMode: SpriteMode? {                                  // default to grid for backward compat
-		get { _spriteMode ?? .atlasGrid }
-		set { _spriteMode = newValue }
+	enum SpriteMode: String, Codable {
+		case atlasGrid
+		case frames
 	}
-	private var _spriteMode: SpriteMode? {
-		get { _spriteModeStorage }
+	
+	/// Public accessor for sprite mode.
+	/// Always non-optional. Defaults to `.frames` if no mode has been set.
+	var spriteMode: SpriteMode {
+		get { _spriteModeStorage ?? .frames }   // ✅ default to frames
 		set { _spriteModeStorage = newValue }
 	}
-	// backing store (so the computed var stays Codable)
+	
+	// Backing store using raw string for Codable compatibility
 	private var _spriteModeStorage: SpriteMode? {
-		get { _spriteModeRaw == nil ? nil : SpriteMode(rawValue: _spriteModeRaw!) }
+		get { _spriteModeRaw.flatMap { SpriteMode(rawValue: $0) } }
 		set { _spriteModeRaw = newValue?.rawValue }
 	}
+	
 	private var _spriteModeRaw: String? { get { spriteModeRaw } set { spriteModeRaw = newValue } }
 	var spriteModeRaw: String?   // <- add this stored optional String in VisualMapping
 	
@@ -149,7 +153,10 @@ struct VisualMapping: Codable, Equatable {
 					   cols: Int = 1, rows: Int = 1,
 					   pivot: CGPoint = .init(x: 0.5, y: 0.85),
 					   spritePivot: CGPoint = .init(x: 0.5, y: 0.9),
-					   scale: Double = 1.0) -> Self
+					   scale: Double = 1.0,
+					   mode: SpriteMode = .frames,
+					   frames: [Data]? = nil,
+					   indices: [Int]? = nil) -> Self
 	{
 		var m = Self.init(kind: .sprite, degMin: nil, degMax: nil, pivot: pivot, scalarRange: nil)
 		m.spriteAtlasPNG = atlasPNG
@@ -157,6 +164,9 @@ struct VisualMapping: Codable, Equatable {
 		m.pivot = pivot
 		m.spritePivot = spritePivot
 		m.spriteScale = scale
+		m.spriteMode = mode
+		m.spriteFrames = frames
+		m.spriteIndices = indices
 		return m
 	}
 }
@@ -164,6 +174,34 @@ struct VisualMapping: Codable, Equatable {
 extension VisualMapping {
 	var hasEmbeddedSpriteData: Bool {
 		(spriteAtlasPNG != nil) || ((spriteFrames?.isEmpty == false))
+	}
+}
+
+extension VisualMapping {
+	mutating func normalizeSpriteIndices() {
+		guard let frames = spriteFrames else { return }
+		if spriteIndices == nil {
+			// Default mapping: 0, 1, 2...
+			spriteIndices = Array(0..<frames.count)
+		} else if spriteIndices!.count < frames.count {
+			// Pad missing values with identity mapping
+			let start = spriteIndices!.count
+			spriteIndices!.append(contentsOf: start..<frames.count)
+		} else if spriteIndices!.count > frames.count {
+			// Trim extra indices
+			spriteIndices = Array(spriteIndices!.prefix(frames.count))
+		}
+	}
+}
+
+extension VisualMapping {
+	mutating func ensureSpriteOffsets() {
+		let count = spriteFrames?.count ?? 0
+		if spriteOffsets == nil {
+			spriteOffsets = Array(repeating: .zero, count: count)
+		} else if spriteOffsets!.count < count {
+			spriteOffsets!.append(contentsOf: Array(repeating: .zero, count: count - spriteOffsets!.count))
+		}
 	}
 }
 
@@ -249,6 +287,9 @@ struct Control: Identifiable, Codable {
     var id: UUID = UUID()
     var name: String
     var type: ControlType
+	
+	// Not persisted, runtime only
+	var showLabel: Bool = false
     
     // Common value storage
     var value: Double?        // knob: 0.0 ... 1.0
@@ -310,8 +351,14 @@ struct Control: Identifiable, Codable {
 	var linkOnIndex: Int? = nil
 	
 	// For when we need sprites
+	enum SpriteLayout: String, Codable {
+		case vertical
+		case horizontal
+	}
 	var sprites: ControlSpriteSet? // nil = no sprites (use patch)
 	var spriteIndex: Int?          // derive from pressed/index when present
+	var spriteLayout: SpriteLayout = .vertical
+	var frameMapping: [Int : Int]? = nil
 	
     // Draggable position
 	var position: CGPoint = CGPoint(x: 0.5, y: 0.5)
@@ -788,37 +835,46 @@ struct Knob: View {
 
 // MARK: - Stepped Knob
 struct SteppedKnob: View {
-    @Binding var index: Int
-    let steps: Int
-    var label: String
-    var stepLabels: [String]?
-    
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    RadialGradient(colors: [.black, .gray],
-                                   center: .center, startRadius: 5, endRadius: 30)
-                )
-                .shadow(radius: 4)
-            
-            Rectangle()
-                .fill(Color.green)
-                .frame(width: 2, height: 12)
-                .offset(y: -25)
-                .rotationEffect(.degrees(Double(index) / Double(steps - 1) * 270 - 135))
-        }
-        .frame(width: 60, height: 60)
-        .gesture(DragGesture().onEnded { drag in
-            if drag.translation.height < 0 {
-                index = min(index + 1, steps - 1)
-            } else {
-                index = max(index - 1, 0)
-            }
-        })
-        .help("\(label): \(stepLabels?[index] ?? "\(index)")")
-    }
+	@Binding var index: Int
+	let steps: Int
+	var label: String
+	var stepLabels: [String]?
+	
+	// pixels per step of drag movement
+	private let pixelsPerStep: CGFloat = 30
+	
+	var body: some View {
+		ZStack {
+			Circle()
+				.fill(
+					RadialGradient(colors: [.black, .gray],
+								   center: .center,
+								   startRadius: 5,
+								   endRadius: 30)
+				)
+				.shadow(radius: 4)
+			
+			// indicator line
+			Rectangle()
+				.fill(Color.green)
+				.frame(width: 2, height: 12)
+				.offset(y: -25)
+				.rotationEffect(.degrees(Double(index) / Double(steps - 1) * 270 - 135))
+		}
+		.frame(width: 60, height: 60)
+		.highPriorityGesture(
+			DragGesture(minimumDistance: 5).onEnded { drag in
+				let stepDelta = Int(-drag.translation.height / pixelsPerStep)
+				let newIndex = index + stepDelta
+				index = min(max(newIndex, 0), steps - 1)
+				print("New index: \(index)")
+			}
+		)
+		.help("\(label): \(stepLabels?[index] ?? "\(index)")")
+	}
 }
+
+
 
 // MARK: - Multi-Position Switch
 struct MultiSwitch: View {

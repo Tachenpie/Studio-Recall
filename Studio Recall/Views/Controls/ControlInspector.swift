@@ -432,15 +432,6 @@ struct ControlInspector: View {
 							}
 							
 							let msLabels = binding.options.wrappedValue ?? []
-//							Picker("Selected", selection: Binding(
-//								get: { binding.selectedIndex.wrappedValue ?? 0 },
-//								set: { binding.selectedIndex.wrappedValue = $0 }
-//							)) {
-//								ForEach(msLabels.indices, id: \.self) { i in
-//									Text(msLabels[i].isEmpty ? "#\(i)" : msLabels[i]).tag(i)
-//								}
-//							}
-//							.pickerStyle(.menu)
 							
 							Text("Current: \((msLabels.indices.contains(binding.selectedIndex.wrappedValue ?? -1) ? msLabels[binding.selectedIndex.wrappedValue ?? 0] : "#\(binding.selectedIndex.wrappedValue ?? 0)"))")
 							.font(.caption)
@@ -800,20 +791,18 @@ private struct MappingEditor: View {
 						region.mapping = .flip3D()
 						
 					case .sprite:
-						if current != .sprite {
-							var m = VisualMapping.sprite(
+						if region.mapping == nil {
+							region.mapping = VisualMapping.sprite(
 								atlasPNG: nil,
 								cols: (control.type == .multiSwitch || control.type == .button) ? 2 : 1,
 								rows: 1,
 								pivot: CGPoint(x: 0.5, y: 0.88),
 								spritePivot: CGPoint(x: 0.5, y: 0.92),
-								scale: 1.0
+								scale: 1.0,
+								mode: .frames
 							)
-							if let n = control.options?.count, n > 0 {
-								m.spriteIndices = Array(0..<n)
-							}
-							region.mapping = m
 						}
+
 				}
 				regionBinding.wrappedValue = region
 			}
@@ -917,10 +906,7 @@ private struct MappingEditor: View {
 								set: { var r = regionBinding.wrappedValue; r.mapping = $0; regionBinding.wrappedValue = r }
 							), control: $control)
 						case .sprite:
-							SpriteEditor(mapping: Binding(
-								get: { regionBinding.wrappedValue.mapping! },
-								set: { var r = regionBinding.wrappedValue; r.mapping = $0; regionBinding.wrappedValue = r }
-							), control: $control)
+							SpriteEditor(region: regionBinding, control: $control)
 					}
 					
 					HStack {
@@ -1216,155 +1202,167 @@ private struct FlipEditor: View {
 }
 
 private struct SpriteEditor: View {
-	@Binding var mapping: VisualMapping
+	@Binding var region: ImageRegion
 	@Binding var control: Control
 	
 	@State private var showOpen = false
 	@State private var showLibrarySheet = false
 	
+	// Derived binding to mapping
+	var mapping: Binding<VisualMapping> {
+		Binding(
+			get: { region.mapping ?? VisualMapping.sprite(
+				atlasPNG: nil,
+				cols: 1,
+				rows: 1,
+				pivot: CGPoint(x: 0.5, y: 0.88),
+				spritePivot: CGPoint(x: 0.5, y: 0.92),
+				scale: 1.0,
+				mode: .frames
+			) },
+			set: { region.mapping = $0 }
+		)
+	}
+	
 	var body: some View {
 		VStack(alignment: .leading, spacing: 8) {
-			Text("Sprites show a pose image per switch position using a grid-based atlas. Set the pivot where the hinge meets the lever, then align the sprite’s pivot so the image sits correctly.")
-				.font(.caption).foregroundStyle(.secondary)
+			SourcePicker(mapping: mapping, showLibrarySheet: $showLibrarySheet)
+			
+			if mapping.wrappedValue.spriteMode == .atlasGrid {
+				AtlasEditor(mapping: mapping, control: $control)
+			} else {
+				FramesEditor(mapping: mapping, control: $control)
+			}
+			
+			SpritePivotEditor(mapping: mapping)
+		}
+	}
+}
+
+// MARK: - SourcePicker
+private struct SourcePicker: View {
+	var mapping: Binding<VisualMapping>
+	@Binding var showLibrarySheet: Bool
+	
+	var body: some View {
+		VStack(alignment: .leading, spacing: 4) {
 			HStack {
-				Text("Source").frame(width: 80, alignment: .leading)
-				// Library picker
-				HStack {
-					Text("Library").frame(width: 80, alignment: .leading)
-					Picker("", selection: Binding(
-						get: { mapping.spriteAssetId ?? UUID(uuidString: "00000000-0000-0000-0000-000000000000")! },
-						set: { newId in mapping.spriteAssetId = newId }
-					)) {
-						Text("— none —").tag(UUID(uuidString: "00000000-0000-0000-0000-000000000000")!)
-						ForEach(SpriteLibrary.shared.allAssets()) { asset in
-							Text(asset.name).tag(asset.id)
-						}
-					}
-					.labelsHidden()
-					Button("Browse…") { showLibrarySheet = true }
-						.buttonStyle(.bordered)
-						.help("Choose from pre-installed and imported sprites")
-						.sheet(isPresented: $showLibrarySheet) {
-							LibraryBrowserSheet { assetId in
-								mapping.spriteAssetId = assetId
-								showLibrarySheet = false
-							}
-							.frame(width: 560, height: 420)
-						}
-				}
-				Picker("", selection: Binding(
-					get: { mapping.spriteMode ?? .atlasGrid },
-					set: { mapping.spriteMode = $0 }
+				Picker("Source", selection: Binding(
+					get: { mapping.wrappedValue.spriteMode },
+					set: { mapping.wrappedValue.spriteMode = $0 }
 				)) {
 					Text("Grid Atlas").tag(VisualMapping.SpriteMode.atlasGrid)
 					Text("Individual Frames").tag(VisualMapping.SpriteMode.frames)
-				}.labelsHidden()
+				}
+				.labelsHidden()
+			}
+			.frame(width: 160)
+			
+			Text("Sprites show a pose image per switch position using a grid-based atlas. Set the pivot where the hinge meets the lever, then align the sprite’s pivot so the image sits correctly.")
+				.font(.caption)
+				.foregroundStyle(.secondary)
+			
+			HStack {
+				Text("Library").frame(width: 80, alignment: .leading)
+				Picker("", selection: Binding(
+					get: { mapping.wrappedValue.spriteAssetId ?? UUID(uuidString: "00000000-0000-0000-0000-000000000000")! },
+					set: { newId in mapping.wrappedValue.spriteAssetId = newId }
+				)) {
+					Text("— none —").tag(UUID(uuidString: "00000000-0000-0000-0000-000000000000")!)
+					ForEach(SpriteLibrary.shared.allAssets()) { asset in
+						Text(asset.name).tag(asset.id)
+					}
+				}
+				.labelsHidden()
+				
+				Button("Browse…") { showLibrarySheet = true }
+					.buttonStyle(.bordered)
+					.help("Choose from pre-installed and imported sprites")
+					.sheet(isPresented: $showLibrarySheet) {
+						LibraryBrowserSheet { assetId in
+							mapping.wrappedValue.spriteAssetId = assetId
+							showLibrarySheet = false
+						}
+						.frame(width: 560, height: 420)
+					}
+			}
+		}
+	}
+}
+	
+// MARK: - AtlasEditor
+private struct AtlasEditor: View {
+	var mapping: Binding<VisualMapping>
+	@Binding var control: Control
+	
+	var body: some View {
+		VStack(alignment: .leading, spacing: 8) {
+			// Atlas loader (macOS)
+			HStack {
+				Text("Atlas").frame(width: 80, alignment: .leading)
+				Button(mapping.wrappedValue.spriteAssetId == nil ? "Choose Image…" : "Replace Image…") {
+#if os(macOS)
+					let p = NSOpenPanel()
+					if #available(macOS 11.0, *) {
+						p.allowedContentTypes = [UTType.png]
+					} else {
+						p.allowedFileTypes = ["png"]
+					}
+					p.allowsMultipleSelection = false
+					if p.runModal() == .OK, let url = p.url, let d = try? Data(contentsOf: url) {
+						mapping.wrappedValue.spriteMode = .atlasGrid
+						if let asset = try? SpriteLibrary.shared.importAtlasGrid(
+							name: url.deletingPathExtension().lastPathComponent,
+							data: d,
+							cols: mapping.wrappedValue.spriteCols ?? 1,
+							rows: mapping.wrappedValue.spriteRows ?? 1
+						) {
+							mapping.wrappedValue.spriteAssetId = asset.id
+							mapping.wrappedValue.spriteAtlasPNG = d
+							
+						}
+					}
+					
+#endif
+				}
 			}
 			
-			if (mapping.spriteMode ?? .atlasGrid) == .atlasGrid {
-				// Atlas loader (macOS)
-				HStack {
-					Text("Atlas").frame(width: 80, alignment: .leading)
-					Button(mapping.spriteAssetId == nil ? "Choose Image…" : "Replace Image…") {
-#if os(macOS)
-						let p = NSOpenPanel()
-						if #available(macOS 11.0, *) {
-							p.allowedContentTypes = [UTType.png]
-						} else {
-							p.allowedFileTypes = ["png"]
-						}
-						p.allowsMultipleSelection = false
-						if p.runModal() == .OK, let url = p.url, let d = try? Data(contentsOf: url) {
-							if let asset = try? SpriteLibrary.shared.importAtlas(name: url.deletingPathExtension().lastPathComponent,
-																				 data: d,
-																				 cols: mapping.spriteCols ?? 2,
-																				 rows: mapping.spriteRows ?? 1) {
-								mapping.spriteAssetId = asset.id
-								mapping.spriteAtlasPNG = nil   // clear embedded
-							}
-						}
-#endif
-					}
+			Divider()
+			
+			HStack {
+				Text("Layout").frame(width: 80, alignment: .leading)
+				Picker("", selection: $control.spriteLayout) {
+					Text("Vertical").tag(Control.SpriteLayout.vertical)
+					Text("Horizontal").tag(Control.SpriteLayout.horizontal)
 				}
-
-				
-				HStack {
-					Text("Grid").frame(width: 80, alignment: .leading)
-					Stepper("Cols: \(mapping.spriteCols ?? 1)", value: Binding(get: { mapping.spriteCols ?? 1 }, set: { mapping.spriteCols = $0 }), in: 1...16)
-					Stepper("Rows: \(mapping.spriteRows ?? 1)", value: Binding(get: { mapping.spriteRows ?? 1 }, set: { mapping.spriteRows = $0 }), in: 1...16)
-				}
-				
-				if control.type == .multiSwitch {
-					HStack(alignment: .firstTextBaseline) {
-						Text("Frame map").frame(width: 80, alignment: .leading)
-						TextField("e.g. 0, 1, 2", text: Binding(
-							get: {
-								let m = mapping.spriteIndices ?? []
-								return m.map(String.init).joined(separator: ", ")
-							},
-							set: { s in
-								let arr = s.split(separator: ",").map { Int($0.trimmingCharacters(in: .whitespaces)) ?? 0 }
-								mapping.spriteIndices = arr
-							}
-						))
-						.textFieldStyle(.roundedBorder)
-						.help("Optional: map each option to a frame index; otherwise Selected index is used as the frame.")
-					}
-				}
-				
-				HStack {
-					Text("Scale").frame(width: 80, alignment: .leading)
-					Slider(value: Binding(get: { mapping.spriteScale ?? 1.0 }, set: { mapping.spriteScale = $0 }), in: 0.2...2.0)
-					Text(String(format: "%.2f", mapping.spriteScale ?? 1.0)).monospacedDigit().frame(width: 44, alignment: .trailing)
-				}
-				
-				// Pivots: region vs sprite
-				HStack {
-					Text("Rotate").frame(width: 80, alignment: .leading)
-					Picker("", selection: Binding(
-						get: { (mapping.spriteQuarterTurns ?? 0) % 4 },
-						set: { mapping.spriteQuarterTurns = $0 % 4 }
-					)) {
-						Text("0°").tag(0)
-						Text("90°").tag(1)
-						Text("180°").tag(2)
-						Text("270°").tag(3)
-					}
-					.pickerStyle(.segmented)
-				}
-				.help("Rotates the sprite around the Sprite Pivot by 90° steps. Use 90°/270° for horizontal switches.")
-
-				HStack {
-					Text("Region Pivot").frame(width: 100, alignment: .leading)
-					NumberField(value: Binding(get: { Double(mapping.pivot?.x ?? 0.5) }, set: { x in var p = mapping.pivot ?? CGPoint(x: 0.5, y: 0.85); p.x = CGFloat(x); mapping.pivot = p }))
-					Text("Y")
-					NumberField(value: Binding(get: { Double(mapping.pivot?.y ?? 0.85) }, set: { y in var p = mapping.pivot ?? CGPoint(x: 0.5, y: 0.85); p.y = CGFloat(y); mapping.pivot = p }))
-				}
-				.help("Region Pivot: 0…1 within the cropped patch (where the real hinge sits).")
-				
-				HStack {
-					Text("Sprite Pivot").frame(width: 100, alignment: .leading)
-					NumberField(value: Binding(get: { Double(mapping.spritePivot?.x ?? 0.5) }, set: { x in var p = mapping.spritePivot ?? CGPoint(x: 0.5, y: 0.9); p.x = CGFloat(x); mapping.spritePivot = p }))
-					Text("Y")
-					NumberField(value: Binding(get: { Double(mapping.spritePivot?.y ?? 0.9) }, set: { y in var p = mapping.spritePivot ?? CGPoint(x: 0.5, y: 0.9); p.y = CGFloat(y); mapping.spritePivot = p }))
-				}
-				.help("Sprite Pivot: 0…1 within a single frame image (e.g., bottom of lever). Make these two pivots coincide.")
-				
-				Text("Rotation happens around the Sprite Pivot. If the lever ‘walks’ when you rotate, move the Sprite Pivot onto the hinge.")
-					.font(.caption)
-					.foregroundStyle(.secondary)
-
-				// Tiny live preview (optional)
-				if let data = mapping.spriteAtlasPNG,
-				   let ns = NSImage(data: data) {
-					HStack {
-						Text("Preview").frame(width: 80, alignment: .leading)
-						Image(nsImage: ns).resizable().scaledToFit().frame(height: 48)
-					}
-				}
+				.pickerStyle(.segmented)
 			}
-			else {
-				// Frames mode: add + list
+			if let frameCount = mapping.wrappedValue.spriteFrames?.count, frameCount > 0 {
+				FrameMappingEditor(frameCount: frameCount, mapping: mapping.wrappedValue, control: $control)
+			}
+			
+			HStack {
+				Text("Grid").frame(width: 80, alignment: .leading)
+				Stepper("Cols: \(mapping.wrappedValue.spriteCols ?? 1)",
+						value: Binding(get: { mapping.wrappedValue.spriteCols ?? 1 },
+									   set: { mapping.wrappedValue.spriteCols = $0 }),
+						in: 1...16)
+				Stepper("Rows: \(mapping.wrappedValue.spriteRows ?? 1)",
+						value: Binding(get: { mapping.wrappedValue.spriteRows ?? 1 },
+									   set: { mapping.wrappedValue.spriteRows = $0 }),
+						in: 1...16)
+			}
+		}
+	}
+}
+
+// MARK: - FramesEditor
+private struct FramesEditor: View {
+	var mapping: Binding<VisualMapping>
+	@Binding var control: Control
+	
+	var body: some View {
+		VStack(alignment: .leading, spacing: 8) {
 				HStack {
 					Text("Frames").frame(width: 80, alignment: .leading)
 					Button("Add…") {
@@ -1377,47 +1375,326 @@ private struct SpriteEditor: View {
 						}
 						p.allowsMultipleSelection = true
 						if p.runModal() == .OK {
-							let frames = p.urls.compactMap { try? Data(contentsOf: $0) }
-							if let asset = try? SpriteLibrary.shared.importFrames(name: "Frames \(Date().timeIntervalSince1970)",
-																				  frames: frames) {
-								mapping.spriteAssetId = asset.id
-								mapping.spriteFrames = nil
+							let newFrames = p.urls.compactMap { try? Data(contentsOf: $0) }
+							if !newFrames.isEmpty, let firstURL = p.urls.first {
+								do {
+									let asset = try SpriteLibrary.shared.importFrames(
+										name: firstURL.deletingPathExtension().lastPathComponent,
+										frames: newFrames
+									)
+									mapping.wrappedValue.spriteMode = .frames
+									mapping.wrappedValue.spriteAssetId = asset.id
+									mapping.wrappedValue.spriteFrames = SpriteLibrary.shared.loadFrameData(for: asset)
+									mapping.wrappedValue.spritePivot = asset.spritePivot
+									mapping.wrappedValue.normalizeSpriteIndices()
+									mapping.wrappedValue.ensureSpriteOffsets()
+									print("Uploaded \(newFrames.count) frames → asset \(asset.id)")
+								} catch {
+									print("❌ Failed to import frames: \(error)")
+								}
 							}
 						}
 #endif
 					}
-				}
-
-				if let frames = mapping.spriteFrames, !frames.isEmpty {
-					ScrollView(.horizontal) {
-						HStack(spacing: 8) {
-							ForEach(Array(frames.enumerated()), id:\.0) { (i, d) in
-								if let ns = NSImage(data: d) {
-									VStack(spacing: 4) {
-										Image(nsImage: ns).resizable().interpolation(.high).frame(width: 48, height: 48).border(.separator)
-										HStack(spacing: 6) {
-											Button("↑") {
-												var f = mapping.spriteFrames!; guard i>0 else { return }
-												f.swapAt(i, i-1); mapping.spriteFrames = f
-											}.buttonStyle(.plain)
-											Button("↓") {
-												var f = mapping.spriteFrames!; guard i < f.count-1 else { return }
-												f.swapAt(i, i+1); mapping.spriteFrames = f
-											}.buttonStyle(.plain)
-											Button("–") {
-												var f = mapping.spriteFrames!; f.remove(at: i); mapping.spriteFrames = f
-											}.buttonStyle(.plain)
-										}
-									}
-								}
-							}
-						}.frame(height: 70)
+					
+					
+					Button("Clear Frames") {
+						mapping.wrappedValue.spriteFrames = []
+						mapping.wrappedValue.spriteIndices = []
 					}
+					.buttonStyle(.bordered)
+				}
+				
+				if mapping.wrappedValue.spriteMode == .frames,
+				   let frames = mapping.wrappedValue.spriteFrames, !frames.isEmpty {
+					ScrollView(.horizontal, showsIndicators: true) {
+						HStack(spacing: 12) {
+							ForEach(frames.indices, id: \.self) { idx in
+								FrameEditor(idx: idx, mapping: mapping, frames: frames, control: $control)
+							}
+						}
+						.padding(.horizontal, 4)
+					}
+					.frame(height: 160)
 				}
 			}
 		}
 	}
+
+// MARK: - FrameEditor
+private struct FrameEditor: View {
+	let idx: Int
+	var mapping: Binding<VisualMapping>
+	let frames: [Data]
+	@Binding var control: Control
+	
+	var body: some View {
+		VStack(spacing: 6) {
+			// Thumbnail
+			if let nsImage = NSImage(data: frames[idx]) {
+				Image(nsImage: nsImage)
+					.resizable()
+					.interpolation(.high)
+					.antialiased(true)
+					.frame(width: 48, height: 48)
+				//													.border(Color.gray, width: 1)
+					.clipShape(RoundedRectangle(cornerRadius: 4))
+			} else {
+				Rectangle()
+					.fill(Color.gray.opacity(0.2))
+					.frame(width: 48, height: 48)
+					.overlay(Text("?"))
+			}
+			
+			// Value field
+			TextField("Index",
+				value: Binding(
+					get: { mapping.wrappedValue.spriteIndices?[idx] ?? idx },
+					set: { newVal in
+						if mapping.wrappedValue.spriteIndices == nil {
+							mapping.wrappedValue.normalizeSpriteIndices()
+							mapping.wrappedValue.spriteIndices = Array(0..<frames.count)
+						}
+						mapping.wrappedValue.spriteIndices?[idx] = newVal
+					}),
+				formatter: NumberFormatter())
+			.frame(width: 50)
+			
+			HStack(spacing: 4) {
+				Text("X")
+				Stepper("", value: Binding(
+					get: { Int((mapping.wrappedValue.spriteOffsets?[idx].x ?? 0) * 100) },
+					set: { newVal in
+						mapping.wrappedValue.ensureSpriteOffsets()
+						mapping.wrappedValue.spriteOffsets?[idx].x = CGFloat(newVal) / 100.0
+					}), in: -50...50)
+				Text("Y")
+				Stepper("", value: Binding(
+					get: { Int((mapping.wrappedValue.spriteOffsets?[idx].y ?? 0) * 100) },
+					set: { newVal in
+						mapping.wrappedValue.ensureSpriteOffsets()
+						mapping.wrappedValue.spriteOffsets?[idx].y = CGFloat(newVal) / 100.0
+					}), in: -50...50)
+			}
+			.font(.caption)
+		}
+		.padding(6)
+		.background(RoundedRectangle(cornerRadius: 6).fill(Color(NSColor.windowBackgroundColor)))
+		.overlay(
+			RoundedRectangle(cornerRadius: 6)
+				.stroke(
+					(control.selectedIndex == (mapping.wrappedValue.spriteIndices?[idx] ?? idx))
+					? Color.accentColor : Color.gray.opacity(0.3),
+					lineWidth: (control.selectedIndex == (mapping.wrappedValue.spriteIndices?[idx] ?? idx)) ? 2 : 1
+				)
+		)
+	}
 }
+
+// MARK: - SpritePivotEditor
+private struct SpritePivotEditor: View {
+	var mapping: Binding<VisualMapping>
+	
+	var body: some View {
+		VStack(alignment: .leading, spacing: 6) {
+			// Pivots: region vs sprite
+			HStack {
+				Text("Rotate").frame(width: 80, alignment: .leading)
+				Picker("", selection: Binding(
+					get: { (mapping.wrappedValue.spriteQuarterTurns ?? 0) % 4 },
+					set: { mapping.wrappedValue.spriteQuarterTurns = $0 % 4 }
+				)) {
+					Text("0°").tag(0)
+					Text("90°").tag(1)
+					Text("180°").tag(2)
+					Text("270°").tag(3)
+				}
+				.pickerStyle(.segmented)
+			}
+			.help("Rotates the sprite around the Sprite Pivot by 90° steps. Use 90°/270° for horizontal switches.")
+			
+			HStack {
+				Text("Region Pivot").frame(width: 100, alignment: .leading)
+				NumberField(value: Binding(get: { Double(mapping.wrappedValue.pivot?.x ?? 0.5) },
+										   set: { mapping.wrappedValue.pivot?.x = CGFloat($0) }))
+				Text("Y")
+				NumberField(value: Binding(get: { Double(mapping.wrappedValue.pivot?.y ?? 0.85) },
+										   set: { mapping.wrappedValue.pivot?.y = CGFloat($0) }))
+			}
+			.help("Region Pivot: 0…1 within the cropped patch (where the real hinge sits).")
+			
+			HStack {
+				Text("Sprite Pivot").frame(width: 100, alignment: .leading)
+				NumberField(value: Binding(get: { Double(mapping.wrappedValue.spritePivot?.x ?? 0.5) },
+										   set: { mapping.wrappedValue.spritePivot?.x = CGFloat($0) }))
+				Text("Y")
+				NumberField(value: Binding(get: { Double(mapping.wrappedValue.spritePivot?.y ?? 0.9) },
+										   set: { mapping.wrappedValue.spritePivot?.y = CGFloat($0) }))
+			}
+			.help("Sprite Pivot: 0…1 within a single frame image (e.g., bottom of lever). Make these two pivots coincide.")
+		}
+	}
+}
+			
+//											// Reorder / delete
+//											HStack(spacing: 6) {
+//												Button("↑") {
+//													guard idx > 0 else { return }
+//													var f = mapping.wrappedValue.spriteFrames!
+//													f.swapAt(idx, idx - 1)
+//													mapping.wrappedValue.spriteFrames = f
+//													mapping.wrappedValue.normalizeSpriteIndices()
+//													mapping.wrappedValue.spriteOffsets?.swapAt(idx, idx - 1)
+//												}.buttonStyle(.plain)
+//												
+//												Button("↓") {
+//													guard idx < frames.count - 1 else { return }
+//													var f = mapping.wrappedValue.spriteFrames!
+//													f.swapAt(idx, idx + 1)
+//													mapping.wrappedValue.spriteFrames = f
+//													mapping.wrappedValue.normalizeSpriteIndices()
+//													mapping.wrappedValue.spriteOffsets?.swapAt(idx, idx + 1)
+//												}.buttonStyle(.plain)
+//												
+//												Button("–") {
+//													var f = mapping.wrappedValue.spriteFrames!
+//													f.remove(at: idx)
+//													mapping.wrappedValue.spriteFrames = f
+//													mapping.wrappedValue.normalizeSpriteIndices()
+//													mapping.wrappedValue.spriteOffsets?.remove(at: idx)
+//												}.buttonStyle(.plain)
+//											}
+//											// Pivot nudges for this frame
+//											VStack(alignment: .leading, spacing: 2) {
+//												HStack {
+//													Text("Nudge X")
+//													Stepper(
+//														"X: \(Int((mapping.wrappedValue.spriteOffsets?[idx].x ?? 0) * 100))%",
+//														value: Binding(
+//															get: { Int((mapping.wrappedValue.spriteOffsets?[idx].x ?? 0) * 100) },
+//															set: { newVal in
+//																ensureOffsets()
+//																mapping.wrappedValue.spriteOffsets?[idx].x = CGFloat(newVal) / 100.0
+//															}
+//														),
+//														in: -50...50
+//													) {
+//														Text("X")
+//													}
+//												}
+//												HStack {
+//													Text("Nudge Y")
+//													Stepper(
+//														"Y: \(Int((mapping.wrappedValue.spriteOffsets?[idx].y ?? 0) * 100))%",
+//														value: Binding(
+//															get: { Int((mapping.wrappedValue.spriteOffsets?[idx].y ?? 0) * 100) },
+//															set: { newVal in
+//																ensureOffsets()
+//																mapping.wrappedValue.spriteOffsets?[idx].y = CGFloat(newVal) / 100.0
+//															}
+//														),
+//														in: -50...50
+//													) {
+//														Text("Y")
+//													}
+//												}
+//											}
+//											.font(.caption)
+//
+//										}
+//										.padding(6)
+//										.background(RoundedRectangle(cornerRadius: 6).fill(Color(NSColor.windowBackgroundColor)))
+//										.overlay(
+//											RoundedRectangle(cornerRadius: 6)
+//												.stroke(
+//													(control.selectedIndex == (mapping.wrappedValue.spriteIndices?[idx] ?? idx))
+//													? Color.accentColor
+//													: Color.gray.opacity(0.3),
+//													lineWidth: (control.selectedIndex == (mapping.wrappedValue.spriteIndices?[idx] ?? idx)) ? 2 : 1
+//												)
+//										)
+//
+//									}
+//								}
+//								.padding(.horizontal, 4)
+//							}
+//							.frame(height: 180)
+//						}
+//					}
+//
+//				}
+//
+//				
+//				
+//				Text("Rotation happens around the Sprite Pivot. If the lever ‘walks’ when you rotate, move the Sprite Pivot onto the hinge.")
+//					.font(.caption)
+//					.foregroundStyle(.secondary)
+//				
+//				// Tiny live preview (optional)
+//				if let data = mapping.wrappedValue.spriteAtlasPNG,
+//				   let ns = NSImage(data: data) {
+//					HStack {
+//						Text("Preview").frame(width: 80, alignment: .leading)
+//						Image(nsImage: ns).resizable().scaledToFit().frame(height: 48)
+//					}
+//				}
+//			}
+//		}
+//}
+
+private struct FrameMappingEditor: View {
+	let frameCount: Int
+	let mapping: VisualMapping
+	@Binding var control: Control
+	
+	var body: some View {
+		VStack(alignment: .leading, spacing: 4) {
+			Text("Frame Mapping")
+				.font(.caption)
+				.foregroundStyle(.secondary)
+			
+			ForEach(0..<frameCount, id: \.self) { frameIndex in
+				FrameMappingRow(frameIndex: frameIndex,
+								control: $control,
+								mapping: mapping
+				)
+			}
+		}
+	}
+}
+
+private struct FrameMappingRow: View {
+	let frameIndex: Int
+	@Binding var control: Control
+	var mapping: VisualMapping
+	
+	private var binding: Binding<Int> {
+		Binding<Int>(
+			get: { control.frameMapping?[frameIndex] ?? frameIndex },
+			set: { newVal in
+				if control.frameMapping == nil { control.frameMapping = [:] }
+				control.frameMapping?[frameIndex] = newVal
+			}
+		)
+	}
+	
+	var body: some View {
+		HStack {
+			Text("Frame \(frameIndex)")
+				.frame(width: 80, alignment: .leading)
+			
+			let valueCount = control.options?.count ?? (mapping.spriteFrames?.count ?? 0)
+			Picker("Value", selection: binding) {
+				ForEach(0..<valueCount, id: \.self) { val in
+					Text("Value \(val)").tag(val)
+				}
+			}
+			.frame(maxWidth: 150)
+		}
+	}
+}
+
+
 
 
 // MARK: - Small reusable controls
