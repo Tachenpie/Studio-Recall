@@ -550,6 +550,22 @@ struct Control: Identifiable, Codable {
 			try c.encode(first, forKey: .region)
 		}
 	}
+	
+	func bounds(in canvasSize: CGSize) -> CGRect {
+		guard let first = regions.first else {
+			return CGRect(
+				x: x * canvasSize.width - 20,
+				y: y * canvasSize.height - 20,
+				width: 40, height: 40
+			)
+		}
+		return CGRect(
+			x: first.rect.minX * canvasSize.width,
+			y: first.rect.minY * canvasSize.height,
+			width: first.rect.width * canvasSize.width,
+			height: first.rect.height * canvasSize.height
+		)
+	}
 }
 
 extension Control {
@@ -604,6 +620,13 @@ extension Control {
 private extension Bound {
 	var isNegInf: Bool { self == .negInfinity }
 	var isPosInf: Bool { self == .posInfinity }
+}
+
+extension Control {
+	func boundsNormalized() -> CGRect {
+		// assume regions are already normalized
+		regions.reduce(CGRect.null) { $0.union($1.rect) }
+	}
 }
 
 extension Control {
@@ -684,6 +707,34 @@ extension Control {
 }
 
 // Extension for concentric knobs and lit buttons
+extension Control {
+	mutating func ensureConcentricRegions() {
+		guard type == .concentricKnob else { return }
+		
+		if regions.count < 2 {
+			// Outer region (big circle, full bounds)
+			let outer = ImageRegion(
+				rect: CGRect(x: 0.1, y: 0.1, width: 0.8, height: 0.8),
+				mapping: .rotate(min: -135, max: 135,
+								 pivot: CGPoint(x: 0.5, y: 0.5),
+								 taper: .linear),
+				shape: .circle
+			)
+			
+			// Inner region (smaller circle inside)
+			let inner = ImageRegion(
+				rect: CGRect(x: 0.35, y: 0.35, width: 0.3, height: 0.3),
+				mapping: .rotate(min: -135, max: 135,
+								 pivot: CGPoint(x: 0.5, y: 0.5),
+								 taper: .linear),
+				shape: .circle
+			)
+			
+			regions = [outer, inner]
+		}
+	}
+}
+
 extension Control {
 	// Decibel/linear normalization helpers exist; mirror them per-ring if you need semantics:
 	func normalizedOuter(mapping: VisualMapping?) -> Double {

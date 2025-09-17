@@ -18,6 +18,10 @@ struct RegionOverlay: View {
 	let shape: ImageRegionShape
 	let zoom: CGFloat
 	
+	let controlType: ControlType
+	let regionIndex: Int
+	let regions: [ImageRegion]
+	
 	@Environment(\.isPanMode) private var isPanMode
 	
 	var body: some View {
@@ -38,30 +42,60 @@ struct RegionOverlay: View {
 		
 		ZStack(alignment: .topLeading) {
 			// 1) Region-local container positioned at (x,y), sized (w,h)
-			ZStack(alignment: .topLeading) {
+//			ZStack(alignment: .topLeading) {
 				// 1a) “marching ants” outline (no fill), drawn in LOCAL space
-				let outline = Path { p in
-					p.addPath(pathFor(shape: shape, in: CGRect(x: 0, y: 0, width: w, height: h)))
-				}
-				outline
-					.stroke(.black, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: 0))
-					.overlay(
-						outline.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashUnit))
+//				let outline = Path { p in
+//					p.addPath(pathFor(shape: shape, in: CGRect(x: 0, y: 0, width: w, height: h)))
+//				}
+//				outline
+//					.stroke(.black, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: 0))
+//					.overlay(
+//						outline.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashUnit))
+//					)
+//					.allowsHitTesting(false)
+				if isConcentricOuterRegion {
+					let outer = CGRect(x: 0, y: 0, width: w, height: h)
+					let innerNorm = regions[1].rect.denormalized(to: canvasSize)
+					let innerLocal = CGRect(
+						x: (innerNorm.minX - x),
+						y: (innerNorm.minY - y),
+						width: innerNorm.width,
+						height: innerNorm.height
 					)
-					.allowsHitTesting(false)
-				
+					let donut = DonutShape(
+						outerRect: outer,
+						innerRect: innerLocal
+					)
+					
+					donut
+						.stroke(.black, style: StrokeStyle(lineWidth: hair, dash: dash))
+						.overlay(donut.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashUnit)))
+						.contentShape(donut) // ✅ hit test only in the ring
+						.zIndex(1)
+				} else {
+					// Inner or non-concentric case
+					let outline = Path { p in
+						p.addPath(pathFor(shape: shape, in: CGRect(x: 0, y: 0, width: w, height: h)))
+					}
+					outline
+						.stroke(.black, style: StrokeStyle(lineWidth: hair, dash: dash))
+						.overlay(outline.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashUnit)))
+						.contentShape(pathFor(shape: shape, in: CGRect(x: 0, y: 0, width: w, height: h)))
+						.zIndex(1)
+				}
 				// 1b) SINGLE hit surface (visual overlay is non-interactive)
 //				Rectangle()
 //					.fill(.clear)
 //					.frame(width: w, height: h)
 //					.contentShape(Rectangle())
 //					.zIndex(1)
-				RegionClipShape(shape: shape)
-					.strokeBorder(Color.accentColor, lineWidth: hair)
-					.frame(width: w, height: h)
-					.position(x: x + w/2, y: y + h/2)
-					.contentShape(RegionClipShape(shape: shape)) // ensures hit area matches shape
-					.zIndex(1)
+
+//				RegionClipShape(shape: shape)
+//					.strokeBorder(Color.accentColor, lineWidth: hair)
+//					.frame(width: w, height: h)
+//					.position(x: x + w/2, y: y + h/2)
+//					.contentShape(RegionClipShape(shape: shape)) // ensures hit area matches shape
+//					.zIndex(1)
 				
 				// 1c) Handles — tiny white squares with black hairline stroke
 				Group {
@@ -121,14 +155,16 @@ struct RegionOverlay: View {
 			}
 			.frame(width: w, height: h, alignment: .topLeading)
 			.offset(x: x, y: y) // place the local container once
-		}
+//		}
 		.frame(width: canvasSize.width, height: canvasSize.height, alignment: .topLeading)
 		.zIndex(10)
 	}
 	
 	// MARK: - Helpers
 	
-	private var effectiveStep: CGFloat { max(0.001, gridStep / max(zoom, 0.0001)) }
+//	private var effectiveStep: CGFloat { max(0.001, gridStep / max(zoom, 0.0001)) }
+	private var effectiveStep: CGFloat { max(0.001, gridStep * (1 / zoom)) }
+
 	
 	private func rectToPixels(_ r: CGRect) -> CGRect {
 		CGRect(x: r.origin.x * canvasSize.width,
@@ -146,5 +182,25 @@ struct RegionOverlay: View {
 			case .rect:   return Path(rect)
 			case .circle: return Path(ellipseIn: rect)
 		}
+	}
+	
+	private var isConcentricOuterRegion: Bool {
+		controlType == .concentricKnob && regionIndex == 0 && regions.count > 1
+	}
+	
+	private var innerRect: CGRect? {
+		guard isConcentricOuterRegion else { return nil }
+		return regions[1].rect.denormalized(to: canvasSize)
+	}
+}
+
+extension CGRect {
+	func denormalized(to canvasSize: CGSize) -> CGRect {
+		CGRect(
+			x: origin.x * canvasSize.width,
+			y: origin.y * canvasSize.height,
+			width: size.width * canvasSize.width,
+			height: size.height * canvasSize.height
+		)
 	}
 }

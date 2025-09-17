@@ -11,6 +11,8 @@ import AppKit
 struct RuntimeControlsOverlay: View {
 	@EnvironmentObject private var sessionManager: SessionManager
 	
+	@Environment(\.canvasZoom) private var zoom
+	
 	let device: Device
 	@Binding var instance: DeviceInstance
 //	let faceplateSize: CGSize
@@ -19,6 +21,8 @@ struct RuntimeControlsOverlay: View {
 	@State private var editingID: UUID? = nil
 	@State private var editorText: String = ""
 	@State private var scratchValue: ControlValue = .knob(0)
+	@State private var hoveredControl: Control?
+	@State private var hoverStart: Date?
 	
 	// knob feel (points per full travel ~ 240)
 	private let knobSensitivity: CGFloat = 1.0 / 240.0
@@ -34,22 +38,35 @@ struct RuntimeControlsOverlay: View {
 	
 	var body: some View {
 		GeometryReader { geo in
-			ZStack {
-				
+			ZStack(alignment: .topLeading) {
 				// live visual projection of instance state over the faceplate
 				RuntimePatches(device: device, instance: $instance)
 					.allowsHitTesting(false)
 				
 				ForEach(device.controls) { def in
-					let rectN = def.regions.first?.rect
-					?? CGRect(x: max(0, def.x - 0.05),
-							  y: max(0, def.y - 0.05),
-							  width: 0.10, height: 0.10)
-					let frame = CGRect(x: rectN.minX * geo.size.width,
-									   y: rectN.minY * geo.size.height,
-									   width:  rectN.width * geo.size.width,
-									   height: rectN.height * geo.size.height)
-					
+//					let rectN = def.regions.first?.rect ?? CGRect(
+//						x: max(0, def.x - 0.05),
+//						y: max(0, def.y - 0.05),
+//						width: 0.10, height: 0.10)
+//					let frame = CGRect(x: rectN.minX * geo.size.width,
+//									   y: rectN.minY * geo.size.height,
+//									   width:  rectN.width * geo.size.width,
+//									   height: rectN.height * geo.size.height)
+					let frame = def.bounds(in: geo.size)
+//					let normFrame = def.boundsNormalized()
+//					let frame = CGRect(
+//						x: normFrame.minX * geo.size.width,
+//						y: normFrame.minY * geo.size.height,
+//						width: normFrame.width * geo.size.width,
+//						height: normFrame.height * geo.size.height
+//					)
+					let _ = print("""
+\(def.name):
+  normFrame = (normFrame)
+  frame = \(frame)
+  geo.size = \(geo.size)
+""")
+
 					let value = Binding<ControlValue>(
 						get: {
 							let inst = instance
@@ -62,19 +79,96 @@ struct RuntimeControlsOverlay: View {
 							sessionManager.setControlValue(instanceID: instance.id, controlID: def.id, to: newVal)
 						}
 					)
-					
-					controlHit(for: def, frame: frame, value: value)
-						.position(x: frame.midX, y: frame.midY)
-					
-					if editingID == def.id {
-						InlineEditor(def: def,
-									 value: value,
-									 text: $editorText,
-									 onClose: { editingID = nil })
-						.position(x: frame.midX, y: frame.midY)
-						.zIndex(10)
-					}
+						controlHit(for: def, frame: frame, value: value)
+//							.position(x: frame.midX, y: frame.midY)
+						.offset(x: frame.minX, y: frame.minY)
+						
+						if editingID == def.id {
+							InlineEditor(def: def,
+										 value: value,
+										 text: $editorText,
+										 onClose: { editingID = nil })
+//							.position(x: frame.midX, y: frame.midY)
+							.offset(x: frame.minX, y: frame.minY)
+							.zIndex(10)
+						}
 				}
+				// Hover hit zones (only for hover, not clicks)
+				ForEach(device.controls) { def in
+					let frame = def.bounds(in: geo.size)
+					
+					Rectangle()
+//						.fill(Color.clear)
+						.fill(Color.red.opacity(0.2))
+//						.stroke(Color.red, lineWidth: 1)
+						.frame(width: frame.width, height: frame.height)
+						.offset(x: frame.minX, y: frame.minY)
+//						.position(x: frame.midX, y: frame.midY)
+						.id(def.id)
+						.background(Text(def.name).font(.caption).foregroundColor(.white))
+//						.contentShape(Rectangle().path(in: CGRect(
+//							x: frame.minX,
+//							y: frame.minY,
+//							width: frame.width,
+//							height: frame.height
+//						)))
+						.zIndex(1000)
+						.onHover { inside in
+							if inside {
+								print("➡️ Hover \(def.name)")
+								hoveredControl = def
+								hoverStart = Date()
+							} else if hoveredControl?.id == def.id {
+								print("⬅️ Left \(def.name)")
+								hoveredControl = nil
+								hoverStart = nil
+							}
+						}
+						.allowsHitTesting(true)   // ✅ hover works
+						.contentShape(Rectangle()) // precise hover zone
+					Text(def.name)
+						.foregroundColor(.orange)
+						.font(.caption)
+				}
+				// Hover bubble
+				if let def = hoveredControl,
+				   let start = hoverStart,
+				   Date().timeIntervalSince(start) > 0.5 {
+					
+					let frame = def.bounds(in: geo.size)
+					
+					Group {
+						if def.type == .concentricKnob {
+							let state = instance.controlStates[def.id] ?? ControlValue.initialValue(for: def)
+							let outer = (state.asOuter ?? def.outerValue) ?? 0.0
+							let inner = (state.asInner ?? def.innerValue) ?? 0.0
+							let outerLabel = def.outerLabel ?? "Outer"
+							let innerLabel = def.innerLabel ?? "Inner"
+							
+							VStack(spacing: 2) {
+								Text("\(outerLabel): " + String(format: "%.2f", outer))
+								Text("\(innerLabel): " + String(format: "%.2f", inner))
+							}
+							.font(.caption2.monospacedDigit())
+						} else {
+							let state = instance.controlStates[def.id] ?? ControlValue.initialValue(for: def)
+							Text(displayString(for: state, control: def))
+								.font(.caption2.monospacedDigit())
+						}
+					}
+					.padding(4)
+					.background(.black.opacity(0.75))
+					.foregroundColor(.white)
+					.cornerRadius(4)
+					.offset(x: frame.minX, y: frame.minY)
+//					.position(x: frame.midX, y: frame.midY)
+					.scaleEffect(1 / max(zoom, 0.01)) // 👈 keep bubble constant size
+					.transition(.opacity.combined(with: .scale))
+					.animation(.easeInOut(duration: 0.2), value: hoveredControl?.id)
+				}
+			}
+			.onHover { inside in
+				print("🌐 Hover overlay active: \(inside)")
 			}
 		}
 	}

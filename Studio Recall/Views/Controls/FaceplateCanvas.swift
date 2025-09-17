@@ -91,7 +91,10 @@ struct FaceplateCanvas: View {
 								gridStep: gridStep,
 								minRegion: minRegion,
 								shape: sel.wrappedValue.regions[idx].shape,
-								zoom: zoom
+								zoom: zoom,
+								controlType: sel.wrappedValue.type,
+								regionIndex: idx,
+								regions: sel.wrappedValue.regions
 							)
 						}
 					}
@@ -113,6 +116,9 @@ struct FaceplateCanvas: View {
 								pan: pan,
 								isPanMode: isPanMode,
 								shape: sel.wrappedValue.regions[idx].shape,
+								controlType: sel.wrappedValue.type,
+								regionIndex: idx,
+								regions: sel.wrappedValue.regions,
 								isEnabled: activeRegionIndex == idx
 							)
 						}
@@ -127,6 +133,7 @@ struct FaceplateCanvas: View {
 				let relX = max(0, min(1, localPoint.x / canvasSize.width))
 				let relY = max(0, min(1, localPoint.y / canvasSize.height))
 				let c = Control(name: type.displayName, type: type, x: relX, y: relY)
+	
 				// no snapping here
 				editableDevice.device.controls.append(c)
 				selectedControlId = c.id
@@ -134,6 +141,13 @@ struct FaceplateCanvas: View {
 			}
 		)
 		.environment(\.isRegionEditing, isEditingRegion)
+		.onChange(of: selectedControlId) { _, newId in
+			if let id = newId,
+			   let idx = editableDevice.device.controls.firstIndex(where: { $0.id == id }) {
+				editableDevice.device.controls[idx].ensureConcentricRegions()
+			}
+		}
+
 #if os(macOS)
 		.overlay(
 			KeyCaptureLayer(
@@ -175,7 +189,7 @@ struct FaceplateCanvas: View {
 		r.origin.y = min(r.origin.y, 1 - r.size.height)
 		return r
 	}
-	
+
 	private func updateRegionRect(of sel: Binding<Control>, to new: CGRect, idx: Int = 0) {
 		var r = new
 		// min size

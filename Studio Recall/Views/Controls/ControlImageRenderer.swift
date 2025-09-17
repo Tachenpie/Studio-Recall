@@ -362,14 +362,14 @@ struct VisualEffect: ViewModifier {
 								let dx = -offset.x * regionSize.width //geo.size.width
 								let dy = -offset.y * regionSize.height //geo.size.height
 								
-								let _ = print("""
-	🎨 Sprite Render Debug:
-	- resolvedIndex = \(resolvedIndex)
-	- geo.size = \(geo.size)
-	- spriteAnchor = \(spriteAnchor)
-	- controlAnchor = \(controlAnchor)
-	- offset = \(offset) → (\(dx), \(dy))
-	""")
+//								let _ = print("""
+//	🎨 Sprite Render Debug:
+//	- resolvedIndex = \(resolvedIndex)
+//	- geo.size = \(geo.size)
+//	- spriteAnchor = \(spriteAnchor)
+//	- controlAnchor = \(controlAnchor)
+//	- offset = \(offset) → (\(dx), \(dy))
+//	""")
 								
 								Image(decorative: image, scale: 1.0)
 									.resizable()

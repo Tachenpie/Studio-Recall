@@ -18,7 +18,9 @@ struct RegionHitLayer: View {
 	let pan: CGSize
 	var isPanMode: Bool = false
 	let shape: ImageRegionShape
-	
+	let controlType: ControlType
+	let regionIndex: Int
+	let regions: [ImageRegion]
 	var isEnabled: Bool = true
 	
 	// ---- Tuning -------------------------------------------------------------
@@ -57,18 +59,38 @@ struct RegionHitLayer: View {
 //				.contentShape(Rectangle())
 //				.gesture(isPanMode || !isEnabled ? nil : dragGesture(regionFrame: frame, localSize: regionSize))
 //				.allowsHitTesting(isEnabled && !isPanMode)
-			RegionClipShape(shape: shape)
-				.fill(Color.clear)
-				.frame(width: parentSize.width, height: parentSize.height)
-				.contentShape(RegionClipShape(shape: shape))   // ✅ hit testing matches shape
-				.gesture(isPanMode || !isEnabled ? nil : dragGesture(regionFrame: frame, localSize: regionSize))
-				.allowsHitTesting(isEnabled && !isPanMode)
+			if isConcentricOuterRegion {
+				let outer = regionFrameInParent(rect: rect)
+				let inner = regionFrameInParent(rect: regions[1].rect)
+				DonutShape(outerRect: outer, innerRect: inner)
+					.fill(Color.clear, style: FillStyle(eoFill: true))
+					.contentShape(DonutShape(outerRect: outer, innerRect: inner))
+					.gesture(isPanMode || !isEnabled ? nil : dragGesture(regionFrame: outer, localSize: regionSize))
+					.allowsHitTesting(isEnabled && !isPanMode)
+			} else {
+				RegionClipShape(shape: shape)
+					.fill(Color.clear)
+					.frame(width: parentSize.width, height: parentSize.height)
+					.contentShape(RegionClipShape(shape: shape))   // ✅ hit testing matches shape
+					.gesture(isPanMode || !isEnabled ? nil : dragGesture(regionFrame: frame, localSize: regionSize))
+					.allowsHitTesting(isEnabled && !isPanMode)
+			}
 		}
 	}
 	
 	// MARK: - Mapping (parent px delta → normalized delta)
+	private var isConcentricOuterRegion: Bool {
+		controlType == .concentricKnob && regionIndex == 0 && regions.count > 1
+	}
+	
+	private var innerRect: CGRect? {
+		guard isConcentricOuterRegion else { return nil }
+		return regions[1].rect.denormalized(to: canvasSize, zoom: zoom, pan: pan, parentSize: parentSize)
+	}
+	
 	private func parentDeltaToNormalized(dx: CGFloat, dy: CGFloat) -> (CGFloat, CGFloat) {
-		(dx / (canvasSize.width * zoom), dy / (canvasSize.height * zoom))
+//		(dx / (canvasSize.width * zoom), dy / (canvasSize.height * zoom))
+		(dx / canvasSize.width, dy / canvasSize.height)
 	}
 	
 	private func canvasOriginInParent() -> CGPoint {
@@ -124,7 +146,12 @@ struct RegionHitLayer: View {
 				}
 				
 				// Parent px deltas → canvas-normalized deltas
-				let (nx, ny) = parentDeltaToNormalized(dx: g.translation.width, dy: g.translation.height)
+				let resizeScale = 1.0 / zoom
+//				let (nx, ny) = parentDeltaToNormalized(dx: g.translation.width, dy: g.translation.height)
+				let (nx, ny) = parentDeltaToNormalized(
+					dx: g.translation.width * resizeScale,
+					dy: g.translation.height * resizeScale
+				)
 				var r = dragStartRect
 				
 				guard let h = activeHandle else {
@@ -522,3 +549,19 @@ private extension NSCursor {
 }
 
 #endif
+
+// MARK: - CGRect helpers
+extension CGRect {
+	func denormalized(to canvasSize: CGSize, zoom: CGFloat, pan: CGSize, parentSize: CGSize) -> CGRect {
+		let origin = CGPoint(
+			x: origin.x * canvasSize.width * zoom + (parentSize.width - canvasSize.width * zoom) * 0.5 + pan.width,
+			y: origin.y * canvasSize.height * zoom + (parentSize.height - canvasSize.height * zoom) * 0.5 + pan.height
+		)
+		return CGRect(
+			x: origin.x,
+			y: origin.y,
+			width: size.width * canvasSize.width * zoom,
+			height: size.height * canvasSize.height * zoom
+		)
+	}
+}

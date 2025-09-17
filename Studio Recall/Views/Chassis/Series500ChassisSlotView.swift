@@ -58,6 +58,7 @@ struct Series500ChassisSlotView: View {
 			RuntimeControlsOverlay(device: device, instance: instanceBinding)
 				.frame(width: moduleSize.width, height: moduleSize.height)
 				.zIndex(1)
+				.allowsHitTesting(true)
 			
 			// ✅ Draggable rails with screws (500-series: top & bottom)
 			VStack {
@@ -98,6 +99,7 @@ struct Series500ChassisSlotView: View {
 			.frame(width: moduleSize.width, height: moduleSize.height)
 //			.clipShape(RoundedRectangle(cornerRadius: 6))
 			.clipShape(Rectangle())
+//			.allowsHitTesting(false)
 			.padding(.vertical, 4)
 			.onDrag {
 				let payload = DragPayload(instanceId: instance.id, deviceId: device.id)

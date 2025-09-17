@@ -60,6 +60,7 @@ struct RackChassisSlotView: View {
 			RuntimeControlsOverlay(device: device, instance: instanceBinding)
 				.frame(width: rackSize.width, height: rackSize.height)
 				.zIndex(1)
+				.allowsHitTesting(true)
 			
 			// ✅ Draggable rails with screws
 			HStack {
@@ -99,6 +100,7 @@ struct RackChassisSlotView: View {
 			.frame(width: rackSize.width, height: rackSize.height)
 //			.clipShape(RoundedRectangle(cornerRadius: 6))
 			.clipShape(Rectangle())
+//			.allowsHitTesting(false)
 			.onDrag {
 				let payload = DragPayload(instanceId: instance.id, deviceId: device.id)
 				DragContext.shared.beginDrag(payload: payload)
