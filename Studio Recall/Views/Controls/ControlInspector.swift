@@ -442,10 +442,31 @@ struct ControlInspector: View {
 				
 			case .button:
 				GroupBox("Button") {
-					Toggle("Pressed", isOn: Binding(
-						get: { binding.isPressed.wrappedValue ?? false },
-						set: { binding.isPressed.wrappedValue = $0 }
-					))
+					VStack(alignment: .leading, spacing: 8) {
+						Toggle("Pressed", isOn: Binding(
+							get: { binding.isPressed.wrappedValue ?? false },
+							set: { binding.isPressed.wrappedValue = $0 }
+						))
+						HStack {
+							HStack {
+								Text("On Label")
+								TextField("On", text: Binding(
+									get: { binding.onLabel.wrappedValue ?? "On" },
+									set: { binding.onLabel.wrappedValue = $0 }
+									))
+								.textFieldStyle(.roundedBorder)
+							}
+							HStack {
+								Text("Off Label")
+								TextField("Off", text: Binding(
+									get: { binding.offLabel.wrappedValue ?? "Off" },
+									set: { binding.offLabel.wrappedValue = $0 }
+								))
+								.textFieldStyle(.roundedBorder)
+							}
+						}
+						.padding(.horizontal)
+					}
 				}
 				
 			case .light:
@@ -627,6 +648,25 @@ struct ControlInspector: View {
 							get: { binding.lampFollowsPress.wrappedValue ?? true },
 							set: { binding.lampFollowsPress.wrappedValue = $0 }
 						))
+						HStack {
+							HStack {
+								Text("On Label")
+								TextField("On", text: Binding(
+									get: { binding.onLabel.wrappedValue ?? "On" },
+									set: { binding.onLabel.wrappedValue = $0 }
+								))
+								.textFieldStyle(.roundedBorder)
+							}
+							HStack {
+								Text("Off Label")
+								TextField("Off", text: Binding(
+									get: { binding.offLabel.wrappedValue ?? "Off" },
+									set: { binding.offLabel.wrappedValue = $0 }
+								))
+								.textFieldStyle(.roundedBorder)
+							}
+						}
+						.padding(.horizontal)
 						
 						HStack {
 							// small preview swatch

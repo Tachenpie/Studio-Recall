@@ -61,24 +61,24 @@ struct Series500ChassisSlotView: View {
 				.allowsHitTesting(true)
 			
 			// ✅ Draggable rails with screws (500-series: top & bottom)
-			VStack {
-				RailH()
-					.contentShape(Rectangle())
-					.onDrag {
-						deviceDragProvider(instance: instance, device: device) // top rail drag
-					}
-					.contextMenu {
-						Button("Edit Device...") {
-							editingDevice = device
-							isPresentingEditor = true
+				.overlay(alignment: .top) {
+					RailH()
+						.contentShape(Rectangle())
+						.onDrag {
+							deviceDragProvider(instance: instance, device: device) // top rail drag
 						}
-						Button("Remove from rack", role: .destructive) {
-							removeInstance(instance, of: device)
+						.contextMenu {
+							Button("Edit Device...") {
+								editingDevice = device
+								isPresentingEditor = true
+							}
+							Button("Remove from rack", role: .destructive) {
+								removeInstance(instance, of: device)
+							}
 						}
-					}
-				
-				Spacer()
-				
+				}
+
+				.overlay(alignment: .bottom) {
 				RailH()
 					.contentShape(Rectangle())
 					.onDrag {
@@ -101,17 +101,17 @@ struct Series500ChassisSlotView: View {
 			.clipShape(Rectangle())
 //			.allowsHitTesting(false)
 			.padding(.vertical, 4)
-			.onDrag {
-				let payload = DragPayload(instanceId: instance.id, deviceId: device.id)
-				DragContext.shared.beginDrag(payload: payload)
-				if let data = try? JSONEncoder().encode(payload) {
-					return NSItemProvider(item: data as NSData,
-										  typeIdentifier: UTType.deviceDragPayload.identifier)
-				}
-				return NSItemProvider()
-			} preview: {
-				DeviceView(device: device).frame(width: 60, height: 80).shadow(radius: 4)
-			}
+//			.onDrag {
+//				let payload = DragPayload(instanceId: instance.id, deviceId: device.id)
+//				DragContext.shared.beginDrag(payload: payload)
+//				if let data = try? JSONEncoder().encode(payload) {
+//					return NSItemProvider(item: data as NSData,
+//										  typeIdentifier: UTType.deviceDragPayload.identifier)
+//				}
+//				return NSItemProvider()
+//			} preview: {
+//				DeviceView(device: device).frame(width: 60, height: 80).shadow(radius: 4)
+//			}
 			.overlay(
 //				RoundedRectangle(cornerRadius: 6)
 				Rectangle()

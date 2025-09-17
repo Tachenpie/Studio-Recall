@@ -311,6 +311,10 @@ struct Control: Identifiable, Codable {
 	var optionAngles: [Double]? = nil
 	var optionValues: [Double]? = nil
 	
+	// Button and Lit Button
+	var onLabel: String? = nil
+	var offLabel: String? = nil
+	
 	// Concentric knob (outer ring + inner ring
 	var outerValue: Double?          // normalized 0…1 (e.g. Gain)
 	var innerValue: Double?          // normalized 0…1 (e.g. Q)
@@ -390,6 +394,9 @@ struct Control: Identifiable, Codable {
 		// stepped/multiswitch metadata
 		case stepAngles, stepValues, optionAngles, optionValues
 		
+		// button/litbutton labels
+		case onLabel, offLabel
+		
 		// knob ranges/taper
 		case knobMin, knobMax
 		
@@ -437,6 +444,10 @@ struct Control: Identifiable, Codable {
 		stepValues    = try c.decodeIfPresent([Double].self, forKey: .stepValues)
 		optionAngles  = try c.decodeIfPresent([Double].self, forKey: .optionAngles)
 		optionValues  = try c.decodeIfPresent([Double].self, forKey: .optionValues)
+		
+		// button labels
+		onLabel  = try c.decodeIfPresent(String.self, forKey: .onLabel)
+		offLabel = try c.decodeIfPresent(String.self, forKey: .offLabel)
 		
 		// knob ranges
 		knobMin = try c.decodeIfPresent(Bound.self, forKey: .knobMin)
@@ -505,6 +516,10 @@ struct Control: Identifiable, Codable {
 		try c.encodeIfPresent(stepValues, forKey: .stepValues)
 		try c.encodeIfPresent(optionAngles, forKey: .optionAngles)
 		try c.encodeIfPresent(optionValues, forKey: .optionValues)
+		
+		// button labels
+		try c.encodeIfPresent(onLabel, forKey: .onLabel)
+		try c.encodeIfPresent(offLabel, forKey: .offLabel)
 		
 		// knob ranges
 		try c.encodeIfPresent(knobMin, forKey: .knobMin)
@@ -588,6 +603,9 @@ extension Control {
 		self.stepValues = nil
 		self.optionAngles = nil
 		self.optionValues = nil
+		
+		self.onLabel = "On"
+		self.offLabel = "Off"
 		
 		self.onColor = nil
 		self.offColor = nil
@@ -1045,6 +1063,104 @@ struct LitButton: View {
 				.padding(2)
 		}
 		.frame(width: 42, height: 42)
+	}
+}
+
+// MARK: - Canonical display formatting for control values
+extension Control {
+	/// Returns one or more display lines for this control using the current instance state.
+	/// Handles absolute value conversions and labels (incl. concentric knobs).
+	func displayLines(for instance: DeviceInstance) -> [String] {
+		let value = instance.controlStates[id] ?? ControlValue.initialValue(for: self)
+		return displayLines(for: value)
+	}
+	
+	/// Overload if you already have a ControlValue on hand.
+	func displayLines(for value: ControlValue) -> [String] {
+		switch (type, value) {
+			case (.concentricKnob, .concentricKnob(let outer, let inner)):
+				let oAbs = unitToAbsolute(outer, lo: outerMin, hi: outerMax, taper: outerTaper)
+				let iAbs = unitToAbsolute(inner, lo: innerMin, hi: innerMax, taper: innerTaper)
+				let oLabel = outerLabel ?? "Outer"
+				let iLabel = innerLabel ?? "Inner"
+				return [
+					"\(oLabel): " + numberString(oAbs, decimals: 2),
+					"\(iLabel): " + numberString(iAbs, decimals: 2)
+				]
+				
+			case (.knob, .knob(let u)):
+				let abs = unitToAbsolute(u, lo: knobMin, hi: knobMax, taper: regions.first?.mapping?.taper)
+				return [numberString(abs, decimals: 2)]
+				
+			case (.steppedKnob, .steppedKnob(let idx)):
+				if let labels = options, labels.indices.contains(idx) {
+					return [labels[idx]]
+				} else {
+					return ["\(idx)"]
+				}
+				
+			case (.multiSwitch, .multiSwitch(let idx)):
+				if let opts = options, opts.indices.contains(idx) {
+					return [opts[idx]]
+				} else {
+					return ["\(idx)"]
+				}
+				
+			case (.button, .button(let pressed)):
+				return [pressed ? (onLabel ?? "On") : (offLabel ?? "Off")]
+				
+			case (.light, .light(let lit)):
+				return [lit ? (onLabel ?? "On") : (offLabel ?? "Off")]
+				
+			case (.litButton, .litButton(let pressed)):
+				return [pressed ? (onLabel ?? "On") : (offLabel ?? "Off")]
+				
+			default:
+				// Mismatched pair (e.g., stale state type) — fall back gracefully
+				return ["—"]
+		}
+	}
+	
+	// MARK: - Local helpers
+	
+	/// Convert unit value [0..1] into absolute using this app's tapers/bounds.
+	private func unitToAbsolute(_ u: Double,
+								lo: Bound?,
+								hi: Bound?,
+								taper: ValueTaper?) -> Double {
+		let loV = (lo ?? .finite(0)).asFinite(-Double.greatestFiniteMagnitude)
+		let hiV = (hi ?? .finite(1)).asFinite(Double.greatestFiniteMagnitude)
+		
+		let clampedU = min(max(u, 0.0), 1.0)
+		
+		switch taper ?? .linear {
+			case .linear:
+				return loV + (hiV - loV) * clampedU
+//			case .log:
+//				// Simple log-ish mapping (adjust if you already use a different one)
+//				let minV = max(1e-6, loV)
+//				let maxV = max(minV * 1.000001, hiV)
+//				let logMin = log(minV)
+//				let logMax = log(maxV)
+//				return exp(logMin + (logMax - logMin) * clampedU)
+			case .decibel:
+				// Example dB mapping: treat lo/hi as dB and interpolate linearly
+				return loV + (hiV - loV) * clampedU
+		}
+	}
+	
+	private func numberString(_ x: Double, decimals: Int) -> String {
+		String(format: "%.\(decimals)f", x)
+	}
+}
+
+private extension Bound {
+	func asFinite(_ fallback: Double) -> Double {
+		switch self {
+			case .finite(let v): return v
+			case .negInfinity:   return -Double.greatestFiniteMagnitude
+			case .posInfinity:   return  Double.greatestFiniteMagnitude
+		}
 	}
 }
 

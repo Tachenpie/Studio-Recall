@@ -63,55 +63,54 @@ struct RackChassisSlotView: View {
 				.allowsHitTesting(true)
 			
 			// ✅ Draggable rails with screws
-			HStack {
-				RailV()
-					.contentShape(Rectangle())
-					.onDrag {
-						deviceDragProvider(instance: instance, device: device)   // left rail drag
-					}
-					.contextMenu {
-						Button("Edit Device...") {
-							editingDevice = device
-							isPresentingEditor = true
+				.overlay(alignment: .leading) {
+					RailV()
+						.contentShape(Rectangle())
+						.onDrag {
+							deviceDragProvider(instance: instance, device: device)   // left rail drag
 						}
-						Button("Remove from rack", role: .destructive) {
-							removeInstance(instance, of: device)
+						.contextMenu {
+							Button("Edit Device...") {
+								editingDevice = device
+								isPresentingEditor = true
+							}
+							Button("Remove from rack", role: .destructive) {
+								removeInstance(instance, of: device)
+							}
 						}
-					}
+				}
 				
-				Spacer()
-				
-				RailV()
-					.contentShape(Rectangle())
-					.onDrag {
-						deviceDragProvider(instance: instance, device: device)   // right rail drag
-					}
-					.contextMenu {
-						Button("Edit Device...") {
-							editingDevice = device
-							isPresentingEditor = true
+				.overlay(alignment: .trailing) {
+					RailV()
+						.contentShape(Rectangle())
+						.onDrag {
+							deviceDragProvider(instance: instance, device: device)   // right rail drag
 						}
-						Button("Remove from rack", role: .destructive) {
-							removeInstance(instance, of: device)
+						.contextMenu {
+							Button("Edit Device...") {
+								editingDevice = device
+								isPresentingEditor = true
+							}
+							Button("Remove from rack", role: .destructive) {
+								removeInstance(instance, of: device)
+							}
 						}
-					}
-			}
+				}
 		}
 			.frame(width: rackSize.width, height: rackSize.height)
-//			.clipShape(RoundedRectangle(cornerRadius: 6))
 			.clipShape(Rectangle())
 //			.allowsHitTesting(false)
-			.onDrag {
-				let payload = DragPayload(instanceId: instance.id, deviceId: device.id)
-				DragContext.shared.beginDrag(payload: payload)
-				if let data = try? JSONEncoder().encode(payload) {
-					return NSItemProvider(item: data as NSData,
-										  typeIdentifier: UTType.deviceDragPayload.identifier)
-				}
-				return NSItemProvider()
-			} preview: {
-				DeviceView(device: device).frame(width: 80, height: 40).shadow(radius: 4)
-			}
+//			.onDrag {
+//				let payload = DragPayload(instanceId: instance.id, deviceId: device.id)
+//				DragContext.shared.beginDrag(payload: payload)
+//				if let data = try? JSONEncoder().encode(payload) {
+//					return NSItemProvider(item: data as NSData,
+//										  typeIdentifier: UTType.deviceDragPayload.identifier)
+//				}
+//				return NSItemProvider()
+//			} preview: {
+//				DeviceView(device: device).frame(width: 80, height: 40).shadow(radius: 4)
+//			}
 			.overlay(
 //				RoundedRectangle(cornerRadius: 6)
 				Rectangle()
