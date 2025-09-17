@@ -15,6 +15,7 @@ struct Series500ChassisSlotView: View {
     
     @EnvironmentObject var settings: AppSettings
     @EnvironmentObject var library: DeviceLibrary
+	@EnvironmentObject var sessionManager: SessionManager
     
     @Binding var hoveredIndex: Int?
     @Binding var hoveredRange: Range<Int>?
@@ -66,6 +67,10 @@ struct Series500ChassisSlotView: View {
 						.contentShape(Rectangle())
 						.onDrag {
 							deviceDragProvider(instance: instance, device: device) // top rail drag
+						} preview: {
+							DeviceView(device: device)
+								.frame(width: 140, height: 60)
+								.shadow(radius: 6)
 						}
 						.contextMenu {
 							Button("Edit Device...") {
@@ -83,6 +88,10 @@ struct Series500ChassisSlotView: View {
 					.contentShape(Rectangle())
 					.onDrag {
 						deviceDragProvider(instance: instance, device: device) // bottom rail drag
+					} preview: {
+						DeviceView(device: device)
+							.frame(width: 140, height: 60)
+							.shadow(radius: 6)
 					}
 					.contextMenu {
 						Button("Edit Device...") {
@@ -131,6 +140,20 @@ struct Series500ChassisSlotView: View {
 					}
 				)
 			}
+			.onDrop(of: [UTType.deviceDragPayload],
+					delegate: ChassisDropDelegate(
+						currentIndex: index,
+						indexFor: nil,
+						slots: $slots,
+						hoveredIndex: $hoveredIndex,
+						hoveredValid: $hoveredValid,
+						hoveredRange: $hoveredRange,
+						library: library,
+						measure: { $0.rackUnits ?? 1 },
+						kind: .rack,
+						onCommit: { sessionManager.saveSessions() } // optional
+					)
+			)
 		return AnyView(body)
 	}
 
@@ -139,25 +162,26 @@ struct Series500ChassisSlotView: View {
 		
 		return Rectangle()
 		// tiny alpha keeps it in the hit-testing tree but is visually identical
-			.fill(Color.white.opacity(0.03))
+			.fill(Color.white.opacity(0.06))
 			.frame(width: moduleSize.width, height: moduleSize.height)
 			.overlay(
 				Rectangle()
 					.stroke(Color.secondary.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [4]))
 			)
 			.contentShape(Rectangle()) // <- important for drops
-			.onDrop(
-				of: [UTType.deviceDragPayload],
-				delegate: ChassisDropDelegate(
-					currentIndex: index,
-					slots: $slots,
-					hoveredIndex: $hoveredIndex,
-					hoveredValid: $hoveredValid,
-					hoveredRange: $hoveredRange,
-					library: library,
-					measure: { $0.slotWidth ?? 1 },
-					kind: .series500
-				)
+			.onDrop(of: [UTType.deviceDragPayload],
+					delegate: ChassisDropDelegate(
+						currentIndex: index,
+						indexFor: nil,
+						slots: $slots,
+						hoveredIndex: $hoveredIndex,
+						hoveredValid: $hoveredValid,
+						hoveredRange: $hoveredRange,
+						library: library,
+						measure: { $0.rackUnits ?? 1 },
+						kind: .rack,
+						onCommit: { sessionManager.saveSessions() } // optional
+					)
 			)
 	}
 

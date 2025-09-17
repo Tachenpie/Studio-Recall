@@ -14,6 +14,7 @@ struct RackChassisSlotView: View {
     @Binding var slots: [DeviceInstance?]
     @EnvironmentObject var settings: AppSettings
     @EnvironmentObject var library: DeviceLibrary
+	@EnvironmentObject var sessionManager: SessionManager
     
     @Binding var hoveredIndex: Int?
     @Binding var hoveredRange: Range<Int>?
@@ -68,6 +69,10 @@ struct RackChassisSlotView: View {
 						.contentShape(Rectangle())
 						.onDrag {
 							deviceDragProvider(instance: instance, device: device)   // left rail drag
+						} preview: {
+							DeviceView(device: device)
+								.frame(width: 140, height: 60)
+								.shadow(radius: 6)
 						}
 						.contextMenu {
 							Button("Edit Device...") {
@@ -85,6 +90,10 @@ struct RackChassisSlotView: View {
 						.contentShape(Rectangle())
 						.onDrag {
 							deviceDragProvider(instance: instance, device: device)   // right rail drag
+						} preview: {
+							DeviceView(device: device)
+								.frame(width: 140, height: 60)
+								.shadow(radius: 6)
 						}
 						.contextMenu {
 							Button("Edit Device...") {
@@ -130,6 +139,20 @@ struct RackChassisSlotView: View {
 					}
 				)
 			}
+			.onDrop(of: [UTType.deviceDragPayload],
+					delegate: ChassisDropDelegate(
+						currentIndex: index,
+						indexFor: nil,
+						slots: $slots,
+						hoveredIndex: $hoveredIndex,
+						hoveredValid: $hoveredValid,
+						hoveredRange: $hoveredRange,
+						library: library,
+						measure: { $0.rackUnits ?? 1 },
+						kind: .rack,
+						onCommit: { sessionManager.saveSessions() } // optional
+					)
+			)
 		return AnyView(body)
 	}
 
@@ -137,26 +160,28 @@ struct RackChassisSlotView: View {
 		let rackSize = DeviceMetrics.rackSize(units: units, scale: settings.pointsPerInch)
 		
 		return Rectangle()
-			.fill(Color.white.opacity(0.03))   // must be in hit-test tree
+			.fill(Color.white.opacity(0.06))   // must be in hit-test tree
 			.frame(width: rackSize.width, height: rackSize.height)
 			.contentShape(Rectangle())
 			.overlay(
 				Rectangle()
 					.stroke(Color.secondary.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [4]))
 			)
-			.onDrop(
-				of: [UTType.deviceDragPayload],
-				delegate: ChassisDropDelegate(
-					currentIndex: index,
-					slots: $slots,
-					hoveredIndex: $hoveredIndex,
-					hoveredValid: $hoveredValid,
-					hoveredRange: $hoveredRange,
-					library: library,
-					measure: { $0.rackUnits ?? 1 },
-					kind: .rack
-				)
+			.onDrop(of: [UTType.deviceDragPayload],
+					delegate: ChassisDropDelegate(
+						currentIndex: index,
+						indexFor: nil,
+						slots: $slots,
+						hoveredIndex: $hoveredIndex,
+						hoveredValid: $hoveredValid,
+						hoveredRange: $hoveredRange,
+						library: library,
+						measure: { $0.rackUnits ?? 1 },
+						kind: .rack,
+						onCommit: { sessionManager.saveSessions() } // optional
+					)
 			)
+
 	}
 
     private func indexOfInstance(_ instance: DeviceInstance) -> Int? {
@@ -179,6 +204,8 @@ struct RackChassisSlotView: View {
 	
 	private func deviceDragProvider(instance: DeviceInstance, device: Device) -> NSItemProvider {
 		let payload = DragPayload(instanceId: instance.id, deviceId: device.id)
+		print("\(payload.id) is from \(payload.source)")
+
 		DragContext.shared.beginDrag(payload: payload)
 		let provider = NSItemProvider()
 		provider.registerDataRepresentation(

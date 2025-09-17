@@ -12,6 +12,7 @@ struct Series500ChassisView: View {
     @Binding var chassis: Series500Chassis
     @EnvironmentObject var settings: AppSettings
     @EnvironmentObject var library: DeviceLibrary
+	@EnvironmentObject var sessionManager: SessionManager
 	@Environment(\.canvasZoom) private var canvasZoom
     
     @State private var hoveredIndex: Int? = nil
@@ -63,14 +64,17 @@ struct Series500ChassisView: View {
 				.cornerRadius(8)
 				.overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
 				.onDrop(of: [UTType.deviceDragPayload],
-						delegate: Series500CatchAllDropDelegate(
+						delegate: ChassisDropDelegate(
+							currentIndex: nil,
+							indexFor: { pt in slotIndex(for: pt) }, // your existing mapper: point → slot index
 							slots: $chassis.slots,
 							hoveredIndex: $hoveredIndex,
-							hoveredRange: $hoveredRange,
 							hoveredValid: $hoveredValid,
+							hoveredRange: $hoveredRange,
 							library: library,
-							slotWidth: module.width,
-							spacing: spacing
+							measure: { $0.rackUnits ?? 1 },
+							kind: .rack,
+							onCommit: { sessionManager.saveSessions() }
 						)
 				)
 				.zIndex(1)
@@ -126,6 +130,27 @@ struct Series500ChassisView: View {
         }
     }
 	
+	
+	// Map a drop point (in the chassis VStack's local coords) to a slot index.
+	private func slotIndex(for pt: CGPoint) -> Int {
+		// Match the layout used above
+		let spacing: CGFloat = 4
+		let unit = DeviceMetrics.rackSize(units: 1, scale: settings.pointsPerInch)
+		let unitH = unit.height
+		
+		// Account for the .padding() on the chassis container (default ~= 16)
+		let containerPadding: CGFloat = 16
+		var y = pt.y - containerPadding
+		if y < 0 { y = 0 }
+		
+		// Convert y → row index, snapping by (unit height + spacing)
+		let rowFloat = (y + spacing / 2) / (unitH + spacing)
+		let row = Int(rowFloat.rounded(.down))
+		
+		// Clamp to slots
+		return max(0, min(row, max(0, chassis.slots.count - 1)))
+	}
+
 	// MARK: - 500-series edit / helpers
 	
 	private func clearAll500Devices() {

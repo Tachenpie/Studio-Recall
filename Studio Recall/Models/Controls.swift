@@ -1089,8 +1089,25 @@ extension Control {
 				]
 				
 			case (.knob, .knob(let u)):
-				let abs = unitToAbsolute(u, lo: knobMin, hi: knobMax, taper: regions.first?.mapping?.taper)
-				return [numberString(abs, decimals: 2)]
+				// Convert to absolute (your existing helper)
+				let absVal = unitToAbsolute(u, lo: knobMin, hi: knobMax, taper: regions.first?.mapping?.taper)
+				
+				// Heuristics: if the bound is infinite or the number is not finite / extreme,
+				// prefer a clock readout. You can also just *always* include both.
+				let loIsInf = (knobMin == .negInfinity || knobMin == .posInfinity)
+				let hiIsInf = (knobMax == .negInfinity || knobMax == .posInfinity)
+				let absIsWeird = !absVal.isFinite || abs(absVal) > 1.0e10
+				
+				let clock = clockString(forUnit: u)  // e.g. “11:30”
+				
+				if loIsInf || hiIsInf || absIsWeird {
+					// Show clock only, or include both; pick the style you like:
+					// return [clock]
+					return ["\(clock)"]
+				} else {
+					// Normal numeric readout
+					return [numberString(absVal, decimals: 2)]
+				}
 				
 			case (.steppedKnob, .steppedKnob(let idx)):
 				if let labels = options, labels.indices.contains(idx) {
@@ -1151,6 +1168,35 @@ extension Control {
 	
 	private func numberString(_ x: Double, decimals: Int) -> String {
 		String(format: "%.\(decimals)f", x)
+	}
+	
+	// MARK: - Clock face formatter for knobs (e.g., “11:30”)
+	private func clockString(forUnit u: Double,
+							 startDeg: Double = -150,  // ~7 o’clock
+							 endDeg: Double = 150,     // ~5 o’clock
+							 roundToMinutes: Int = 5   // snap to nearest 5 minutes
+	) -> String {
+		// Clamp and map unit → angle in degrees (0° = 12:00)
+		let uu = min(max(u, 0.0), 1.0)
+		let angle = startDeg + uu * (endDeg - startDeg)   // [-150, +150]
+		
+		// Convert angle to minutes from 12:00 (0.5° per minute)
+		var mins = angle / 0.5
+		
+		// Normalize to [0, 720) minutes (12 hours = 720 minutes)
+		mins = mins.truncatingRemainder(dividingBy: 720)
+		if mins < 0 { mins += 720 }
+		
+		// Round to nice increments
+		let step = Double(roundToMinutes)
+		mins = (mins / step).rounded() * step
+		
+		// Hours/minutes (12-hour clock; 0 -> 12)
+		let hours = Int(mins / 60) % 12
+		let minutes = Int(mins) % 60
+		let hour = hours == 0 ? 12 : hours
+		
+		return String(format: "%d:%02d", hour, minutes)
 	}
 }
 
