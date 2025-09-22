@@ -27,6 +27,17 @@ struct DeviceInstance: Identifiable, Codable, Equatable {
 			)
 		}
 	}
+	
+	// Preserve an existing instance id (e.g., when moving an instance in the rack).
+	init(id: UUID, deviceID: UUID, device: Device? = nil) {
+		self.id = id
+		self.deviceID = deviceID
+		if let d = device {
+			self.controlStates = Dictionary(
+				uniqueKeysWithValues: d.controls.map { ($0.id, ControlValue.initialValue(for: $0)) }
+			)
+		}
+	}
 }
 
 // Represent the value for any control type

@@ -109,7 +109,7 @@ struct DeviceLibraryView: View {
                                         onCancel: { activeSheet = nil }
                                     )
                                 }
-                                .frame(minWidth: 500, minHeight: 400)
+                                .frame(minWidth: 1000, minHeight: 400)
                             }
         }
     }
@@ -126,15 +126,20 @@ struct DeviceLibraryView: View {
             VStack(spacing: 2) {
                 Text(device.name)
                     .font(.caption)
-                    .fontWeight(.medium)
+					.foregroundColor(.secondary)
+					.fontWeight(.medium)
                     .lineLimit(1)
                     .truncationMode(.tail)
 
-                Text(device.type == .rack
-                     ? "\(device.rackUnits ?? 1)U"
-                     : "\(device.slotWidth ?? 1) slots")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+				if device.type == .rack {
+					Text("\(device.rackUnits ?? 1)U, \(device.rackWidth.label) Rack")
+					.font(.caption)
+					.fontWeight(.medium)
+				} else {
+					Text("\(device.slotWidth ?? 1) slots")
+						.font(.caption)
+				}
+					
             }
         }
         .padding(8)
@@ -143,29 +148,35 @@ struct DeviceLibraryView: View {
         .cornerRadius(8)
         .contentShape(Rectangle())
 		.onDrag {
-			let payload = DragPayload(deviceId: device.id)       // or (instanceId:, deviceId:)
+			let payload = DragPayload(deviceId: device.id)
 			DragContext.shared.beginDrag(payload: payload)
 			
 			let provider = NSItemProvider()
+			// primary custom type
 			provider.registerDataRepresentation(
 				forTypeIdentifier: UTType.deviceDragPayload.identifier,
 				visibility: .all
 			) { completion in
-				do {
-					let data = try JSONEncoder().encode(payload)
-					completion(data, nil)
-				} catch {
-					completion(nil, error)
-				}
-				return nil
+				completion(try? JSONEncoder().encode(payload), nil); return nil
 			}
+			// fallbacks
+			provider.registerDataRepresentation(forTypeIdentifier: UTType.data.identifier, visibility: .all) { completion in
+				completion(Data(), nil); return nil
+			}
+			provider.registerDataRepresentation(forTypeIdentifier: UTType.item.identifier, visibility: .all) { completion in
+				completion(Data(), nil); return nil
+			}
+			provider.registerDataRepresentation(forTypeIdentifier: UTType.utf8PlainText.identifier, visibility: .all) { completion in
+				completion(Data("device".utf8), nil); return nil
+			}
+			
+//			print("📦 onDrag start – device=\(device.name) utis=\(provider.registeredTypeIdentifiers)")
 			return provider
 		} preview: {
-            DeviceView(device: device)
-                .frame(width: 80, height: 40)
-                .shadow(radius: 4)
-        }
-
+			DeviceView(device: device)
+//				.frame(width: 80, height: 40)
+				.shadow(radius: 4)
+		}
     }
 
     // MARK: - Editor Sheet

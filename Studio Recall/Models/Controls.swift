@@ -1066,76 +1066,74 @@ struct LitButton: View {
 	}
 }
 
-// MARK: - Canonical display formatting for control values
+// MARK: - Structured display entries (with optional system icon)
+struct ControlDisplayEntry: Hashable {
+	var text: String
+	var systemImage: String? = nil   // e.g. "clock"
+}
+
 extension Control {
-	/// Returns one or more display lines for this control using the current instance state.
-	/// Handles absolute value conversions and labels (incl. concentric knobs).
-	func displayLines(for instance: DeviceInstance) -> [String] {
-		let value = instance.controlStates[id] ?? ControlValue.initialValue(for: self)
-		return displayLines(for: value)
+	/// Canonical, structured display for the current value in `instance`.
+	func displayEntries(for instance: DeviceInstance) -> [ControlDisplayEntry] {
+		let v = instance.controlStates[id] ?? ControlValue.initialValue(for: self)
+		return displayEntries(for: v)
 	}
 	
-	/// Overload if you already have a ControlValue on hand.
-	func displayLines(for value: ControlValue) -> [String] {
+	/// Overload if you already have a ControlValue.
+	func displayEntries(for value: ControlValue) -> [ControlDisplayEntry] {
 		switch (type, value) {
-			case (.concentricKnob, .concentricKnob(let outer, let inner)):
-				let oAbs = unitToAbsolute(outer, lo: outerMin, hi: outerMax, taper: outerTaper)
-				let iAbs = unitToAbsolute(inner, lo: innerMin, hi: innerMax, taper: innerTaper)
-				let oLabel = outerLabel ?? "Outer"
-				let iLabel = innerLabel ?? "Inner"
+			case (.concentricKnob, .concentricKnob(let outerU, let innerU)):
+				let outerIsClock = shouldShowClock(lo: outerMin, hi: outerMax, taper: outerTaper)
+				let innerIsClock = shouldShowClock(lo: innerMin, hi: innerMax, taper: innerTaper)
+				
+				let outerText: String = outerIsClock
+				? clockString(forUnit: outerU)
+				: numberString(unitToAbsolute(outerU, lo: outerMin, hi: outerMax, taper: outerTaper), decimals: 2)
+				
+				let innerText: String = innerIsClock
+				? clockString(forUnit: innerU)
+				: numberString(unitToAbsolute(innerU, lo: innerMin, hi: innerMax, taper: innerTaper), decimals: 2)
+				
 				return [
-					"\(oLabel): " + numberString(oAbs, decimals: 2),
-					"\(iLabel): " + numberString(iAbs, decimals: 2)
+					ControlDisplayEntry(text: "\(outerLabel ?? "Outer"): \(outerText)", systemImage: outerIsClock ? "clock" : nil),
+					ControlDisplayEntry(text: "\(innerLabel ?? "Inner"): \(innerText)", systemImage: innerIsClock ? "clock" : nil)
 				]
 				
 			case (.knob, .knob(let u)):
-				// Convert to absolute (your existing helper)
-				let absVal = unitToAbsolute(u, lo: knobMin, hi: knobMax, taper: regions.first?.mapping?.taper)
-				
-				// Heuristics: if the bound is infinite or the number is not finite / extreme,
-				// prefer a clock readout. You can also just *always* include both.
-				let loIsInf = (knobMin == .negInfinity || knobMin == .posInfinity)
-				let hiIsInf = (knobMax == .negInfinity || knobMax == .posInfinity)
-				let absIsWeird = !absVal.isFinite || abs(absVal) > 1.0e10
-				
-				let clock = clockString(forUnit: u)  // e.g. “11:30”
-				
-				if loIsInf || hiIsInf || absIsWeird {
-					// Show clock only, or include both; pick the style you like:
-					// return [clock]
-					return ["\(clock)"]
+				let showClock = shouldShowClock(lo: knobMin, hi: knobMax, taper: regions.first?.mapping?.taper)
+				if showClock {
+					return [ControlDisplayEntry(text: clockString(forUnit: u), systemImage: "clock")]
 				} else {
-					// Normal numeric readout
-					return [numberString(absVal, decimals: 2)]
+					let abs = unitToAbsolute(u, lo: knobMin, hi: knobMax, taper: regions.first?.mapping?.taper)
+					return [ControlDisplayEntry(text: numberString(abs, decimals: 2))]
 				}
 				
 			case (.steppedKnob, .steppedKnob(let idx)):
 				if let labels = options, labels.indices.contains(idx) {
-					return [labels[idx]]
-				} else {
-					return ["\(idx)"]
+					return [ControlDisplayEntry(text: labels[idx])]
 				}
+				return [ControlDisplayEntry(text: "\(idx)")]
 				
 			case (.multiSwitch, .multiSwitch(let idx)):
 				if let opts = options, opts.indices.contains(idx) {
-					return [opts[idx]]
-				} else {
-					return ["\(idx)"]
+					return [ControlDisplayEntry(text: opts[idx])]
 				}
+				return [ControlDisplayEntry(text: "\(idx)")]
 				
 			case (.button, .button(let pressed)):
-				return [pressed ? (onLabel ?? "On") : (offLabel ?? "Off")]
-				
-			case (.light, .light(let lit)):
-				return [lit ? (onLabel ?? "On") : (offLabel ?? "Off")]
+				return [ControlDisplayEntry(text: pressed ? (onLabel ?? "On") : (offLabel ?? "Off"))]
 				
 			case (.litButton, .litButton(let pressed)):
-				return [pressed ? (onLabel ?? "On") : (offLabel ?? "Off")]
+				return [ControlDisplayEntry(text: pressed ? (onLabel ?? "On") : (offLabel ?? "Off"))]
 				
 			default:
-				// Mismatched pair (e.g., stale state type) — fall back gracefully
-				return ["—"]
+				return [ControlDisplayEntry(text: "—")]
 		}
+	}
+	
+	/// Back-compat: keep your existing lines API by mapping entries → text.
+	func displayLines(for instance: DeviceInstance) -> [String] {
+		return displayEntries(for: instance).map { $0.text }
 	}
 	
 	// MARK: - Local helpers
@@ -1171,32 +1169,27 @@ extension Control {
 	}
 	
 	// MARK: - Clock face formatter for knobs (e.g., “11:30”)
+	private func shouldShowClock(lo: Bound?, hi: Bound?, taper: ValueTaper?) -> Bool {
+		let loInf = (lo == .negInfinity || lo == .posInfinity)
+		let hiInf = (hi == .negInfinity || hi == .posInfinity)
+		let isDB  = (taper ?? .linear) == .decibel
+//		print("Low: \(loInf), High: \(hiInf), dB: \(isDB)")
+		return loInf || hiInf || isDB
+	}
+	
 	private func clockString(forUnit u: Double,
-							 startDeg: Double = -150,  // ~7 o’clock
-							 endDeg: Double = 150,     // ~5 o’clock
-							 roundToMinutes: Int = 5   // snap to nearest 5 minutes
-	) -> String {
-		// Clamp and map unit → angle in degrees (0° = 12:00)
+							 startDeg: Double = -150, endDeg: Double = 150,
+							 roundToMinutes: Int = 5) -> String {
 		let uu = min(max(u, 0.0), 1.0)
-		let angle = startDeg + uu * (endDeg - startDeg)   // [-150, +150]
-		
-		// Convert angle to minutes from 12:00 (0.5° per minute)
+		let angle = startDeg + uu * (endDeg - startDeg) // [-150, +150]
 		var mins = angle / 0.5
-		
-		// Normalize to [0, 720) minutes (12 hours = 720 minutes)
 		mins = mins.truncatingRemainder(dividingBy: 720)
 		if mins < 0 { mins += 720 }
-		
-		// Round to nice increments
 		let step = Double(roundToMinutes)
 		mins = (mins / step).rounded() * step
-		
-		// Hours/minutes (12-hour clock; 0 -> 12)
-		let hours = Int(mins / 60) % 12
-		let minutes = Int(mins) % 60
-		let hour = hours == 0 ? 12 : hours
-		
-		return String(format: "%d:%02d", hour, minutes)
+		let h = Int(mins / 60) % 12
+		let m = Int(mins) % 60
+		return String(format: "%d:%02d", (h == 0 ? 12 : h), m)
 	}
 }
 

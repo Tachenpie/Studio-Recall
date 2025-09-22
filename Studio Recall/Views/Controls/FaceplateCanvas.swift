@@ -164,7 +164,7 @@ struct FaceplateCanvas: View {
 	// MARK: helpers
 	private func computeAspectRatio() -> CGFloat {
 		if editableDevice.device.type == .rack {
-			let w: CGFloat = 19.0
+			let w: CGFloat = DeviceMetrics.bodyInches(for: editableDevice.device.rackWidth) // 19 / 8.5 / 5.5
 			let h: CGFloat = 1.75 * CGFloat(editableDevice.device.rackUnits ?? 1)
 			return w / h
 		} else {
@@ -173,7 +173,7 @@ struct FaceplateCanvas: View {
 			return w / h
 		}
 	}
-	
+
 	private var selectedControlBinding: Binding<Control>? {
 		guard let id = selectedControlId,
 			  let idx = editableDevice.device.controls.firstIndex(where: { $0.id == id }) else { return nil }

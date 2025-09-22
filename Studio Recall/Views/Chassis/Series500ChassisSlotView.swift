@@ -56,7 +56,7 @@ struct Series500ChassisSlotView: View {
 				.frame(width: moduleSize.width, height: moduleSize.height)
 				.allowsHitTesting(false)
 			
-			RuntimeControlsOverlay(device: device, instance: instanceBinding)
+			RuntimeControlsOverlay(device: device, instance: instanceBinding, prelayout: nil, faceMetrics: nil)
 				.frame(width: moduleSize.width, height: moduleSize.height)
 				.zIndex(1)
 				.allowsHitTesting(true)
@@ -141,19 +141,18 @@ struct Series500ChassisSlotView: View {
 				)
 			}
 			.onDrop(of: [UTType.deviceDragPayload],
-					delegate: ChassisDropDelegate(
-						currentIndex: index,
+					delegate: Series500DropDelegate(
+						fixedIndex: index,
 						indexFor: nil,
 						slots: $slots,
 						hoveredIndex: $hoveredIndex,
-						hoveredValid: $hoveredValid,
 						hoveredRange: $hoveredRange,
+						hoveredValid: $hoveredValid,
 						library: library,
-						measure: { $0.rackUnits ?? 1 },
-						kind: .rack,
-						onCommit: { sessionManager.saveSessions() } // optional
+						onCommit: { sessionManager.saveSessions() }
 					)
 			)
+
 		return AnyView(body)
 	}
 
@@ -170,17 +169,15 @@ struct Series500ChassisSlotView: View {
 			)
 			.contentShape(Rectangle()) // <- important for drops
 			.onDrop(of: [UTType.deviceDragPayload],
-					delegate: ChassisDropDelegate(
-						currentIndex: index,
+					delegate: Series500DropDelegate(
+						fixedIndex: index,
 						indexFor: nil,
 						slots: $slots,
 						hoveredIndex: $hoveredIndex,
-						hoveredValid: $hoveredValid,
 						hoveredRange: $hoveredRange,
+						hoveredValid: $hoveredValid,
 						library: library,
-						measure: { $0.rackUnits ?? 1 },
-						kind: .rack,
-						onCommit: { sessionManager.saveSessions() } // optional
+						onCommit: { sessionManager.saveSessions() }
 					)
 			)
 	}

@@ -19,16 +19,21 @@ struct DeviceView: View {
         ZStack {
             if let data = device.imageData,
                let nsImage = NSImage(data: data) {
-                Image(nsImage: nsImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(
-                        width: device.type == .series500 ?
-                            CGFloat((device.slotWidth ?? 1) * 120) : nil,
-                        height: device.type == .rack ?
-                            CGFloat((device.rackUnits ?? 1) * 60) : nil
-                    )
-                    .cornerRadius(4)
+//                Image(nsImage: nsImage)
+//                    .resizable()
+//                    .scaledToFit()
+//                    .frame(
+//                        width: device.type == .series500 ?
+//                            CGFloat((device.slotWidth ?? 1) * 120) : nil,
+//                        height: device.type == .rack ?
+//                            CGFloat((device.rackUnits ?? 1) * 60) : nil
+//                    )
+//                    .cornerRadius(4)
+				Image(nsImage: nsImage)
+					.resizable()
+					.scaledToFill()
+					.clipped()
+					.cornerRadius(4)
             } else {
                 drawnDevice
             }
@@ -51,15 +56,17 @@ struct DeviceView: View {
                 }
             }
         }
-        .padding()
-        .frame(
-            width: device.type == .series500 ?
-                CGFloat((device.slotWidth ?? 1) * 120) : nil,
-            height: device.type == .rack ?
-                CGFloat((device.rackUnits ?? 1) * 60) : nil
-        )
+//        .padding()
+//        .frame(
+//            width: device.type == .series500 ?
+//                CGFloat((device.slotWidth ?? 1) * 120) : nil,
+//            height: device.type == .rack ?
+//                CGFloat((device.rackUnits ?? 1) * 60) : nil
+//        )
         .background(deviceBackground)
         .cornerRadius(4)
+//		.padding()
+		.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
     private var deviceBackground: some View {

@@ -24,7 +24,7 @@ struct NewDeviceChooser: View {
                 )
                 onChoose(rackDevice)
             } label: {
-                Label("Rack Gear (19\" wide)", systemImage: "rectangle.3.offgrid")
+                Label("Rack Gear", systemImage: "rectangle.3.offgrid")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)

@@ -15,6 +15,8 @@ struct RuntimeControlsOverlay: View {
 	
 	let device: Device
 	@Binding var instance: DeviceInstance
+	let prelayout: SlotPrelayout?
+	let faceMetrics: FaceRenderMetrics?
 	
 	@State private var editingID: UUID? = nil
 	@State private var editorText: String = ""
@@ -23,26 +25,36 @@ struct RuntimeControlsOverlay: View {
 	@State private var bubbleVisibleFor: Control.ID? = nil
 	@State private var hoverToken: UUID? = nil
 	
-	private let knobSensitivity: CGFloat = 1.0 / 240.0
+	private let knobSensitivity: CGFloat = 1.5 / 240.0
 	
 	var body: some View {
 		GeometryReader { geo in
+			let faceW = prelayout?.faceWidthPts ?? geo.size.width
+			let slotH = prelayout?.heightPts    ?? geo.size.height
+			
+			let fm: FaceRenderMetrics = faceMetrics
+			?? DeviceMetrics.faceRenderMetrics(
+				faceWidthPts: faceW,
+				slotHeightPts: slotH,
+				imageData: device.imageData
+			)
+			
 			ZStack(alignment: .topLeading) {
 				// live visual projection of instance state over the faceplate
 				RuntimePatches(device: device, instance: $instance)
+					.frame(width: fm.size.width, height: fm.size.height)
 					.allowsHitTesting(false)
 				
 				ForEach(device.controls) { def in
-					let frame = def.bounds(in: geo.size)
+					let frame = def.bounds(in: fm.size)
+					
 					let value = Binding<ControlValue>(
-						get: {
-							let inst = instance
-							return inst.controlStates[def.id] ?? ControlValue.initialValue(for: def)
-						},
+						get: { return instance.controlStates[def.id] ?? ControlValue.initialValue(for: def) },
 						set: { newVal in
-							var inst = instance
-							inst.controlStates[def.id] = newVal
-							instance = inst
+//							var inst = instance
+//							inst.controlStates[def.id] = newVal
+//							instance = inst
+							instance.controlStates[def.id] = newVal
 							sessionManager.setControlValue(instanceID: instance.id, controlID: def.id, to: newVal)
 						}
 					)
@@ -54,7 +66,7 @@ struct RuntimeControlsOverlay: View {
 								let token = UUID()
 								hoverToken = token
 								hoveredControl = def
-								let f = def.bounds(in: geo.size)
+//								let f = def.bounds(in: geo.size)
 //								print("🫧 schedule  \(def.name)  token=\(token)  frame=(\(Int(f.minX)),\(Int(f.minY)))  zoom=\(zoom)")
 								DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
 									if hoverToken == token { bubbleVisibleFor = def.id }
@@ -97,6 +109,7 @@ struct RuntimeControlsOverlay: View {
 					// Give the local stack the control’s size, then place it once
 					.frame(width: frame.width, height: frame.height, alignment: .topLeading)
 					.position(x: frame.midX, y: frame.midY)
+					
 						if editingID == def.id {
 							InlineEditor(def: def,
 										 value: value,
@@ -108,7 +121,10 @@ struct RuntimeControlsOverlay: View {
 						}
 				}
 			}
+			.frame(width: fm.size.width, height: fm.size.height, alignment: .topLeading)
+			.frame(width: faceW, height: slotH, alignment: .topLeading)
 		}
+		
 	}
 	
 	@ViewBuilder
@@ -176,24 +192,33 @@ struct RuntimeControlsOverlay: View {
 
 // MARK: - Hover Bubble with control values
 private struct HoverBubbleView: View {
-	let lines: [String]
+	let entries: [ControlDisplayEntry]
 	
 	init(def: Control, instance: DeviceInstance) {
-		self.lines = def.displayLines(for: instance)   // ← canonical call
+		self.entries = def.displayEntries(for: instance)
 	}
 	
 	init(lines: [String]) {
-		self.lines = lines
+		// back-compat initializer if you call it elsewhere
+		self.entries = lines.map { ControlDisplayEntry(text: $0) }
 	}
 	
 	var body: some View {
 		VStack(spacing: 3) {
-			ForEach(lines, id: \.self) { line in
-				Text(line)
-					.font(.caption.monospacedDigit())
-					.lineLimit(1)
-					.fixedSize(horizontal: true, vertical: true)
-					.minimumScaleFactor(0.9)
+			ForEach(entries, id: \.self) { entry in
+				HStack(spacing: 6) {
+					if let symbol = entry.systemImage {
+						Image(systemName: symbol)
+							.font(.caption)
+							.foregroundStyle(.white.opacity(0.9))
+							.accessibilityHidden(true)
+					}
+					Text(entry.text)
+						.font(.caption.monospacedDigit())
+						.lineLimit(1)
+						.fixedSize(horizontal: true, vertical: true)
+						.minimumScaleFactor(0.9)
+				}
 			}
 		}
 		.padding(.horizontal, 10)
@@ -205,8 +230,8 @@ private struct HoverBubbleView: View {
 		}
 		.foregroundStyle(.white)
 		.shadow(radius: 8, y: 3)
-		.accessibilityHidden(false)
-		.accessibilityLabel(Text(lines.joined(separator: ", ")))
+		.accessibilityElement(children: .combine)
+		.accessibilityLabel(Text(entries.map { $0.text }.joined(separator: ", ")))
 	}
 }
 
@@ -514,14 +539,6 @@ struct RuntimePatches: View {
 							},
 							onlyRegionIndex: idx
 						)
-//						.frame(
-//							width:  region.rect.width  * geo.size.width,
-//							height: region.rect.height * geo.size.height
-//						)
-//						.position(
-//							x: region.rect.midX * geo.size.width,
-//							y: region.rect.midY * geo.size.height
-//						)
 						.compositingGroup()
 						.mask { RegionClipShape(shape: region.shape) }
 						.allowsHitTesting(false)

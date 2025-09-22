@@ -17,7 +17,7 @@ struct CategoryEditor: View {
                 TextField("Add or search categories", text: $categoryQuery)
                     .onSubmit {
                         addCategory(categoryQuery)
-                        categoryQuery = ""
+                        categoryQuery = "change this?"
                     }
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                 

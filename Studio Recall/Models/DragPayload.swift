@@ -5,6 +5,7 @@
 //  Created by True Jackie on 9/3/25.
 //
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct DragPayload: Codable, Identifiable {
     enum Source: String, Codable {
@@ -30,4 +31,39 @@ struct DragPayload: Codable, Identifiable {
         self.deviceId = deviceId
         self.instanceId = instanceId
     }
+}
+
+extension DragPayload {
+	/// Canonical provider for rack/library drags.
+	func itemProvider() -> NSItemProvider {
+		let provider = NSItemProvider()
+		let data = (try? JSONEncoder().encode(self)) ?? Data()
+		
+		// Our custom type
+		provider.registerDataRepresentation(
+			forTypeIdentifier: UTType.deviceDragPayload.identifier,
+			visibility: .all
+		) { completion in
+			completion(data, nil)
+			return nil
+		}
+		
+		// A couple of safe fallbacks so .onDrop(of:[...]) still wakes up
+		provider.registerDataRepresentation(
+			forTypeIdentifier: UTType.data.identifier,
+			visibility: .all
+		) { completion in
+			completion(data, nil)
+			return nil
+		}
+		provider.registerDataRepresentation(
+			forTypeIdentifier: UTType.utf8PlainText.identifier,
+			visibility: .all
+		) { completion in
+			completion(data, nil)
+			return nil
+		}
+		
+		return provider
+	}
 }

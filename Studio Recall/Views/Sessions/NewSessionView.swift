@@ -12,8 +12,6 @@ struct NewSessionView: View {
     @Environment(\.dismiss) var dismiss
     
     @State private var name: String = ""
-    @State private var rackCount: Int = 1
-    @State private var seriesCount: Int = 0
     
     var body: some View {
         VStack(spacing: 20) {
@@ -22,8 +20,6 @@ struct NewSessionView: View {
             
             Form {
                 TextField("Session Name", text: $name)
-                Stepper("Rack Chassis: \(rackCount)", value: $rackCount, in: 0...10)
-                Stepper("500-Series Chassis: \(seriesCount)", value: $seriesCount, in: 0...10)
             }
             .frame(width: 300)
             
@@ -36,7 +32,6 @@ struct NewSessionView: View {
                     )
                     dismiss()
                 }
-                .disabled(rackCount == 0 && seriesCount == 0)
             }
         }
         .padding()

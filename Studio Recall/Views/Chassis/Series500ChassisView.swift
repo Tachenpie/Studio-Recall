@@ -64,16 +64,14 @@ struct Series500ChassisView: View {
 				.cornerRadius(8)
 				.overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
 				.onDrop(of: [UTType.deviceDragPayload],
-						delegate: ChassisDropDelegate(
-							currentIndex: nil,
-							indexFor: { pt in slotIndex(for: pt) }, // your existing mapper: point → slot index
+						delegate: Series500DropDelegate(
+							fixedIndex: nil,
+							indexFor: { pt in slotIndex(for: pt) },   // your helper maps CGPoint → slot index
 							slots: $chassis.slots,
 							hoveredIndex: $hoveredIndex,
-							hoveredValid: $hoveredValid,
 							hoveredRange: $hoveredRange,
+							hoveredValid: $hoveredValid,
 							library: library,
-							measure: { $0.rackUnits ?? 1 },
-							kind: .rack,
 							onCommit: { sessionManager.saveSessions() }
 						)
 				)
@@ -131,24 +129,17 @@ struct Series500ChassisView: View {
     }
 	
 	
-	// Map a drop point (in the chassis VStack's local coords) to a slot index.
+	// Map a drop point (in the chassis HStack's local coords) to a 500-series slot index (horizontal).
 	private func slotIndex(for pt: CGPoint) -> Int {
-		// Match the layout used above
 		let spacing: CGFloat = 4
-		let unit = DeviceMetrics.rackSize(units: 1, scale: settings.pointsPerInch)
-		let unitH = unit.height
+		let module = DeviceMetrics.moduleSize(units: 1, scale: settings.pointsPerInch)
+		let slotStride = module.width + spacing
 		
-		// Account for the .padding() on the chassis container (default ~= 16)
-		let containerPadding: CGFloat = 16
-		var y = pt.y - containerPadding
-		if y < 0 { y = 0 }
+		// This HStack has no explicit .padding() before .onDrop, so no padding compensation needed.
+		let x = max(0, pt.x)
+		let raw = Int(floor((x + spacing / 2) / slotStride))
 		
-		// Convert y → row index, snapping by (unit height + spacing)
-		let rowFloat = (y + spacing / 2) / (unitH + spacing)
-		let row = Int(rowFloat.rounded(.down))
-		
-		// Clamp to slots
-		return max(0, min(row, max(0, chassis.slots.count - 1)))
+		return max(0, min(raw, max(0, chassis.slots.count - 1)))
 	}
 
 	// MARK: - 500-series edit / helpers
@@ -202,111 +193,4 @@ struct Series500ChassisView: View {
 		}
 	}
 
-}
-
-// MARK: - Catch All Drop Delegate
-private struct Series500CatchAllDropDelegate: DropDelegate {
-	@Binding var slots: [DeviceInstance?]
-	@Binding var hoveredIndex: Int?
-	@Binding var hoveredRange: Range<Int>?
-	@Binding var hoveredValid: Bool
-	
-	let library: DeviceLibrary
-	let slotWidth: CGFloat
-	let spacing: CGFloat
-	
-	// Map a local X (0 at left edge) to a slot index
-	private func index(for location: CGPoint) -> Int {
-		let stride = max(1, slotWidth + spacing)
-		let raw = Int(floor(location.x / stride))
-		return min(max(raw, 0), max(slots.count - 1, 0))
-	}
-	
-	func validateDrop(info: DropInfo) -> Bool {
-		info.hasItemsConforming(to: [UTType.deviceDragPayload])
-	}
-	
-	func dropEntered(info: DropInfo) {
-		updateHover(info: info)
-	}
-	
-	func dropUpdated(info: DropInfo) -> DropProposal? {
-		updateHover(info: info)
-		if DragContext.shared.currentPayload?.source == .library {
-			return DropProposal(operation: .copy)
-		} else {
-			return DropProposal(operation: .move)
-		}
-	}
-	
-	func performDrop(info: DropInfo) -> Bool {
-		guard
-			let payload = DragContext.shared.currentPayload,
-			let device  = library.device(for: payload.deviceId)
-		else { return false }
-		
-		let start = hoveredIndex ?? 0
-		let units = device.slotWidth ?? 1
-		let range = start ..< min(start + units, slots.count)
-		
-		// Must be valid & fully empty (except the instance being moved)
-		guard canPlace(range: range, ignoring: payload.instanceId) else { return false }
-		
-		if payload.source == .library {
-			// copy from library
-			let instance = DeviceInstance(deviceID: device.id, device: device)
-			for i in range { slots[i] = nil }
-			slots[start] = instance
-		} else {
-			// move existing (clear old range, then place)
-			if let moving = payload.instanceId,
-			   let oldIndex = slots.firstIndex(where: { $0?.id == moving }),
-			   let oldDeviceID = slots[oldIndex]?.deviceID,
-			   let oldDevice = library.device(for: oldDeviceID) {
-				let oldUnits = oldDevice.slotWidth ?? 1
-				for i in oldIndex ..< min(oldIndex + oldUnits, slots.count) {
-					slots[i] = nil
-				}
-			}
-			let instance = DeviceInstance(deviceID: device.id, device: device)
-			for i in range { slots[i] = nil }
-			slots[start] = instance
-		}
-		
-		hoveredIndex = nil
-		hoveredRange = nil
-		hoveredValid = false
-		DragContext.shared.endDrag()
-		return true
-	}
-	
-	// MARK: - helpers
-	private func updateHover(info: DropInfo) {
-		guard
-			let payload = DragContext.shared.currentPayload,
-			let device  = library.device(for: payload.deviceId)
-		else {
-			hoveredIndex = nil
-			hoveredRange = nil
-			hoveredValid = false
-			return
-		}
-		
-		let loc = info.location
-		let start = index(for: loc)
-		let units = device.slotWidth ?? 1
-		let range = start ..< min(start + units, slots.count)
-		
-		hoveredIndex = start
-		hoveredRange = range
-		hoveredValid = canPlace(range: range, ignoring: payload.instanceId)
-	}
-	
-	private func canPlace(range: Range<Int>, ignoring ignored: UUID?) -> Bool {
-		guard !range.isEmpty, range.upperBound <= slots.count else { return false }
-		for i in range {
-			if let inst = slots[i], inst.id != ignored { return false }
-		}
-		return true
-	}
 }

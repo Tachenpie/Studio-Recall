@@ -23,12 +23,18 @@ struct DeviceSidebarRow: View {
                 Text(device.name)
                     .font(.body)
                     .lineLimit(1)
-                
-                Text(device.type == .rack
-                     ? "\(device.rackUnits ?? 1)U"
-                     : "\(device.slotWidth ?? 1) slots")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+				if device.type == .rack {
+					VStack {
+						Text("\(device.rackUnits ?? 1)U")
+						Text("\(device.rackWidth.label) Rack")
+					}
+					.font(.caption)
+					.foregroundColor(.secondary)
+				} else {
+					Text("\(device.slotWidth ?? 1) slots")
+					.font(.caption)
+					.foregroundColor(.secondary)
+				}
             }
             
             Spacer()

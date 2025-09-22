@@ -9,17 +9,17 @@ import SwiftUI
 struct AddRackSheet: View {
     @EnvironmentObject var sessionManager: SessionManager
     @Environment(\.dismiss) private var dismiss
-    @State private var slotCount: Int = 0
+    @State private var rows: Int = 0
     
     var body: some View {
         Form {
-            Stepper("Slots: \(slotCount)", value: $slotCount, in: 1...64)
+            Stepper("Units: \(rows)", value: $rows, in: 1...64)
             
             HStack {
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }
                 Button("Add") {
-                    sessionManager.addRack(slotCount: slotCount)
+                    sessionManager.addRack(rows: rows)
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
@@ -27,7 +27,7 @@ struct AddRackSheet: View {
         }
         .padding()
         .onAppear {
-            slotCount = sessionManager.lastRackSlotCount
+            rows = sessionManager.lastRackSlotCount
         }
     }
 }
