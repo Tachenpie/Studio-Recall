@@ -8,6 +8,12 @@
 import SwiftUI
 
 struct DragStrip: View {
+	@EnvironmentObject var sessionManager: SessionManager
+	
+	@Environment(\.canvasZoom) private var canvasZoom
+	@State private var start: CGPoint?
+	@State private var began = false
+	
 	var title: String? = nil
 	var onBegan: () -> Void = {}
 	var onDrag: (CGSize) -> Void
@@ -17,9 +23,8 @@ struct DragStrip: View {
 	var onClearRequested: (() -> Void)? = nil
 	var onDeleteRequested: (() -> Void)? = nil
 	
-	@Environment(\.canvasZoom) private var canvasZoom
-	@State private var start: CGPoint?
-	@State private var began = false
+	var newLabelAnchor: LabelAnchor? = nil
+	var defaultLabelOffset: CGPoint = CGPoint(x: 32, y: 28)
 	
 	var body: some View {
 		ZStack(alignment: .bottom) {
@@ -71,6 +76,19 @@ struct DragStrip: View {
 			if let onEditRequested {
 				Button { onEditRequested() } label: {
 					Label("Edit Chassis…", systemImage: "slider.horizontal.3")
+				}
+			}
+			if let anchor = newLabelAnchor {
+				Button {
+					let new = SessionLabel(
+						anchor: anchor,
+						offset: defaultLabelOffset,
+						text: "New label",
+						style: .preset(.plasticLabelMaker)
+					)
+					sessionManager.addLabel(new)
+				} label: {
+					Label("New Label", systemImage: "tag")
 				}
 			}
 			if let onClearRequested {

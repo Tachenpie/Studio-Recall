@@ -13,6 +13,7 @@ struct Series500ChassisView: View {
     @EnvironmentObject var settings: AppSettings
     @EnvironmentObject var library: DeviceLibrary
 	@EnvironmentObject var sessionManager: SessionManager
+	
 	@Environment(\.canvasZoom) private var canvasZoom
     
     @State private var hoveredIndex: Int? = nil
@@ -24,6 +25,8 @@ struct Series500ChassisView: View {
 	
 	var onDelete: (() -> Void)? = nil
     
+	private let facePadding: CGFloat = 4
+	
 	var body: some View {
 		let spacing: CGFloat = 4
 		let module = DeviceMetrics.moduleSize(units: 1, scale: settings.pointsPerInch)
@@ -53,7 +56,9 @@ struct Series500ChassisView: View {
 				},
 				onDeleteRequested: {
 					onDelete?()
-				}
+				},
+				newLabelAnchor: .rack(chassis.id),
+				defaultLabelOffset: CGPoint(x: 14, y: 4)
 			)
 			.frame(width: faceWidth)            // <<< exact match
 			.zIndex(2)
@@ -76,6 +81,25 @@ struct Series500ChassisView: View {
 						)
 				)
 				.zIndex(1)
+				.background(
+					GeometryReader { proxy in
+						Color.clear
+							.anchorPreference(key: RackRectsKey.self, value: .bounds) { bounds in
+								[RackRect(id: chassis.id, frame: proxy[bounds])]
+							}
+					}
+				)
+			
+			// LABELS
+			if let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) {
+				let session = $sessionManager.sessions[i]
+				LabelCanvas(
+					labels: session.labels,
+					anchor: .rack(chassis.id),
+					parentOrigin: CGPoint(x: facePadding, y: facePadding)
+				)
+				.allowsHitTesting(true)
+			}
 		}
 		.sheet(isPresented: $showEdit) { editSheet }
 	}

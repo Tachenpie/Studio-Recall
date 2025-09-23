@@ -21,6 +21,7 @@ struct SessionView: View {
 	@State private var showMinimap = true
 	@State private var rackDragStart: [UUID: CGPoint] = [:]
 	@State private var chassisDragStart: [UUID: CGPoint] = [:]
+	@State private var rackRects: [RackRect] = []
 
     var body: some View {
 		NavigationStack {
@@ -53,7 +54,7 @@ struct SessionView: View {
 							let unitMod = DeviceMetrics.moduleSize(units: 1, scale: settings.pointsPerInch)
 							let topBarH: CGFloat = 24
 							
-							let rackRects: [CGRect] = session.wrappedValue.racks.map { r in
+							let rackRectsCG: [CGRect] = session.wrappedValue.racks.map { r in
 								let rows = r.slots.count
 								let h = CGFloat(rows) * unitRow.height
 								+ CGFloat(max(0, rows - 1)) * 4   // row spacing
@@ -63,7 +64,7 @@ struct SessionView: View {
 								return CGRect(x: r.position.x - w/2, y: r.position.y - h/2, width: w, height: h)
 							}
 							
-							let chassisRects: [CGRect] = session.wrappedValue.series500Chassis.map { c in
+							let chassisRectsCG: [CGRect] = session.wrappedValue.series500Chassis.map { c in
 								let slots = c.slots.count
 								let w = CGFloat(slots) * unitMod.width + CGFloat(max(0, slots - 1)) * 4
 								let h = unitMod.height + 8              // existing vertical padding on face
@@ -73,17 +74,17 @@ struct SessionView: View {
 							let rackPositions   = session.wrappedValue.racks.map(\.position)
 							let chassisPositions = session.wrappedValue.series500Chassis.map(\.position)
 							
-							SessionCanvasLayer(session: session, canvasSize: geo.size)
+							SessionCanvasLayer(session: session, canvasSize: geo.size, rackRects: rackRects)
 								.environment(\.canvasZoom, CGFloat(session.wrappedValue.canvasZoom))
 								.scaleEffect(session.wrappedValue.canvasZoom, anchor: .topLeading)
 								.offset(x: session.wrappedValue.canvasPan.x, y: session.wrappedValue.canvasPan.y)
 							
 							// 3) Minimap stays separate and short
 							Group {
-								if showMinimap, !(rackRects.isEmpty && chassisRects.isEmpty) {
+								if showMinimap, !(rackRectsCG.isEmpty && chassisRectsCG.isEmpty) {
 									MinimapOverlay(
-										rackRects: rackRects,
-										chassisRects: chassisRects,
+										rackRects: rackRectsCG,
+										chassisRects: chassisRectsCG,
 										rackPositions: rackPositions,
 										chassisPositions: chassisPositions,
 										zoom: session.canvasZoom,
@@ -96,6 +97,7 @@ struct SessionView: View {
 							}
 						}
 					}
+					.onPreferenceChange(RackRectsKey.self) { rackRects = $0 }
 				}
 			} else {
 				Text("No session loaded")
@@ -118,6 +120,19 @@ struct SessionView: View {
                         Label("Edit Library", systemImage: "books.vertical")
                     }
                 }
+				ToolbarItem() {
+					Button {
+						let new = SessionLabel(
+							anchor: .session,
+							offset: CGPoint(x: 40, y: 40),
+							text: "",
+							style: .preset(.plasticLabelMaker)
+						)
+						sessionManager.addLabel(new)
+					} label: {
+						Label("Create Label", systemImage: "bubble.and.pencil")
+					}
+				}
 				ToolbarItem(placement: .status) {
 					Button {
 						showMinimap.toggle()

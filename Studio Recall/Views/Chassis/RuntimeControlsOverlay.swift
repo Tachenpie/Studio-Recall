@@ -116,13 +116,16 @@ struct RuntimeControlsOverlay: View {
 										 text: $editorText,
 										 onClose: { editingID = nil })
 							.position(x: frame.midX, y: frame.midY)
-							.scaleEffect(1 / max(zoom, 0.01), anchor: .topLeading)
-							.zIndex(10)
+							.frame(minWidth: 220)
+							.fixedSize()
+							.zIndex(20_000)
 						}
 				}
 			}
 			.frame(width: fm.size.width, height: fm.size.height, alignment: .topLeading)
 			.frame(width: faceW, height: slotH, alignment: .topLeading)
+			.background(Color.clear.preference(key: HoverBubbleActiveKey.self,
+											   value: bubbleVisibleFor != nil))
 		}
 		
 	}
@@ -246,9 +249,9 @@ private struct InlineEditor: View {
 	@FocusState private var focused: Bool
 	
 	// Local absolute-value buffers
-	@State private var absVal: Double = 0
-	@State private var stepIndex: Int = 0
-	@State private var multiIndex: Int = 0
+	@State private var absVal:   Double = 0
+	@State private var stepIndex:   Int = 0
+	@State private var multiIndex:  Int = 0
 	@State private var outerAbs: Double = 0
 	@State private var innerAbs: Double = 0
 	
@@ -602,3 +605,9 @@ private extension ControlValue {
 
 // MARK: - Min helpers
 @inline(__always) private func clamp01(_ v: Double) -> Double { max(0, min(1, v)) }
+
+// MARK: - Hover bubble z-order signal
+struct HoverBubbleActiveKey: PreferenceKey {
+	static var defaultValue: Bool = false
+	static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
+}

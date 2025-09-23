@@ -18,6 +18,7 @@ struct RackChassisView: View {
 	@State private var hoveredIndex: Int? = nil
 	@State private var hoveredValid: Bool = false
 	@State private var hoveredRange: Range<Int>? = nil
+	@State private var hoveredRows: Range<Int>? = nil   // NEW: vertical span
 	@State private var dragStart: CGPoint? = nil
 	@State private var showEdit = false
 	@State private var editUnits: Int = 0
@@ -58,7 +59,9 @@ struct RackChassisView: View {
 					showEdit = true
 				},
 				onClearRequested: { clearAllRackDevices() },
-				onDeleteRequested: { onDelete?() }
+				onDeleteRequested: { onDelete?() },
+				newLabelAnchor: .rack(rack.id),
+				defaultLabelOffset: CGPoint(x: 32, y: 28)
 			)
 			.frame(width: faceW)
 			.zIndex(2)
@@ -88,6 +91,7 @@ struct RackChassisView: View {
 													hoveredIndex: $hoveredIndex,
 													hoveredValid: $hoveredValid,
 													hoveredRange: $hoveredRange,
+													hoveredRows:  $hoveredRows,
 													library: library,
 													kind: .rack,
 													onCommit: { sessionManager.saveSessions() }
@@ -102,6 +106,26 @@ struct RackChassisView: View {
 				}
 				.frame(width: innerW)
 				.padding(facePadding)
+				
+				if let rows = hoveredRows, let cols = hoveredRange {
+					// Position/size in points (include row spacing)
+					let x = facePadding + CGFloat(cols.lowerBound) * colW
+					let w = CGFloat(cols.count) * colW
+					
+					let y = facePadding
+					+ CGFloat(rows.lowerBound) * (rowH + rowSpacing)               // ← include spacing
+					let h = CGFloat(rows.count) * rowH
+					+ CGFloat(max(0, rows.count - 1)) * rowSpacing                 // ← include spacing
+					
+					Rectangle()
+						.fill(hoveredValid
+							  ? Color.black.opacity(0.5)                                  // allowed
+							  : Color(NSColor.unemphasizedSelectedTextBackgroundColor))  // disallowed
+						.frame(width: w, height: h)
+						.position(x: x + w/2, y: y + h/2)
+						.allowsHitTesting(false)
+						.zIndex(5)
+				}
 				
 				// B) DEVICES — inch-accurate overlay
 				ForEach(rack.slots.indices, id: \.self) { row in
@@ -129,12 +153,24 @@ struct RackChassisView: View {
 							prelayout: pre,
 							slots: $rack.slots,
 							hoveredIndex: $hoveredIndex,
+							hoveredValid: $hoveredValid,
 							hoveredRange: $hoveredRange,
-							hoveredValid: $hoveredValid
+							hoveredRows:  $hoveredRows
 						)
 						.frame(width: L.totalW, height: L.hPts, alignment: .topLeading)
 						.position(x: xLeft + L.totalW / 2, y: yTop + L.hPts / 2)
 					}
+				}
+				
+				// LABELS
+				if let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) {
+					let session = $sessionManager.sessions[i]
+					LabelCanvas(
+						labels: session.labels,
+						anchor: .rack(rack.id),
+						parentOrigin: CGPoint(x: facePadding, y: facePadding)
+					)
+					.allowsHitTesting(true)
 				}
 			}
 			.contentShape(Rectangle())
@@ -148,10 +184,10 @@ struct RackChassisView: View {
 				delegate: ChassisDropDelegate(
 					fixedCell: nil,
 					indexFor: { pt in
-						// Clamp to the inner chassis band (same coords as the ZStack)
+						// Clamp inside the inner face (same coord space as ZStack)
 						let xL = facePadding
 						let xR = facePadding + innerW
-						let innerH = faceH - 2 * facePadding        // total drawable height inside padding
+						let innerH = faceH - 2 * facePadding
 						let yT = facePadding
 						let yB = facePadding + innerH
 						
@@ -160,8 +196,13 @@ struct RackChassisView: View {
 							y: max(yT, min(pt.y, yB - 0.5))
 						)
 						
-						// Map to grid
-						var (r, c0) = cellIndex(for: clamped, colW: colW, rowH: rowH)
+						// --- Column from simple width ---
+						var (r, c0) = cellIndex(for: clamped, colW: colW, rowH: rowH) // we’ll overwrite r next
+						
+						// --- Row using step = rowH + rowSpacing (so gaps map to the row above) ---
+						let stepY = rowH + rowSpacing
+						let relY  = clamped.y - yT
+						var rFromSpacing = Int(floor(relY / stepY))        // map spacing to the row above
 						
 						// Snap start so the full span fits (right-most / bottom-most)
 						if let payload = DragContext.shared.currentPayload,
@@ -174,8 +215,11 @@ struct RackChassisView: View {
 							let maxStartRow = rack.rows - spanRows
 							
 							c0 = min(max(c0, 0), maxStartCol)
-							r  = min(max(r, 0), maxStartRow)
+							rFromSpacing = min(max(rFromSpacing, 0), maxStartRow)
 						}
+						
+						// replace row computed by cellIndex with spacing-aware one
+						r = rFromSpacing
 						return (r, c0)
 					},
 					rowX0: facePadding,
@@ -184,6 +228,7 @@ struct RackChassisView: View {
 					hoveredIndex: $hoveredIndex,
 					hoveredValid: $hoveredValid,
 					hoveredRange: $hoveredRange,
+					hoveredRows:  $hoveredRows,
 					library: library,
 					kind: .rack,
 					onCommit: {
@@ -193,6 +238,14 @@ struct RackChassisView: View {
 				)
 			)
 			.zIndex(1)
+			.background(
+				GeometryReader { proxy in
+					Color.clear
+						.anchorPreference(key: RackRectsKey.self, value: .bounds) { bounds in
+							[RackRect(id: rack.id, frame: proxy[bounds])]
+						}
+				}
+			)
 		}
 		.sheet(isPresented: $showEdit) { editSheet }
 	}
@@ -212,14 +265,12 @@ struct RackChassisView: View {
 		let externalRight: Bool
 	}
 
-	// Inch-accurate, anchor-stable row layout.
-	// - Base pads: every boundary gets grid-gap points (19″/6 * empty columns).
-	// - Leftover: split uniformly across internal seams; each neighbor gets half as rails.
-	// - External wings only on the far row edges for partial-width devices.
+	// MARK: - Per-row prelayout (inch-accurate)
 	private func buildRowLayout(row: Int, ppi: CGFloat) -> [SlotLayout] {
 		let rowPts  = 19.0 * ppi
 		let colPts  = rowPts / CGFloat(RackGrid.columnsPerRow)
 		let wingPts = DeviceMetrics.wingWidth * ppi
+		let eps: CGFloat = 0.25
 		
 		func isTopAnchor(_ inst: DeviceInstance) -> Bool {
 			guard row > 0 else { return true }
@@ -253,25 +304,30 @@ struct RackChassisView: View {
 		
 		let P_leftBase  = CGFloat(leadingUnits)  * colPts
 		let P_rightBase = CGFloat(trailingUnits) * colPts
-		var seamBasePts: [CGFloat] = internalUnits.map { CGFloat($0) * colPts } // one per internal boundary
 		
-		// --- faces + external wings (partials only at far edges) ---
-		var faces: [CGFloat] = []
+		var seamBasePts = internalUnits.map { CGFloat($0) * colPts }   // one per internal seam
+		
+		// --- faces + wings only if actually touching rack edge (pad ~ 0) ---
+		var faces:  [CGFloat] = []
 		var wingsL: [CGFloat] = []
 		var wingsR: [CGFloat] = []
 		for i in items.indices {
 			let dev = items[i].dev
-			faces.append(DeviceMetrics.bodyInches(for: dev.rackWidth) * ppi) // 19 / 8.5 / 5.5
+			faces.append(DeviceMetrics.bodyInches(for: dev.rackWidth) * ppi)
+			
 			let isFirst = (i == 0), isLast = (i == items.count - 1)
-			wingsL.append((dev.rackWidth != .full && isFirst) ? wingPts : 0)
-			wingsR.append((dev.rackWidth != .full && isLast)  ? wingPts : 0)
+			let wantsLeftWing  = (dev.rackWidth != .full && isFirst && P_leftBase  <= eps)
+			let wantsRightWing = (dev.rackWidth != .full && isLast  && P_rightBase <= eps)
+			
+			wingsL.append(wantsLeftWing  ? wingPts : 0)
+			wingsR.append(wantsRightWing ? wingPts : 0)
 		}
 		
+		// --- compute uniform extra seam width (edges never get any) ---
 		var used: CGFloat = P_leftBase + P_rightBase
 		for v in seamBasePts { used += v }
 		for i in items.indices { used += faces[i] + wingsL[i] + wingsR[i] }
 		
-		// --- leftover becomes UNIFORM extra seam width (edges never get any) ---
 		let seamCount = max(0, items.count - 1)
 		let extraPerSeam = seamCount > 0 ? max(0, (rowPts - used) / CGFloat(seamCount)) : 0
 		if extraPerSeam > 0 {
@@ -280,10 +336,26 @@ struct RackChassisView: View {
 		
 		// --- build final layouts ---
 		var result: [SlotLayout] = []
-		var x: CGFloat = P_leftBase
+		var x: CGFloat = 0   // ← keep the leading gap as position, not as a rail
+		
 		for i in items.indices {
-			let lRail = (i == 0) ? 0 : seamBasePts[i - 1] / 2
-			let rRail = (i == items.count - 1) ? 0 : seamBasePts[i] / 2
+			// internal seams split 50/50
+			let leftInternal  = (i == 0) ? 0 : seamBasePts[i - 1] * 0.5
+			let rightInternal = (i == items.count - 1) ? 0 : seamBasePts[i] * 0.5
+			
+			let isFirst = (i == 0)
+			let isLast  = (i == items.count - 1)
+			let hasLeftWing  = wingsL[i] > 0
+			let hasRightWing = wingsR[i] > 0
+			
+			// Edge pads become rails on the single adjacent device,
+			// BUT never on a side that has a wing.
+			let lRailRaw = leftInternal  + (isFirst && !hasLeftWing  ? P_leftBase  : 0)
+			let rRailRaw = rightInternal + (isLast  && !hasRightWing ? P_rightBase : 0)
+			
+			let lRail = (lRailRaw <= eps) ? 0 : lRailRaw
+			let rRail = (rRailRaw <= eps) ? 0 : rRailRaw
+			
 			let total = faces[i] + wingsL[i] + wingsR[i] + lRail + rRail
 			let h     = DeviceMetrics.rackSize(units: items[i].dev.rackUnits ?? 1, scale: ppi).height
 			
@@ -303,8 +375,8 @@ struct RackChassisView: View {
 			x += total
 		}
 		
-		// small FP guard: nudge the last right rail only (faces don't move)
-		let usedNow = P_leftBase + result.reduce(0) { $0 + $1.totalW } + P_rightBase
+		// tiny FP guard: nudge last box width only (never mutate rails)
+		let usedNow = result.reduce(0) { $0 + $1.totalW }   // ← no + P_leftBase here
 		let err = rowPts - usedNow
 		if abs(err) > 0.75, let i = result.indices.last {
 			let L = result[i]
@@ -316,12 +388,13 @@ struct RackChassisView: View {
 				lWing: L.lWing,
 				rWing: L.rWing,
 				lRail: L.lRail,
-				rRail: L.rRail + err,
+				rRail: L.rRail,
 				hPts: L.hPts,
 				externalLeft: L.externalLeft,
 				externalRight: L.externalRight
 			)
 		}
+
 		return result
 	}
 

@@ -103,6 +103,16 @@ struct Series500ChassisSlotView: View {
 						}
 					}
 			}
+			
+			if let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) {
+				let session = $sessionManager.sessions[i]
+				LabelCanvas(
+					labels: session.labels,
+					anchor: .deviceInstance(instance.id),
+					parentOrigin: .zero
+				)
+				.allowsHitTesting(true)
+			}
 
 		}
 			.frame(width: moduleSize.width, height: moduleSize.height)

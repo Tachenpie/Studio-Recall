@@ -3,167 +3,6 @@
 //  Studio Recall
 //
 
-//import SwiftUI
-//import UniformTypeIdentifiers
-//
-//@MainActor
-//struct ChassisDropDelegate: DropDelegate {
-//	// Use EITHER a fixed anchor cell (per-cell onDrop)
-//	// OR a mapper from CGPoint -> (row, col) (chassis-level onDrop)
-//	let fixedCell: (row: Int, col: Int)?
-//	let indexFor: ((CGPoint) -> (row: Int, col: Int))?
-//	
-//	@Binding var slots: [[DeviceInstance?]]          // rows × cols
-//	@Binding var hoveredIndex: Int?                  // row for hover painting
-//	@Binding var hoveredValid: Bool
-//	@Binding var hoveredRange: Range<Int>?           // row range for hover painting
-//	
-//	let library: DeviceLibrary
-//	let kind: DeviceType
-//	var onCommit: (() -> Void)? = nil                // e.g. { sessionManager.saveSessions() }
-//	
-//	// MARK: - Helpers
-//	
-//	private func cell(from info: DropInfo) -> (row: Int, col: Int) {
-//		if let f = fixedCell { return f }
-//		if let map = indexFor { return map(info.location) }
-//		return (0, 0)
-//	}
-//	
-//	// Forwarders into RackPlacement (keeps usages below unchanged)
-//	private func isValidType(_ device: Device) -> Bool {
-//		RackPlacement.isValidType(device, kind: kind)
-//	}
-//	
-//	private func rect(for device: Device, droppingAt raw: (row: Int, col: Int))
-//	-> (rows: Range<Int>, cols: Range<Int>, anchor: (row: Int, col: Int)) {
-//		RackPlacement.rect(for: device,
-//						   droppingAt: raw,
-//						   gridRows: slots.count,
-//						   gridCols: RackGrid.columnsPerRow)
-//	}
-//	
-//	private func canPlace(rows rr: Range<Int>, cols cc: Range<Int>, ignoring id: UUID?) -> Bool {
-//		RackPlacement.canPlace(slots: slots, rows: rr, cols: cc, ignoring: id)
-//	}
-//	
-//	private func clearOldSpan(of instanceId: UUID) {
-//		RackPlacement.clearOldSpan(slots: &slots, instanceId: instanceId)
-//	}
-//	
-//	private func place(_ instance: DeviceInstance, rows rr: Range<Int>, cols cc: Range<Int>) {
-//		RackPlacement.place(slots: &slots, instance: instance, rows: rr, cols: cc)
-//	}
-//
-//	
-//	// MARK: - DropDelegate
-//	func validateDrop(info: DropInfo) -> Bool {
-//		let types: [UTType] = [.deviceDragPayload, .item, .data, .plainText, .utf8PlainText]
-//		let ok = info.hasItemsConforming(to: types)
-////		print("🟢 validateDrop? \(ok) providers=",
-////			  info.itemProviders(for: types).map { $0.registeredTypeIdentifiers })
-//		return ok
-//	}
-//	
-//	func dropEntered(info: DropInfo) {
-//		hoveredValid = false
-//		hoveredRange = nil
-//	
-//		guard let payload = DragContext.shared.currentPayload,
-//			  let device  = library.device(for: payload.deviceId),
-//			  isValidType(device) else { return }
-//		
-//		let target = rect(for: device, droppingAt: cell(from: info))
-//		hoveredIndex = target.anchor.row
-//		hoveredRange = target.rows
-//		hoveredValid = canPlace(rows: target.rows, cols: target.cols, ignoring: payload.instanceId)
-////		print("➡️ dropEntered @\(info.location)")
-//	}
-//	
-//	func dropUpdated(info: DropInfo) -> DropProposal? {
-//		guard let payload = DragContext.shared.currentPayload,
-//			  let device  = library.device(for: payload.deviceId),
-//			  isValidType(device)
-//		else {
-//			let (r, _) = cell(from: info)
-//			hoveredIndex = r
-//			hoveredRange = nil
-//			hoveredValid = false
-////			print("🔄 dropUpdated at location=\(info.location)")
-//			return DropProposal(operation: .copy)
-//		}
-//		
-//		let target = rect(for: device, droppingAt: cell(from: info))
-//		hoveredIndex = target.anchor.row
-//		hoveredRange = target.rows
-//		hoveredValid = canPlace(rows: target.rows, cols: target.cols, ignoring: payload.instanceId)
-//		
-//		let op: DropOperation = hoveredValid
-//		? (payload.instanceId == nil ? .copy : .move)
-//		: .forbidden
-//		return DropProposal(operation: op)
-//	}
-//	
-//	func dropExited(info: DropInfo) {
-//		hoveredIndex = nil
-//		hoveredValid = false
-//		hoveredRange = nil
-//	}
-//	
-//	func performDrop(info: DropInfo) -> Bool {
-//		// Cache anchor BEFORE async to avoid capturing DropInfo in background
-//		let dropCell = cell(from: info)
-//		
-//		defer {
-//			hoveredIndex = nil
-//			hoveredValid = false
-//			hoveredRange = nil
-//			DragContext.shared.endDrag()
-//		}
-//		
-//		guard let provider = info.itemProviders(for: [UTType.deviceDragPayload]).first else { return false }
-////		print("✅ performDrop: providers=\(provider)")
-//		
-//		provider.loadDataRepresentation(forTypeIdentifier: UTType.deviceDragPayload.identifier) { data, _ in
-//			guard let data,
-//				  let payload = try? JSONDecoder().decode(DragPayload.self, from: data) else { return }
-//			
-//			Task { @MainActor in
-//				guard let device = library.device(for: payload.deviceId),
-//					  isValidType(device) else { return }
-//				
-//				// Force a TOP-LEFT rect; full width = whole row
-//				let target = rect(for: device, droppingAt: dropCell)
-//				guard canPlace(rows: target.rows, cols: target.cols, ignoring: payload.instanceId) else { return }
-//				
-//				if let movingId = payload.instanceId {
-//					// MOVE existing instance (preserve controlStates)
-//					let instance =
-//					slots.joined().first(where: { $0?.id == movingId }) ??
-//					library.instances.first(where: { $0.id == movingId })
-//					guard let inst = instance else { return }
-//					
-//					clearOldSpan(of: movingId)
-//					place(inst, rows: target.rows, cols: target.cols)
-//				} else {
-//					// COPY
-//					let inst = library.createInstance(of: device)
-//					place(inst, rows: target.rows, cols: target.cols)
-//				}
-//				
-//				onCommit?()
-//			}
-//		}
-//		
-//		return true
-//	}
-//
-//}
-//
-//  ChassisDropDelegate.swift
-//  Studio Recall
-//
-
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -180,6 +19,7 @@ struct ChassisDropDelegate: DropDelegate {
 	@Binding var hoveredIndex: Int?
 	@Binding var hoveredValid: Bool
 	@Binding var hoveredRange: Range<Int>?
+	@Binding var hoveredRows:  Range<Int>?
 	
 	let library: DeviceLibrary
 	let kind: DeviceType
@@ -277,12 +117,13 @@ struct ChassisDropDelegate: DropDelegate {
 		let t = targetRanges(for: dev, at: p)
 		hoveredIndex = t.anchorCol
 		hoveredRange = t.cols
+		hoveredRows = t.rows
 		hoveredValid = canPlace(t.rows, t.cols, ignoring: payload.instanceId)
 	}
 	
 	func dropUpdated(info: DropInfo) -> DropProposal? {
 		guard let payload = currentPayload, let dev = device(for: payload) else {
-			hoveredIndex = nil; hoveredRange = nil; hoveredValid = false
+			hoveredIndex = nil; hoveredRange = nil; hoveredRows = nil; hoveredValid = false
 			return DropProposal(operation: .forbidden)
 		}
 		
@@ -290,6 +131,7 @@ struct ChassisDropDelegate: DropDelegate {
 		let t = targetRanges(for: dev, at: p)                 // ⬅️ snaps inside
 		hoveredIndex = t.anchorCol
 		hoveredRange = t.cols
+		hoveredRows =  t.rows
 		hoveredValid = canPlace(t.rows, t.cols, ignoring: payload.instanceId)
 		
 		return DropProposal(operation: hoveredValid ? .move : .forbidden)
@@ -298,11 +140,12 @@ struct ChassisDropDelegate: DropDelegate {
 	func dropExited(info: DropInfo) {
 		hoveredIndex = nil
 		hoveredRange = nil
+		hoveredRows  = nil
 		hoveredValid = false
 	}
 	
 	func performDrop(info: DropInfo) -> Bool {
-		defer { hoveredIndex = nil; hoveredRange = nil; hoveredValid = false }
+		defer { hoveredIndex = nil; hoveredRange = nil; hoveredRows = nil; hoveredValid = false }
 		guard let payload = currentPayload, let dev = device(for: payload) else { return false }
 		
 		let p = clampedPoint(from: info)
@@ -310,9 +153,11 @@ struct ChassisDropDelegate: DropDelegate {
 		guard canPlace(t.rows, t.cols, ignoring: payload.instanceId) else { return false }
 		
 		if let movingId = payload.instanceId {
+			// Find the existing instance in the grid; if we can't, abort the move.
+			guard let inst = slots.flatMap({ $0 }).compactMap({ $0 }).first(where: { $0.id == movingId }) else {
+				return false
+			}
 			clearOldSpan(movingId)
-			let inst = slots.flatMap { $0 }.compactMap { $0 }.first { $0.id == movingId }
-			?? DeviceInstance(id: movingId, deviceID: dev.id)
 			place(inst, in: t.rows, t.cols)
 		} else {
 			let inst = library.createInstance(of: dev)
@@ -322,3 +167,160 @@ struct ChassisDropDelegate: DropDelegate {
 		return true
 	}
 }
+
+//import SwiftUI
+//import UniformTypeIdentifiers
+//
+//@MainActor
+//struct ChassisDropDelegate: DropDelegate {
+//	// Use EITHER a fixed anchor cell (per-cell onDrop)
+//	// OR a mapper from CGPoint -> (row, col) (chassis-level onDrop)
+//	let fixedCell: (row: Int, col: Int)?
+//	let indexFor: ((CGPoint) -> (row: Int, col: Int))?
+//
+//	@Binding var slots: [[DeviceInstance?]]          // rows × cols
+//	@Binding var hoveredIndex: Int?                  // row for hover painting
+//	@Binding var hoveredValid: Bool
+//	@Binding var hoveredRange: Range<Int>?           // row range for hover painting
+//
+//	let library: DeviceLibrary
+//	let kind: DeviceType
+//	var onCommit: (() -> Void)? = nil                // e.g. { sessionManager.saveSessions() }
+//
+//	// MARK: - Helpers
+//
+//	private func cell(from info: DropInfo) -> (row: Int, col: Int) {
+//		if let f = fixedCell { return f }
+//		if let map = indexFor { return map(info.location) }
+//		return (0, 0)
+//	}
+//
+//	// Forwarders into RackPlacement (keeps usages below unchanged)
+//	private func isValidType(_ device: Device) -> Bool {
+//		RackPlacement.isValidType(device, kind: kind)
+//	}
+//
+//	private func rect(for device: Device, droppingAt raw: (row: Int, col: Int))
+//	-> (rows: Range<Int>, cols: Range<Int>, anchor: (row: Int, col: Int)) {
+//		RackPlacement.rect(for: device,
+//						   droppingAt: raw,
+//						   gridRows: slots.count,
+//						   gridCols: RackGrid.columnsPerRow)
+//	}
+//
+//	private func canPlace(rows rr: Range<Int>, cols cc: Range<Int>, ignoring id: UUID?) -> Bool {
+//		RackPlacement.canPlace(slots: slots, rows: rr, cols: cc, ignoring: id)
+//	}
+//
+//	private func clearOldSpan(of instanceId: UUID) {
+//		RackPlacement.clearOldSpan(slots: &slots, instanceId: instanceId)
+//	}
+//
+//	private func place(_ instance: DeviceInstance, rows rr: Range<Int>, cols cc: Range<Int>) {
+//		RackPlacement.place(slots: &slots, instance: instance, rows: rr, cols: cc)
+//	}
+//
+//
+//	// MARK: - DropDelegate
+//	func validateDrop(info: DropInfo) -> Bool {
+//		let types: [UTType] = [.deviceDragPayload, .item, .data, .plainText, .utf8PlainText]
+//		let ok = info.hasItemsConforming(to: types)
+////		print("🟢 validateDrop? \(ok) providers=",
+////			  info.itemProviders(for: types).map { $0.registeredTypeIdentifiers })
+//		return ok
+//	}
+//
+//	func dropEntered(info: DropInfo) {
+//		hoveredValid = false
+//		hoveredRange = nil
+//
+//		guard let payload = DragContext.shared.currentPayload,
+//			  let device  = library.device(for: payload.deviceId),
+//			  isValidType(device) else { return }
+//
+//		let target = rect(for: device, droppingAt: cell(from: info))
+//		hoveredIndex = target.anchor.row
+//		hoveredRange = target.rows
+//		hoveredValid = canPlace(rows: target.rows, cols: target.cols, ignoring: payload.instanceId)
+////		print("➡️ dropEntered @\(info.location)")
+//	}
+//
+//	func dropUpdated(info: DropInfo) -> DropProposal? {
+//		guard let payload = DragContext.shared.currentPayload,
+//			  let device  = library.device(for: payload.deviceId),
+//			  isValidType(device)
+//		else {
+//			let (r, _) = cell(from: info)
+//			hoveredIndex = r
+//			hoveredRange = nil
+//			hoveredValid = false
+////			print("🔄 dropUpdated at location=\(info.location)")
+//			return DropProposal(operation: .copy)
+//		}
+//
+//		let target = rect(for: device, droppingAt: cell(from: info))
+//		hoveredIndex = target.anchor.row
+//		hoveredRange = target.rows
+//		hoveredValid = canPlace(rows: target.rows, cols: target.cols, ignoring: payload.instanceId)
+//
+//		let op: DropOperation = hoveredValid
+//		? (payload.instanceId == nil ? .copy : .move)
+//		: .forbidden
+//		return DropProposal(operation: op)
+//	}
+//
+//	func dropExited(info: DropInfo) {
+//		hoveredIndex = nil
+//		hoveredValid = false
+//		hoveredRange = nil
+//	}
+//
+//	func performDrop(info: DropInfo) -> Bool {
+//		// Cache anchor BEFORE async to avoid capturing DropInfo in background
+//		let dropCell = cell(from: info)
+//
+//		defer {
+//			hoveredIndex = nil
+//			hoveredValid = false
+//			hoveredRange = nil
+//			DragContext.shared.endDrag()
+//		}
+//
+//		guard let provider = info.itemProviders(for: [UTType.deviceDragPayload]).first else { return false }
+////		print("✅ performDrop: providers=\(provider)")
+//
+//		provider.loadDataRepresentation(forTypeIdentifier: UTType.deviceDragPayload.identifier) { data, _ in
+//			guard let data,
+//				  let payload = try? JSONDecoder().decode(DragPayload.self, from: data) else { return }
+//
+//			Task { @MainActor in
+//				guard let device = library.device(for: payload.deviceId),
+//					  isValidType(device) else { return }
+//
+//				// Force a TOP-LEFT rect; full width = whole row
+//				let target = rect(for: device, droppingAt: dropCell)
+//				guard canPlace(rows: target.rows, cols: target.cols, ignoring: payload.instanceId) else { return }
+//
+//				if let movingId = payload.instanceId {
+//					// MOVE existing instance (preserve controlStates)
+//					let instance =
+//					slots.joined().first(where: { $0?.id == movingId }) ??
+//					library.instances.first(where: { $0.id == movingId })
+//					guard let inst = instance else { return }
+//
+//					clearOldSpan(of: movingId)
+//					place(inst, rows: target.rows, cols: target.cols)
+//				} else {
+//					// COPY
+//					let inst = library.createInstance(of: device)
+//					place(inst, rows: target.rows, cols: target.cols)
+//				}
+//
+//				onCommit?()
+//			}
+//		}
+//
+//		return true
+//	}
+//
+//}

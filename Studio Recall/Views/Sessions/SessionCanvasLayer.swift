@@ -12,8 +12,11 @@ struct SessionCanvasLayer: View {
     @Binding var session: Session
     @EnvironmentObject var settings: AppSettings
     @EnvironmentObject var library: DeviceLibrary
-    let canvasSize: CGSize
-
+    
+	let canvasSize: CGSize
+	
+	var rackRects: [RackRect] = []
+	
     var body: some View {
         // Precompute locals; avoid heavy inline expressions
         let racks = session.racks
@@ -43,6 +46,14 @@ struct SessionCanvasLayer: View {
 				)
                 .position(session.series500Chassis[idx].position)
             }
+			
+			// Labels
+			LabelCanvas(
+				labels: $session.labels,
+				anchor: .session,
+				parentOrigin: .zero,
+				rackRects: rackRects
+			)
         }
 //#if os(macOS)
 //		.overlay(

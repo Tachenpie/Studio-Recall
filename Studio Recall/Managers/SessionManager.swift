@@ -562,6 +562,15 @@ extension SessionManager {
 	}
 }
 
+extension SessionManager {
+	/// Append a label to the current session, persist, and keep currentSession in sync.
+	func addLabel(_ label: SessionLabel) {
+		guard let s = currentSessionIndex else { return }
+		sessions[s].labels.append(label)
+		currentSession = sessions[s]
+		saveSessions()
+	}
+}
 
 // MARK: - Session Commands
 struct SessionCommands: Commands {

@@ -25,13 +25,15 @@ struct RackChassisSlotView: View {
 	@EnvironmentObject var sessionManager: SessionManager
 	
 	@Binding var hoveredIndex: Int?
-	@Binding var hoveredRange: Range<Int>?
 	@Binding var hoveredValid: Bool
+	@Binding var hoveredRange: Range<Int>?
+	@Binding var hoveredRows:  Range<Int>?
 	
 	@State private var hoverLeft = false
 	@State private var hoverRight = false
 	@State private var editingDevice: Device?
 	@State private var isPresentingEditor = false
+	@State private var hoverBubbleActive = false
 	
 	var body: some View {
 		Group {
@@ -56,6 +58,10 @@ struct RackChassisSlotView: View {
 			let isPartial = (device.rackWidth != .full)
 			let showHoverRails = !isPartial  // full-width only
 			
+			let railEps: CGFloat = 0.25
+			let wingL_eff = (L.leftWingPts  > 0 && L.leftRailPts  <= railEps) ? L.leftWingPts  : 0
+			let wingR_eff = (L.rightWingPts > 0 && L.rightRailPts <= railEps) ? L.rightWingPts : 0
+
 			// MARK: face metrics (single source of truth)
 			let metrics = DeviceMetrics.faceRenderMetrics(
 				faceWidthPts: faceW,
@@ -87,18 +93,29 @@ struct RackChassisSlotView: View {
 				)
 				.frame(width: faceW, height: slotH)
 				.zIndex(1)
+				if let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) {
+					let session = $sessionManager.sessions[i]
+					LabelCanvas(
+						labels: session.labels,
+						anchor: .deviceInstance(instance.id),
+						parentOrigin: .zero
+					)
+					.allowsHitTesting(true)
+				}
+
 			}
 			
 			// MARK: content stack (LEFT-side interactors live here)
 			let base = ZStack(alignment: .topLeading) {
 				// face centered vertically once
 				faceGroup
-					.offset(x: L.leftWingPts + L.leftRailPts, y: metrics.vOffset)
+//					.offset(x: L.leftWingPts + L.leftRailPts, y: metrics.vOffset)
+					.offset(x: wingL_eff + L.leftRailPts, y: metrics.vOffset)
 				
 				// LEFT wing (partials only)
-				if isPartial, L.leftWingPts > 0 {
+				if isPartial, wingL_eff > 0 {
 					WingPlate()
-						.frame(width: L.leftWingPts, height: slotH)
+						.frame(width: wingL_eff, height: slotH)
 						.contentShape(Rectangle())
 						.zIndex(50)
 						.background(Rectangle().fill(Color.black.opacity(0.001))) // reliable hit target
@@ -111,11 +128,12 @@ struct RackChassisSlotView: View {
 							onEdit: { startEditing(device) },
 							onRemove: { removeInstance(instance, device: device) }
 						)
+						.zIndex(50)
 				}
 				
 				// LEFT thin rail (only when partial is in the middle)
-				if isPartial, !L.externalLeft, L.leftRailPts > 0.5 {
-					let w = max(L.leftRailPts, 9)
+				if isPartial, wingL_eff == 0, L.leftRailPts > railEps {
+					let w = L.leftRailPts
 					ThinRailHandle(
 						width: w,
 						onDragProvider: { deviceDragProvider(instance: instance, device: device) },
@@ -124,41 +142,23 @@ struct RackChassisSlotView: View {
 						preview: { devicePreviewView(device: device, layout: L, metrics: metrics)}
 					)
 					.frame(width: w, height: slotH)
+					.contentShape(Rectangle().inset(by: -((max(w, 9) - w) / 2)))
 					.zIndex(60)
-//					ZStack {
-//						ThinRailOverlay(
-//							width: w,
-//							onDragProvider: { deviceDragProvider(instance: instance, device: device) },
-//							onRemove: { removeInstance(instance, device: device) },
-//							onEdit: { startEditing(device) }
-//						)
-//						.frame(width: w, height: slotH)
-//						
-//						// explicit hit rect (invisible but hittable)
-//						Rectangle().fill(Color.black.opacity(0.001))
-//							.frame(width: w, height: slotH)
-//							.contentShape(Rectangle())
-//							.onDrag { deviceDragProvider(instance: instance, device: device) }
-//							.contextMenu { deviceContextMenu(instance: instance, device: device) }
-//					}
-//					.zIndex(60)
 				}
 			}
 				.frame(width: L.totalWidthPts, height: slotH, alignment: .topLeading)
-				.clipped()
+//				.clipped()
 			
 			// === RIGHT-side interactors as TRAILING OVERLAYS (no .offset) ===
 			
 			// RIGHT wing (partials only)
 			let withRightWing = base.overlay(alignment: .trailing) {
-				if isPartial, L.rightWingPts > 0 {
+				if isPartial, wingR_eff > 0 {
 					WingPlate()
-						.frame(width: L.rightWingPts, height: slotH)
+						.frame(width: wingR_eff, height: slotH)
 						.contentShape(Rectangle())
 						.background(Rectangle().fill(Color.black.opacity(0.001)))
-						.onDrag {
-							deviceDragProvider(instance: instance, device: device)
-						} preview: {
+						.onDrag { deviceDragProvider(instance: instance, device: device) } preview: {
 							devicePreviewView(device: device, layout: L, metrics: metrics)
 						}
 						.deviceMenu(
@@ -169,35 +169,20 @@ struct RackChassisSlotView: View {
 				}
 			}
 			
-			// RIGHT thin rail (only when partial is in the middle)
+			// RIGHT thin rail (internal only; NEVER if a wing is present)
 			let withRightThin = withRightWing.overlay(alignment: .trailing) {
-				if isPartial, !L.externalRight, L.rightRailPts > 0.5 {
-					let w = max(L.rightRailPts, 9)
+				if isPartial, wingR_eff == 0, L.rightRailPts > railEps {
+					let w = L.rightRailPts              // visual == actual seam width
 					ThinRailHandle(
 						width: w,
 						onDragProvider: { deviceDragProvider(instance: instance, device: device) },
 						onRemove: { removeInstance(instance, device: device) },
 						onEdit: { startEditing(device) },
-						preview: { devicePreviewView(device: device, layout: L, metrics: metrics)}
+						preview: { devicePreviewView(device: device, layout: L, metrics: metrics) }
 					)
 					.frame(width: w, height: slotH)
+					.contentShape(Rectangle().inset(by: -((max(w, 9) - w) / 2))) // bigger hit target only
 					.zIndex(60)
-//					ZStack {
-//						ThinRailOverlay(
-//							width: w,
-//							onDragProvider: { deviceDragProvider(instance: instance, device: device) },
-//							onRemove: { removeInstance(instance, device: device) },
-//							onEdit: { startEditing(device) }
-//						)
-//						.frame(width: w, height: slotH)
-//						
-//						Rectangle().fill(Color.black.opacity(0.001))
-//							.frame(width: w, height: slotH)
-//							.contentShape(Rectangle())
-//							.onDrag { deviceDragProvider(instance: instance, device: device) }
-//							.contextMenu { deviceContextMenu(instance: instance, device: device) }
-//					}
-//					.zIndex(60)
 				}
 			}
 			
@@ -274,13 +259,17 @@ struct RackChassisSlotView: View {
 					}
 				}
 			
+			let finalView = withHoverEdges
+				.onPreferenceChange(HoverBubbleActiveKey.self) { hoverBubbleActive = $0 }
+				.zIndex(hoverBubbleActive ? 9000 : 0)
+			
 			// MARK: per-device drop behavior (unchanged)
 			let payload = DragContext.shared.currentPayload
 			let enableDeviceDrop = (payload?.instanceId == instance.id)
 			
 			if enableDeviceDrop {
 				return AnyView(
-					withHoverEdges.onDrop(
+					finalView.onDrop(
 						of: [UTType.deviceDragPayload],
 						delegate: ChassisDropDelegate(
 							fixedCell: (anchor.row, anchor.col),
@@ -291,6 +280,7 @@ struct RackChassisSlotView: View {
 							hoveredIndex: $hoveredIndex,
 							hoveredValid: $hoveredValid,
 							hoveredRange: $hoveredRange,
+							hoveredRows:  $hoveredRows,
 							library: library,
 							kind: .rack,
 							onCommit: { sessionManager.saveSessions() }
@@ -298,10 +288,9 @@ struct RackChassisSlotView: View {
 					)
 				)
 			} else {
-				return AnyView(withHoverEdges)
+				return AnyView(finalView)
 			}
 		}
-
 		
 		// Fallback (should not be used when prelayout is provided)
 		return AnyView(EmptyView())
@@ -450,43 +439,44 @@ private struct RailOverlay: View {
 	}
 }
 
-private struct ThinRailOverlay: View {
-	let width: CGFloat
-	let onDragProvider: () -> NSItemProvider
-	let onRemove: () -> Void
-	let onEdit: () -> Void
-	private let preview: AnyView
-	
-	init(
-		width: CGFloat,
-		onDragProvider: @escaping () -> NSItemProvider,
-		onRemove: @escaping () -> Void,
-		onEdit: @escaping () -> Void,
-		@ViewBuilder preview: () -> some View = { EmptyView() }
-	) {
-		self.width = width
-		self.onDragProvider = onDragProvider
-		self.onRemove = onRemove
-		self.onEdit = onEdit
-		self.preview = AnyView(preview())
-	}
-	
-	var body: some View {
-		ZStack {
-			// Clear hit area (prevents any grey wash)
-			Color.clear
-			// Subtle handle line
-			Rectangle()
-				.stroke(Color.secondary.opacity(0.55), lineWidth: 1)
-				.padding(.vertical, 2)
-		}
-		.frame(width: width)
-		.contentShape(Rectangle())
-		.help("Drag to move this device. Right-click to edit or remove.")
-		.onDrag { onDragProvider() } preview: { preview }
-		.deviceMenu(onEdit: onEdit, onRemove: onRemove)
-	}
-}
+//private struct ThinRailOverlay: View {
+//	let width: CGFloat
+//	let onDragProvider: () -> NSItemProvider
+//	let onRemove: () -> Void
+//	let onEdit: () -> Void
+//	private let preview: AnyView
+//	
+//	init(
+//		width: CGFloat,
+//		onDragProvider: @escaping () -> NSItemProvider,
+//		onRemove: @escaping () -> Void,
+//		onEdit: @escaping () -> Void,
+//		@ViewBuilder preview: () -> some View = { EmptyView() }
+//	) {
+//		self.width = width
+//		self.onDragProvider = onDragProvider
+//		self.onRemove = onRemove
+//		self.onEdit = onEdit
+//		self.preview = AnyView(preview())
+//	}
+//	
+//	var body: some View {
+//		ZStack {
+//			// Clear hit area (prevents any grey wash)
+//			Color.clear
+//			// Subtle handle line
+//			Rectangle()
+//				.stroke(Color.secondary.opacity(0.55), lineWidth: 1)
+//				.padding(.vertical, 2)
+//		}
+//		.frame(width: width)
+//		.contentShape(Rectangle())
+//		.help("Drag to move this device. Right-click to edit or remove.")
+//		.onDrag { onDragProvider() } preview: { preview }
+//		.deviceMenu(onEdit: onEdit, onRemove: onRemove)
+//		.accessibilityLabel("Device handle")
+//	}
+//}
 
 private struct ThinRailHandle: View {
 	let width: CGFloat
@@ -515,6 +505,7 @@ private struct ThinRailHandle: View {
 			.fill(Color.black.opacity(0.001))
 			.frame(width: width)
 			.contentShape(Rectangle())
+			.help("Drag to move this device. Right-click to edit or remove.")
 			.onDrag { onDragProvider() } preview: { preview }
 			.deviceMenu(onEdit: onEdit, onRemove: onRemove)
 			.accessibilityLabel("Device handle")
@@ -578,10 +569,15 @@ private struct DeviceDragPreview: View {
 	let layout: SlotPrelayout
 	let metrics: FaceRenderMetrics
 	
+	let railEps: CGFloat = 0.25
+	
 	var body: some View {
+		let wingL_eff = (layout.leftWingPts  > 0 && layout.leftRailPts  <= railEps) ? layout.leftWingPts  : 0
+		let wingR_eff = (layout.rightWingPts > 0 && layout.rightRailPts <= railEps) ? layout.rightWingPts : 0
+		
 		ZStack(alignment: .topLeading) {
 			// Left wing (if any)
-			if layout.leftWingPts > 0 {
+			if wingL_eff > 0 {
 				WingPlate()
 					.frame(width: layout.leftWingPts, height: layout.heightPts)
 			}
@@ -605,12 +601,12 @@ private struct DeviceDragPreview: View {
 					.frame(width: metrics.size.width, height: metrics.size.height)
 #endif
 			}
-			.offset(x: layout.leftWingPts + layout.leftRailPts, y: metrics.vOffset)
+			.offset(x: wingL_eff + layout.leftRailPts, y: metrics.vOffset)
 			
 			// Right wing (if any)
-			if layout.rightWingPts > 0 {
+			if wingR_eff > 0 {
 				WingPlate()
-					.frame(width: layout.rightWingPts, height: layout.heightPts)
+					.frame(width: wingR_eff, height: layout.heightPts)
 					.frame(maxWidth: .infinity, alignment: .trailing)
 			}
 		}
