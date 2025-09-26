@@ -69,21 +69,41 @@ struct Studio_RecallApp: App {
 				showingReviewChanges: $showingReviewChanges,
 				showingSaveOptions: $showingSaveOptions
 			)
-            
-            CommandMenu("Library") {
-                    #if os(macOS)
-                Button("Edit Library...") {
-                    openWindow(id: "library")
-                }
-                .keyboardShortcut("1", modifiers: [.command, .shift])
-                    #else
-                Button("Edit Library...") {
-                    showingLibraryEditor = true
-                }
-                .keyboardShortcut("1", modifiers: [.command, .shift])
-                    #endif
-            }
-        }
+			
+			// File ▸ New from Template
+			CommandGroup(after: .newItem) {
+				Menu("New Session from Template") {
+					ForEach(sessionManager.templates) { t in
+						Button(t.name) { sessionManager.newSession(from: t) }
+					}
+					Divider()
+					Button("Blank Session") { sessionManager.newSession(from: nil) }
+				}
+			}
+			
+			// Templates menu
+			CommandMenu("Templates") {
+				Button("Save Current as Template…") {
+					sessionManager.saveCurrentSessionAsTemplate()
+				}
+				Divider()
+				Menu("Default Template") {
+					Button(sessionManager.defaultTemplateId == nil ? "• None" : "None") {
+						sessionManager.defaultTemplateId = nil
+					}
+					ForEach(sessionManager.templates) { t in
+						Button((sessionManager.defaultTemplateId == t.id ? "• " : "") + t.name) {
+							sessionManager.defaultTemplateId = t.id
+						}
+					}
+				}
+#if os(macOS)
+				Divider()
+				Button("Manage Templates…") { sessionManager.showTemplateManager = true }
+#endif
+			}
+		}
+
         
         #if os(macOS)
         Window("Library Manager", id: "library") {

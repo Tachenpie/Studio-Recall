@@ -16,6 +16,7 @@ struct SessionView: View {
     @State private var showingLibraryEditor = false
     @State private var showingAddRack = false
     @State private var showingAddChassis = false
+	@State private var showingSaveTemplateName = false
 	@State private var panStart: CGPoint? = nil
 	@State private var lastMagnification: CGFloat = 1.0
 	@State private var showMinimap = true
@@ -106,21 +107,21 @@ struct SessionView: View {
 		}
             .navigationTitle("Session")
             .toolbar {
-                ToolbarItem() { //placement: .primaryAction) {
-                    Button {
-                        showingNewSession = true
-                    } label: {
-                        Label("New Session", systemImage: "plus")
-                    }
-                }
-                ToolbarItem(placement: .secondaryAction) {
-                    Button {
-                        showingLibraryEditor = true
-                    } label: {
-                        Label("Edit Library", systemImage: "books.vertical")
-                    }
-                }
-				ToolbarItem() {
+				ToolbarItemGroup(placement: .automatic) {
+					Button {
+						sessionManager.addRack()
+					} label: {
+						Label("Add Rack", systemImage: "square.grid.3x2")
+					}
+					.help("Add Rack")
+					
+					Button {
+						sessionManager.addSeries500Chassis()
+					} label: {
+						Label("Add 500-series Chassis", systemImage: "rectangle.3.offgrid")
+					}
+					.help("Add 500-series Chassis")
+					
 					Button {
 						let new = SessionLabel(
 							anchor: .session,
@@ -130,10 +131,12 @@ struct SessionView: View {
 						)
 						sessionManager.addLabel(new)
 					} label: {
-						Label("Create Label", systemImage: "bubble.and.pencil")
+						Label("Create Label", systemImage: "tag")
 					}
+					.help("Create Label")
 				}
-				ToolbarItem(placement: .status) {
+				
+				ToolbarItemGroup(placement: .automatic) {
 					Button {
 						showMinimap.toggle()
 					} label: {
@@ -141,8 +144,7 @@ struct SessionView: View {
 							  systemImage: showMinimap ? "map" : "map.fill")
 					}
 					.help(showMinimap ? "Hide Minimap" : "Show Minimap")
-				}
-				ToolbarItem(placement: .status) {
+				
 					HStack(spacing: 8) {
 						Image(systemName: "minus.magnifyingglass")
 						// --- Slider binding (inside ToolbarItem .status) ---
@@ -190,11 +192,45 @@ struct SessionView: View {
 								sessionManager.saveSessions()
 							}
 						} label: {
-							Image(systemName: "arrow.counterclockwise")
-								.help("Reset zoom & pan")
+							Label("Reset Zoom & Pan", systemImage: "arrow.counterclockwise")
+								.help("Reset Zoom & Pan")
 						}
 					}
 				}
+				
+				ToolbarItemGroup(placement: .automatic) {
+					Menu {
+						// Apply (non-destructive replace of the layout)
+						ForEach(sessionManager.templates) { t in
+							Button(t.name) { sessionManager.applyTemplate(t) }
+						}
+						Divider()
+						Button("Save Current as Template…") {
+							showingSaveTemplateName = true
+						}
+						.help("Save Current as Template...")
+#if os(macOS)
+						Button("Manage Templates…") { sessionManager.showTemplateManager = true }
+							.help("Manage Templates...")
+#endif
+						Divider()
+						// Default template selector
+						Menu("Default Template") {
+							Button(sessionManager.defaultTemplateId == nil ? "• None" : "None") {
+								sessionManager.defaultTemplateId = nil
+							}
+							ForEach(sessionManager.templates) { t in
+								Button((sessionManager.defaultTemplateId == t.id ? "• " : "") + t.name) {
+									sessionManager.defaultTemplateId = t.id
+								}
+							}
+						}
+					} label: {
+						Label("Templates", systemImage: "doc.on.doc")
+							.help("Templates")
+					}
+				}
+				
             }
             .sheet(isPresented: $showingNewSession) {
                 NewSessionView()
@@ -214,6 +250,12 @@ struct SessionView: View {
                 AddSeries500Sheet()
                     .environmentObject(sessionManager)
             }
+			.sheet(isPresented: $sessionManager.showTemplateManager) {
+				TemplateManagerView(sessionManager: sessionManager)
+			}
+			.sheet(isPresented: $showingSaveTemplateName) {
+				SaveTemplateNameSheet(sessionManager: sessionManager)
+			}
     }
 
 	// MARK: - Gestures

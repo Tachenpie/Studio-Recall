@@ -16,188 +16,237 @@ struct ControlInspector: View {
 	@Binding var selectedControlId: UUID?
 	@Binding var isEditingRegion: Bool
 	@Binding var activeRegionIndex: Int
+	var isWideFaceplate: Bool
 	
 	var body: some View {
-		VStack(alignment: .leading, spacing: 14) {
-			Text("Inspector").font(.headline)
-			
-			if let idx = selectedIndex {
-				let binding = $editableDevice.device.controls[idx]
-//				let control = binding.wrappedValue
-				
-				// MARK: Basics
-				GroupBox("Basics") {
-					VStack(alignment: .leading, spacing: 10) {
-						HStack {
-							Text("Name").frame(width: 80, alignment: .leading)
-							TextField("Label", text: binding.name).textFieldStyle(.roundedBorder)
-						}
+		if isWideFaceplate {
+			VStack(alignment: .leading, spacing: 14) {
+				if let idx = selectedIndex {
+					let binding = $editableDevice.device.controls[idx]
+					
+					HStack(alignment: .top, spacing: 6) {
+						basicsArea(binding)
 						
-						HStack {
-							Picker("Type", selection: binding.type) {
-								ForEach(ControlType.allCases, id: \.self) { t in
-									Text(t.displayName).tag(t)
-								}
-							}
-							.pickerStyle(.menu)   // dropdown, very compact
-
-						}
+						regionsArea(binding)
 					}
-				}
-				
-				// MARK: Regions
-				GroupBox("Regions") {
-					VStack(alignment: .leading, spacing: 8) {
-						if binding.regions.wrappedValue.isEmpty {
-							Text("No region yet. Click Create to add one.")
-								.font(.caption)
-								.foregroundStyle(.secondary)
-							
-							Button("Create") {
-								let s = ImageRegion.defaultSize
-								if binding.wrappedValue.type == .concentricKnob {
-									let outer = ImageRegion(
-										rect: CGRect(x: max(0, binding.wrappedValue.x - s*0.6),
-													 y: max(0, binding.wrappedValue.y - s*0.6),
-													 width: s*1.2, height: s*1.2),
-										mapping: nil, shape: .circle
-									)
-									let inner = ImageRegion(
-										rect: CGRect(x: max(0, binding.wrappedValue.x - s*0.35),
-													 y: max(0, binding.wrappedValue.y - s*0.35),
-													 width: s*0.7, height: s*0.7),
-										mapping: nil, shape: .circle
-									)
-									binding.regions.wrappedValue = [outer, inner]
-								} else {
-									let r = ImageRegion(
-										rect: CGRect(x: max(0, binding.wrappedValue.x - s*0.5),
-													 y: max(0, binding.wrappedValue.y - s*0.5),
-													 width: s, height: s),
-										mapping: nil, shape: .circle
-									)
-									binding.regions.wrappedValue = [r]
-								}
-								isEditingRegion = true
-							}
-						} else {
-							// Choose which ring to edit (concentric only)
-							if binding.wrappedValue.type == .concentricKnob,
-							   binding.regions.wrappedValue.count >= 2,
-							   let pair = concentricPairIndices(binding.wrappedValue) {
-								
-								Picker("Edit region", selection: $activeRegionIndex) {
-									Text("Outer").tag(pair.outer)
-									Text("Inner").tag(pair.inner)
-								}
-								.pickerStyle(.segmented)
-								.onAppear {
-									// Default to “Outer” the first time (or after create/delete)
-									if !binding.regions.wrappedValue.indices.contains(activeRegionIndex) {
-										activeRegionIndex = pair.outer
-									}
-								}
-								.onChange(of: binding.regions.wrappedValue) { _, _ in
-									// Keep selection valid if regions are added/removed
-									if !binding.regions.wrappedValue.indices.contains(activeRegionIndex) {
-										activeRegionIndex = pair.outer
-									}
-								}
-							}
-
-							
-							// Safety clamp (outer=0 or inner=1 if present)
-							let idxSel = min(max(activeRegionIndex, 0), max(0, binding.regions.wrappedValue.count - 1))
-							
-							// Selected region binding
-							let regionBinding = Binding<ImageRegion>(
-								get: { binding.regions.wrappedValue[idxSel] },
-								set: { binding.regions.wrappedValue[idxSel] = $0 }
-							)
-							
-							HStack {
-								Toggle("Edit", isOn: $isEditingRegion)
-								Spacer()
-								Button("Delete") {
-									binding.regions.wrappedValue.remove(at: idxSel)
-									activeRegionIndex = 0
-								}
-								.buttonStyle(.borderless)
-							}
-							
-							Picker("Shape", selection: Binding(
-								get: { regionBinding.wrappedValue.shape },
-								set: { regionBinding.wrappedValue.shape = $0 }
-							)) {
-								Text("Rectangle").tag(ImageRegionShape.rect)
-								Text("Circle").tag(ImageRegionShape.circle)
-							}
-							.pickerStyle(.segmented)
-						}
-					}
-				}
-				
-				// MARK: Per-type configuration
-				perTypeSection(binding: binding)
-					.transition(.opacity.combined(with: .move(edge: .top)))
-				
-				// MARK: Mapping
-				GroupBox("Image Mapping") {
-					if isEditingRegion {
-						VStack(alignment: .leading, spacing: 6) {
-							Text("Turn off “Edit Region” to adjust mapping.")
-								.font(.caption)
-								.foregroundStyle(.secondary)
-						}
-						.frame(maxWidth: .infinity, alignment: .leading)
-					} else {
-						MappingEditor(control: binding, activeRegionIndex: $activeRegionIndex)
-					}
-				}
-				.disabled(isEditingRegion)
-				
-				Spacer(minLength: 8)
-				
-				// MARK: Duplicate and Delete
-				HStack {
-					Button {
-						// Duplicate selected control with a tiny offset and a fresh ID
-						var copy = editableDevice.device.controls[idx]
-						copy.id = UUID()
-						copy.name = copy.name + " Copy"
-						copy.x = min(1, copy.x + 0.02)
-						copy.y = min(1, copy.y + 0.02)
-						// Keep region if present (same rect is fine; user can adjust)
-						editableDevice.device.controls.append(copy)
-						selectedControlId = copy.id
-					} label: {
-						Label("Duplicate", systemImage: "plus.square.on.square")
-					}
-					.buttonStyle(.bordered)
 					
+					HStack(alignment: .top, spacing: 6) {
+						perTypeSection(binding: binding)
+							.transition(.opacity.combined(with: .move(edge: .top)))
+						
+						mappingArea(binding)
+					}
+					duplicateAndDelete(idx)
+				} else {
+					Text("Select a control on the faceplate or from Palette.")
+						.foregroundStyle(.secondary)
 					Spacer()
-					
-					Button(role: .destructive) {
-						editableDevice.device.controls.remove(at: idx)
-						selectedControlId = nil
-					} label: {
-						Label("Delete Control", systemImage: "trash")
-					}
 				}
-			} else {
-				Text("Select a control on the canvas.")
-					.foregroundStyle(.secondary)
-				Spacer()
+			}
+			.frame(maxWidth: .infinity, alignment: .leading)
+			.layoutPriority(1)
+			.padding()
+#if os(macOS)
+			.background(Color(NSColor.controlBackgroundColor))
+#else
+			.background(Color(UIColor.secondarySystemBackground))
+#endif
+		} else {
+			VStack(alignment: .leading, spacing: 14) {
+				if let idx = selectedIndex {
+					let binding = $editableDevice.device.controls[idx]
+					
+					// MARK: Basics
+					basicsArea(binding)
+					
+					// MARK: Regions
+					regionsArea(binding)
+					
+					// MARK: Per-type configuration
+					perTypeSection(binding: binding)
+						.transition(.opacity.combined(with: .move(edge: .top)))
+					
+					// MARK: Mapping
+					mappingArea(binding)
+					
+					Spacer(minLength: 8)
+					
+					// MARK: Duplicate and Delete
+					duplicateAndDelete(idx)
+					
+				} else {
+					Text("Select a control on the faceplate or from Palette.")
+						.foregroundStyle(.secondary)
+					Spacer()
+				}
+			}
+			.frame(maxWidth: .infinity, alignment: .leading)
+			.layoutPriority(1)
+			.padding()
+#if os(macOS)
+			.background(Color(NSColor.controlBackgroundColor))
+#else
+			.background(Color(UIColor.secondarySystemBackground))
+#endif
+		}
+	}
+	
+	private func basicsArea(_ binding: Binding<Control>) -> some View {
+		GroupBox("Basics") {
+			VStack(alignment: .leading, spacing: 10) {
+				HStack {
+					Text("Name").frame(width: 80, alignment: .leading)
+					TextField("Label", text: binding.name).textFieldStyle(.roundedBorder)
+				}
+				
+				HStack {
+					Picker("Type", selection: binding.type) {
+						ForEach(ControlType.allCases, id: \.self) { t in
+							Text(t.displayName).tag(t)
+						}
+					}
+					.pickerStyle(.menu)   // dropdown, very compact
+					
+				}
 			}
 		}
-		.frame(maxWidth: .infinity, alignment: .leading)
-		.layoutPriority(1)
-		.padding()
-#if os(macOS)
-		.background(Color(NSColor.controlBackgroundColor))
-#else
-		.background(Color(UIColor.secondarySystemBackground))
-#endif
+	}
+	
+	private func regionsArea(_ binding: Binding<Control>) -> some View {
+		GroupBox("Regions") {
+			VStack(alignment: .leading, spacing: 8) {
+				if binding.regions.wrappedValue.isEmpty {
+					Text("No region yet. Click Create to add one.")
+						.font(.caption)
+						.foregroundStyle(.secondary)
+					
+					Button("Create") {
+						let s = ImageRegion.defaultSize
+						if binding.wrappedValue.type == .concentricKnob {
+							let outer = ImageRegion(
+								rect: CGRect(x: max(0, binding.wrappedValue.x - s*0.6),
+											 y: max(0, binding.wrappedValue.y - s*0.6),
+											 width: s*1.2, height: s*1.2),
+								mapping: nil, shape: .circle
+							)
+							let inner = ImageRegion(
+								rect: CGRect(x: max(0, binding.wrappedValue.x - s*0.35),
+											 y: max(0, binding.wrappedValue.y - s*0.35),
+											 width: s*0.7, height: s*0.7),
+								mapping: nil, shape: .circle
+							)
+							binding.regions.wrappedValue = [outer, inner]
+						} else {
+							let r = ImageRegion(
+								rect: CGRect(x: max(0, binding.wrappedValue.x - s*0.5),
+											 y: max(0, binding.wrappedValue.y - s*0.5),
+											 width: s, height: s),
+								mapping: nil, shape: .circle
+							)
+							binding.regions.wrappedValue = [r]
+						}
+						isEditingRegion = true
+					}
+				} else {
+					// Choose which ring to edit (concentric only)
+					if binding.wrappedValue.type == .concentricKnob,
+					   binding.regions.wrappedValue.count >= 2,
+					   let pair = concentricPairIndices(binding.wrappedValue) {
+						
+						Picker("Edit region", selection: $activeRegionIndex) {
+							Text("Outer").tag(pair.outer)
+							Text("Inner").tag(pair.inner)
+						}
+						.pickerStyle(.segmented)
+						.onAppear {
+							// Default to “Outer” the first time (or after create/delete)
+							if !binding.regions.wrappedValue.indices.contains(activeRegionIndex) {
+								activeRegionIndex = pair.outer
+							}
+						}
+						.onChange(of: binding.regions.wrappedValue) { _, _ in
+							// Keep selection valid if regions are added/removed
+							if !binding.regions.wrappedValue.indices.contains(activeRegionIndex) {
+								activeRegionIndex = pair.outer
+							}
+						}
+					}
+					
+					
+					// Safety clamp (outer=0 or inner=1 if present)
+					let idxSel = min(max(activeRegionIndex, 0), max(0, binding.regions.wrappedValue.count - 1))
+					
+					// Selected region binding
+					let regionBinding = Binding<ImageRegion>(
+						get: { binding.regions.wrappedValue[idxSel] },
+						set: { binding.regions.wrappedValue[idxSel] = $0 }
+					)
+					
+					HStack {
+						Toggle("Edit", isOn: $isEditingRegion)
+						Spacer()
+						Button("Delete") {
+							binding.regions.wrappedValue.remove(at: idxSel)
+							activeRegionIndex = 0
+						}
+						.buttonStyle(.borderless)
+					}
+					
+					Picker("Shape", selection: Binding(
+						get: { regionBinding.wrappedValue.shape },
+						set: { regionBinding.wrappedValue.shape = $0 }
+					)) {
+						Text("Rectangle").tag(ImageRegionShape.rect)
+						Text("Circle").tag(ImageRegionShape.circle)
+					}
+					.pickerStyle(.segmented)
+				}
+			}
+		}
+	}
+	
+	private func mappingArea(_ binding: Binding<Control>) -> some View {
+		GroupBox("Image Mapping") {
+			if isEditingRegion {
+				VStack(alignment: .leading, spacing: 6) {
+					Text("Turn off “Edit Region” to adjust mapping.")
+						.font(.caption)
+						.foregroundStyle(.secondary)
+				}
+				.frame(maxWidth: .infinity, alignment: .leading)
+			} else {
+				MappingEditor(control: binding, activeRegionIndex: $activeRegionIndex)
+			}
+		}
+		.disabled(isEditingRegion)
+	}
+	
+	private func duplicateAndDelete(_ idx: Int) -> some View {
+		HStack {
+			Button {
+				// Duplicate selected control with a tiny offset and a fresh ID
+				var copy = editableDevice.device.controls[idx]
+				copy.id = UUID()
+				copy.name = copy.name + " Copy"
+				copy.x = min(1, copy.x + 0.02)
+				copy.y = min(1, copy.y + 0.02)
+				// Keep region if present (same rect is fine; user can adjust)
+				editableDevice.device.controls.append(copy)
+				selectedControlId = copy.id
+			} label: {
+				Label("Duplicate", systemImage: "plus.square.on.square")
+			}
+			.buttonStyle(.bordered)
+			
+			Spacer()
+			
+			Button(role: .destructive) {
+				editableDevice.device.controls.remove(at: idx)
+				selectedControlId = nil
+			} label: {
+				Label("Delete Control", systemImage: "trash")
+			}
+		}
 	}
 	
 	private var selectedIndex: Int? {

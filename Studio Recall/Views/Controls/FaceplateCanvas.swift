@@ -21,6 +21,9 @@ struct FaceplateCanvas: View {
 	@Binding var activeRegionIndex: Int
 	@Binding var zoom: CGFloat
 	@Binding var pan: CGSize
+	// Optional external overlay (parent-space), e.g. detection boxes.
+	// Signature matches CanvasViewport.overlayContent.
+	var externalOverlay: ((CGSize /*parent*/, CGSize /*canvas*/, CGFloat /*zoom*/, CGSize /*pan*/) -> AnyView)? = nil
 	
 	// local state just for canvas content
 	@State private var draggingControlId: UUID? = nil
@@ -102,31 +105,36 @@ struct FaceplateCanvas: View {
 			},
 			// Type-erase the overlay to AnyView so both branches match
 			overlayContent: { parentSize, canvasSize, zoom, pan -> AnyView in
-				if let sel = selectedControlBinding, isEditingRegion {
-					return AnyView(
-						ForEach(sel.wrappedValue.regions.indices, id: \.self) { idx in
-							RegionHitLayer(
-								rect: Binding(
-									get: { sel.wrappedValue.regions[idx].rect },
-									set: { updateRegionRect(of: sel, to: $0, idx: idx) }
-								),
-								parentSize: parentSize,
-								canvasSize: canvasSize,
-								zoom: zoom,
-								pan: pan,
-								isPanMode: isPanMode,
-								shape: sel.wrappedValue.regions[idx].shape,
-								controlType: sel.wrappedValue.type,
-								regionIndex: idx,
-								regions: sel.wrappedValue.regions,
-								isEnabled: activeRegionIndex == idx
-							)
+				AnyView(
+					ZStack(alignment: .topLeading) {
+						// Existing region edit overlay (unchanged)
+						if let sel = selectedControlBinding, isEditingRegion {
+							ForEach(sel.wrappedValue.regions.indices, id: \.self) { idx in
+								RegionHitLayer(
+									rect: Binding(
+										get: { sel.wrappedValue.regions[idx].rect },
+										set: { updateRegionRect(of: sel, to: $0, idx: idx) }
+									),
+									parentSize: parentSize,
+									canvasSize: canvasSize,
+									zoom: zoom,
+									pan: pan,
+									isPanMode: isPanMode,
+									shape: sel.wrappedValue.regions[idx].shape,
+									controlType: sel.wrappedValue.type,
+									regionIndex: idx,
+									regions: sel.wrappedValue.regions,
+									isEnabled: activeRegionIndex == idx
+								)
+							}
 						}
-					)
-				}
-				else {
-					return AnyView(EmptyView())
-				}
+						
+						// NEW: external overlay (e.g. detection boxes) in parent-space
+						if let externalOverlay {
+							externalOverlay(parentSize, canvasSize, zoom, pan)
+						}
+					}
+				)
 			},
 			onDropString: { raw, localPoint, canvasSize in
 				guard let type = ControlType(rawValue: raw) else { return false }

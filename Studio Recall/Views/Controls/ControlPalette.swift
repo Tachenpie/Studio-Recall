@@ -15,25 +15,48 @@ struct ControlPalette: View {
 	@Binding var selectedControlId: UUID?
 	
 	@State private var searchText: String = ""
-		
+	
+	let isWideFaceplate: Bool
+	
 	var body: some View {
 		ScrollView {
-			VStack(spacing: 12) {
-				SectionHeader(title: "New Controls")
-				NewControlsGrid() // simple grid of tiles
-				
-				Divider().opacity(0.1).padding(.top, 6)
-				
-				SectionHeader(title: "Controls on Faceplate")
-				SearchField(text: $searchText)
-				
-				ExistingControlsList(
-					controls: filtered(editableDevice.device.controls, by: searchText),
-					selectedId: $selectedControlId,
-					onDelete: deleteControl
-				)
+			if isWideFaceplate {
+				HStack(alignment: .top, spacing: 12) {
+					VStack {
+						SectionHeader(title: "New Controls")
+						NewControlsGrid() // simple grid of tiles
+					}
+					Divider().opacity(0.1).padding(.leading, 6)
+					VStack {
+						SectionHeader(title: "Controls on Faceplate")
+						SearchField(text: $searchText)
+						
+						ExistingControlsList(
+							controls: filtered(editableDevice.device.controls, by: searchText),
+							selectedId: $selectedControlId,
+							onDelete: deleteControl
+						)
+					}
+				}
+				.padding(12)
+			} else {
+				VStack(spacing: 12) {
+					SectionHeader(title: "New Controls")
+					NewControlsGrid() // simple grid of tiles
+					
+					Divider().opacity(0.1).padding(.top, 6)
+					
+					SectionHeader(title: "Controls on Faceplate")
+					SearchField(text: $searchText)
+					
+					ExistingControlsList(
+						controls: filtered(editableDevice.device.controls, by: searchText),
+						selectedId: $selectedControlId,
+						onDelete: deleteControl
+					)
+				}
+				.padding(12)
 			}
-			.padding(12)
 		}
 #if os(macOS)
 		.background(Color(NSColor.controlBackgroundColor))
@@ -111,7 +134,7 @@ private struct SearchField: View {
 
 private struct NewControlsGrid: View {
 	private let cols: [GridItem] = [
-		GridItem(.adaptive(minimum: 120), spacing: 10)   // ← uniform-ish
+		GridItem(.adaptive(minimum: 100), spacing: 10)   // ← uniform-ish
 	]
 	
 	var body: some View {
@@ -141,7 +164,7 @@ private struct NewControlTile: View {
 				.lineLimit(1)
 				.foregroundStyle(.primary)
 		}
-		.frame(width: 120, height: 68)  // ← fixed footprint
+		.frame(width: 100, height: 68)  // ← fixed footprint
 		.padding(6)
 		.background(
 			RoundedRectangle(cornerRadius: 10, style: .continuous)

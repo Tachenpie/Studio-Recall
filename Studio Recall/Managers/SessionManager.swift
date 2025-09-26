@@ -10,11 +10,32 @@ import SwiftUI
 final class SessionManager: ObservableObject {
     @Published var sessions: [Session] = []
     @Published var currentSession: Session? = nil
+	@Published var templates: [SessionTemplate] = []
+	@Published var defaultTemplateId: UUID? {
+		didSet { UserDefaults.standard.set(defaultTemplateId?.uuidString, forKey: "DefaultTemplateID") }
+	}
 
+	@Published var showTemplateManager: Bool = false
+	
+	/// Convenience to find current session index quickly.
+	var currentSessionIndex: Int? {
+		guard let id = currentSession?.id else { return nil }
+		return sessions.firstIndex(where: { $0.id == id })
+	}
+	
     private unowned let library: DeviceLibrary
     
     private let saveURL: URL
     private let lastSessionKey = "lastActiveSessionID"
+	private var appSupportURL: URL {
+		let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+#if os(macOS)
+		let bundleID = Bundle.main.bundleIdentifier ?? "Studio Recall"
+#else
+		let bundleID = "Studio Recall"
+#endif
+		return base.appendingPathComponent(bundleID, isDirectory: true)
+	}
 
     // ✅ Initialize directly from UserDefaults
     @Published var lastRackSlotCount: Int {
@@ -39,12 +60,16 @@ final class SessionManager: ObservableObject {
         self.lastChassisSlotCount = savedChassis > 0 ? savedChassis : 10
 
         loadSessions()
+		loadTemplates()
+		if let raw = UserDefaults.standard.string(forKey: "DefaultTemplateID"),
+		   let id = UUID(uuidString: raw) {
+			defaultTemplateId = id
+		}
 		migrateControlStatesToMatchLibrary()
         restoreLastSession()
     }
 
     // MARK: - Session lifecycle
-
     func newSession(name: String, rackRowCounts: [Int] = [], series500SlotCounts: [Int] = []) {
         let racks = rackRowCounts.map { Rack(rows: $0) }
         let series = series500SlotCounts.enumerated().map { (i, count) in
@@ -173,12 +198,6 @@ private extension SessionManager {
 				}
 			}
 		}
-	}
-	
-	/// Convenience to find current session index quickly.
-	var currentSessionIndex: Int? {
-		guard let id = currentSession?.id else { return nil }
-		return sessions.firstIndex(where: { $0.id == id })
 	}
 }
 
@@ -571,6 +590,109 @@ extension SessionManager {
 		saveSessions()
 	}
 }
+
+extension SessionManager {
+	// Saving sessions (you already have saveSessions(); add revert)
+	func revertCurrentSession() {
+		guard let i = currentSessionIndex else { return }
+		currentSession = sessions[i]
+	}
+	
+	// New session from template (used by File ▸ New Session from Template… too)
+	func newSession(from template: SessionTemplate?) {
+		let new: Session
+		if let t = template {
+			new = t.session.snapshotWithNewIDs()
+		} else if let defaultID = defaultTemplateId,
+				  let t = templates.first(where: { $0.id == defaultID }) {
+			new = t.session.snapshotWithNewIDs()
+		} else {
+			// 👇 supply the required initializer arguments for a blank session
+			new = Session(name: "Untitled Session", racks: [], series500Chassis: [])
+		}
+		sessions.append(new)
+		currentSession = new
+		saveSessions()
+	}
+	
+	func applyTemplate(_ t: SessionTemplate) {
+		let new = t.session.snapshotWithNewIDs()
+		if let i = currentSessionIndex {
+			sessions[i] = new          // ← assign a concrete Session
+		} else {
+			sessions.append(new)
+		}
+		currentSession = new
+		saveSessions()
+	}
+	
+	// Create/save template
+	func promptSaveAsTemplate() {
+		// present an NSAlert / sheet to ask for a name; call saveAsTemplate(name:)
+		// (wire this to a small SwiftUI sheet in SessionView if you prefer)
+	}
+	
+	func saveAsTemplate(name: String) {
+		guard let session = currentSession else { return }
+		let skeleton = session.skeletonizedForTemplate()
+		let t = SessionTemplate(name: name, session: skeleton)
+		templates.append(t)
+		saveTemplates()
+	}
+
+	func deleteTemplate(_ t: SessionTemplate) {
+		templates.removeAll { $0.id == t.id }
+		if defaultTemplateId == t.id { defaultTemplateId = nil }
+		saveTemplates()
+	}
+}
+
+extension Session {
+	func snapshotWithNewIDs() -> Session {
+		var s = self
+		s.id = UUID()                // add if you don't have one already
+		// generate fresh IDs for racks/chassis/labels if they carry identity
+		s.racks = s.racks.map { var r = $0; r.id = UUID(); return r }
+		s.series500Chassis = s.series500Chassis.map { var c = $0; c.id = UUID(); return c }
+		s.labels = s.labels.map { var l = $0; l.id = UUID(); return l }
+		return s
+	}
+	
+	func skeletonizedForTemplate() -> Session {
+		// Strip transient data you don't want replicated:
+		// - runtime control states? (keep layout, remove per-take tweaks)
+		// - audio recordings / analysis results (if any)
+		// - maybe clear inline label text? (usually keep text)
+		// Keep layout/pan/zoom/labels/racks/devices.
+		return self
+	}
+}
+
+extension SessionManager {
+	private var templatesURL: URL {
+		appSupportURL.appendingPathComponent("templates.json")
+	}
+	
+	func loadTemplates() {
+		do {
+			let data = try Data(contentsOf: templatesURL)
+			templates = try JSONDecoder().decode([SessionTemplate].self, from: data)
+		} catch {
+			templates = []
+		}
+	}
+	
+	func saveTemplates() {
+		do {
+			let data = try JSONEncoder().encode(templates)
+			try FileManager.default.createDirectory(at: appSupportURL, withIntermediateDirectories: true)
+			try data.write(to: templatesURL, options: .atomic)
+		} catch {
+			print("saveTemplates error:", error)
+		}
+	}
+}
+
 
 // MARK: - Session Commands
 struct SessionCommands: Commands {
