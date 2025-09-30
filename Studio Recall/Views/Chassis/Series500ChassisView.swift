@@ -15,6 +15,7 @@ struct Series500ChassisView: View {
 	@EnvironmentObject var sessionManager: SessionManager
 	
 	@Environment(\.canvasZoom) private var canvasZoom
+	@Environment(\.isInteracting) private var isInteracting
     
     @State private var hoveredIndex: Int? = nil
     @State private var hoveredValid: Bool = false
@@ -67,19 +68,31 @@ struct Series500ChassisView: View {
 			HStack(spacing: spacing) { chassisContent }
 				.background(Color.black)
 				.cornerRadius(8)
-				.overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1))
-				.onDrop(of: [UTType.deviceDragPayload],
-						delegate: Series500DropDelegate(
-							fixedIndex: nil,
-							indexFor: { pt in slotIndex(for: pt) },   // your helper maps CGPoint → slot index
-							slots: $chassis.slots,
-							hoveredIndex: $hoveredIndex,
-							hoveredRange: $hoveredRange,
-							hoveredValid: $hoveredValid,
-							library: library,
-							onCommit: { sessionManager.saveSessions() }
-						)
+				.overlay(
+					Group {
+						if !isInteracting {
+							RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1)
+						}
+					}
 				)
+				.modifier(ConditionalDrawingGroup(active: isInteracting))
+				.background {
+					Color.clear
+						.contentShape(Rectangle()) // full face hit area
+						.onDrop(
+							of: [UTType.deviceDragPayload],
+							delegate: Series500DropDelegate(
+								fixedIndex: nil,
+								indexFor: { pt in slotIndex(for: pt) },   // unchanged
+								slots: $chassis.slots,
+								hoveredIndex: $hoveredIndex,
+								hoveredRange: $hoveredRange,
+								hoveredValid: $hoveredValid,
+								library: library,
+								onCommit: { sessionManager.saveSessions() }
+							)
+						)
+				}
 				.zIndex(1)
 				.background(
 					GeometryReader { proxy in

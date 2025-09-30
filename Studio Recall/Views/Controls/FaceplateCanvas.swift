@@ -21,6 +21,8 @@ struct FaceplateCanvas: View {
 	@Binding var activeRegionIndex: Int
 	@Binding var zoom: CGFloat
 	@Binding var pan: CGSize
+	@Binding var zoomFocusN: CGPoint?
+	
 	// Optional external overlay (parent-space), e.g. detection boxes.
 	// Signature matches CanvasViewport.overlayContent.
 	var externalOverlay: ((CGSize /*parent*/, CGSize /*canvas*/, CGFloat /*zoom*/, CGSize /*pan*/) -> AnyView)? = nil
@@ -40,6 +42,7 @@ struct FaceplateCanvas: View {
 			aspect: aspect,
 			zoom: $zoom,
 			pan: $pan,
+			focusN: $zoomFocusN,
 			content: { canvasSize in
 				ZStack {
 					CanvasContent(

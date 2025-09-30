@@ -205,6 +205,42 @@ extension VisualMapping {
 	}
 }
 
+//extension Control {
+//	/// Normalize a semantic `value` (e.g. dB) to 0…1 using knobMin/knobMax and mapping taper.
+//	func normalizedValueForMapping(_ v: Double? = nil, mapping: VisualMapping?) -> Double {
+//		//		let value = v ?? self.value ?? 0
+//		//		let loB = knobMin
+//		//		let hiB = knobMax
+//		let taper = mapping?.taper ?? .linear
+//		
+//		switch taper {
+//			case .decibel:
+//				// value in dB → linear ratio, then normalize 0…1
+//				let rVal: Double = pow(10.0, (v ?? self.value ?? 0) / 20.0)
+//				
+//				// Safely unwrap bounds (use practical defaults if nil)
+//				let minDb: Double = (knobMin?.resolve(default: -120)) ?? -120
+//				let maxDb: Double = (knobMax?.resolve(default:    0)) ??   0
+//				
+//				// If min == −∞, resolve() returns a very large negative, and pow(...) underflows to 0 → perfect.
+//				let rMin: Double = pow(10.0, minDb / 20.0)   // 0 when minDb is −∞
+//				let rMax: Double = pow(10.0, maxDb / 20.0)   // 1 when maxDb is 0 dB
+//				
+//				let denom = max(1e-12, rMax - rMin)
+//				let t = (rVal - rMin) / denom
+//				return min(max(t, 0), 1)
+//				
+//			case .linear:
+//				guard let lo = knobMin?.resolve(default: 0),
+//					  let hi = knobMax?.resolve(default: 1),
+//					  hi != lo
+//				else { return 0 }
+//				let t = ((v ?? self.value ?? 0) - lo) / (hi - lo)
+//				return min(max(t, 0), 1)
+//		}
+//	}
+//}
+
 enum ImageRegionShape: String, Codable { case rect, circle }
 
 struct ImageRegion: Codable, Equatable {
@@ -673,10 +709,11 @@ extension Control {
 				return min(max(t, 0), 1)
 				
 			case .linear:
-				guard let lo = knobMin?.resolve(default: 0),
-					  let hi = knobMax?.resolve(default: 1),
-					  hi != lo
-				else { return 0 }
+				// Use sensible defaults when bounds are missing (0…1),
+				// and only early-out if hi == lo (avoid divide-by-zero).
+				let lo = knobMin?.resolve(default: 0) ?? 0
+				let hi = knobMax?.resolve(default: 1) ?? 1
+				guard hi != lo else { return 0 }
 				let t = ((v ?? self.value ?? 0) - lo) / (hi - lo)
 				return min(max(t, 0), 1)
 		}
@@ -832,38 +869,68 @@ extension Control {
 }
 
 extension VisualMapping {
-	/// Convenience: compute rotation angle for current control value
+	/// Angle for the control's current state/value, with sensible fallbacks.
 	func rotationDegrees(for control: Control) -> Double {
-		let t = control.normalizedValueForMapping(mapping: self)
 		let a0 = degMin ?? -135
 		let a1 = degMax ??  135
-		return a0 + (a1 - a0) * t
+		
+		switch control.type {
+			case .multiSwitch:
+				// Prefer explicit angles
+				if let list = control.optionAngles,
+				   let idx = control.selectedIndex,
+				   list.indices.contains(idx) {
+					return list[idx]
+				}
+				// Fallback: map selectedIndex across [a0, a1]
+				let maxIdx = max((control.options?.count ?? 0) - 1, 0)
+				let idx    = min(max(control.selectedIndex ?? 0, 0), maxIdx)
+				let t: Double = (maxIdx == 0) ? 0 : Double(idx) / Double(maxIdx)
+				return a0 + (a1 - a0) * t
+				
+			case .steppedKnob:
+				if let list = control.stepAngles,
+				   let idx = control.stepIndex,
+				   list.indices.contains(idx) {
+					return list[idx]
+				}
+				// Fallback: map stepIndex across [a0, a1]
+				let maxIdx = max((control.stepValues?.count ?? 0) - 1, 0)
+				let idx    = min(max(control.stepIndex ?? 0, 0), maxIdx)
+				let t: Double = (maxIdx == 0) ? 0 : Double(idx) / Double(maxIdx)
+				return a0 + (a1 - a0) * t
+				
+			default:
+				// Knobs/buttons/etc.: normalized value → [a0, a1]
+				let t = control.normalizedValueForMapping(mapping: self)
+				return a0 + (a1 - a0) * t
+		}
 	}
 	
+	// For explicit value + bounds + taper (used by the concentric rings):
 	func rotationDegrees(for value: Double?,
 						 lo: Bound? = nil,
 						 hi: Bound? = nil,
 						 taper: ValueTaper? = nil) -> Double {
+		let a0 = degMin ?? -135
+		let a1 = degMax ??  135
 		let t: Double
 		switch taper ?? .linear {
 			case .linear:
-				guard let loV = lo?.resolve(default: 0) ?? 0 as Double?,
-					  let hiV = hi?.resolve(default: 1) ?? 1 as Double?,
-					  hiV != loV else { t = 0; break }
-				t = ((value ?? 0) - loV) / (hiV - loV)
+				let loV = (lo ?? .finite(0)).resolve(default: 0)
+				let hiV = (hi ?? .finite(1)).resolve(default: 1)
+				guard hiV != loV else { return a0 }
+				let v = value ?? loV
+				t = (v - loV) / (hiV - loV)
 			case .decibel:
-				let val = pow(10.0, (value ?? 0) / 20.0)
-				let minDb = lo?.resolve(default: -120) ?? -120
-				let maxDb = hi?.resolve(default: 0) ?? 0
+				let minDb = (lo ?? .finite(-120)).resolve(default: -120)
+				let maxDb = (hi ?? .finite(0)).resolve(default: 0)
+				let rVal = pow(10.0, (value ?? maxDb) / 20.0)
 				let rMin = pow(10.0, minDb / 20.0)
 				let rMax = pow(10.0, maxDb / 20.0)
-				let denom = max(1e-12, rMax - rMin)
-				t = (val - rMin) / denom
+				t = (rVal - rMin) / max(1e-12, rMax - rMin)
 		}
-		let clamped = min(max(t, 0), 1)
-		let a0 = degMin ?? -135
-		let a1 = degMax ??  135
-		return a0 + (a1 - a0) * clamped
+		return a0 + (a1 - a0) * min(max(t, 0), 1)
 	}
 }
 

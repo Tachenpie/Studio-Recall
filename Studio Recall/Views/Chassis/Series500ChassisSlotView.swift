@@ -17,6 +17,8 @@ struct Series500ChassisSlotView: View {
     @EnvironmentObject var library: DeviceLibrary
 	@EnvironmentObject var sessionManager: SessionManager
     
+	@Environment(\.isInteracting) private var isInteracting
+	
     @Binding var hoveredIndex: Int?
     @Binding var hoveredRange: Range<Int>?
     @Binding var hoveredValid: Bool
@@ -55,6 +57,7 @@ struct Series500ChassisSlotView: View {
 			EditableDeviceView(device: .constant(device))
 				.frame(width: moduleSize.width, height: moduleSize.height)
 				.allowsHitTesting(false)
+				.modifier(ConditionalDrawingGroup(active: isInteracting))
 			
 			RuntimeControlsOverlay(device: device, instance: instanceBinding, prelayout: nil, faceMetrics: nil)
 				.frame(width: moduleSize.width, height: moduleSize.height)
@@ -150,18 +153,18 @@ struct Series500ChassisSlotView: View {
 					}
 				)
 			}
-			.onDrop(of: [UTType.deviceDragPayload],
-					delegate: Series500DropDelegate(
-						fixedIndex: index,
-						indexFor: nil,
-						slots: $slots,
-						hoveredIndex: $hoveredIndex,
-						hoveredRange: $hoveredRange,
-						hoveredValid: $hoveredValid,
-						library: library,
-						onCommit: { sessionManager.saveSessions() }
-					)
-			)
+//			.onDrop(of: [UTType.deviceDragPayload],
+//					delegate: Series500DropDelegate(
+//						fixedIndex: index,
+//						indexFor: nil,
+//						slots: $slots,
+//						hoveredIndex: $hoveredIndex,
+//						hoveredRange: $hoveredRange,
+//						hoveredValid: $hoveredValid,
+//						library: library,
+//						onCommit: { sessionManager.saveSessions() }
+//					)
+//			)
 
 		return AnyView(body)
 	}
@@ -174,22 +177,26 @@ struct Series500ChassisSlotView: View {
 			.fill(Color.white.opacity(0.06))
 			.frame(width: moduleSize.width, height: moduleSize.height)
 			.overlay(
-				Rectangle()
-					.stroke(Color.secondary.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [4]))
+				Group {
+					if !isInteracting {
+						Rectangle()
+							.stroke(Color.secondary.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [4]))
+					}
+				}
 			)
 			.contentShape(Rectangle()) // <- important for drops
-			.onDrop(of: [UTType.deviceDragPayload],
-					delegate: Series500DropDelegate(
-						fixedIndex: index,
-						indexFor: nil,
-						slots: $slots,
-						hoveredIndex: $hoveredIndex,
-						hoveredRange: $hoveredRange,
-						hoveredValid: $hoveredValid,
-						library: library,
-						onCommit: { sessionManager.saveSessions() }
-					)
-			)
+//			.onDrop(of: [UTType.deviceDragPayload],
+//					delegate: Series500DropDelegate(
+//						fixedIndex: index,
+//						indexFor: nil,
+//						slots: $slots,
+//						hoveredIndex: $hoveredIndex,
+//						hoveredRange: $hoveredRange,
+//						hoveredValid: $hoveredValid,
+//						library: library,
+//						onCommit: { sessionManager.saveSessions() }
+//					)
+//			)
 	}
 
     private func highlightColor() -> Color {

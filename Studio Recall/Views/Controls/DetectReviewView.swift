@@ -203,7 +203,8 @@ struct DetectReviewView: View {
 									}
 								}
 								.labelsHidden()
-								.frame(width: 130)
+//								.frame(width: 130)
+								.fixedSize()
 								
 								// Label text field (compact width, single line)
 								TextField("", text: row.label)
@@ -212,13 +213,13 @@ struct DetectReviewView: View {
 									.onChange(of: listFocusID) { _, new in
 										focusedDraftID = new
 									}
-									.frame(minWidth: isWideFaceplate ? 120 : 80, maxWidth: 140)
+									.frame(width: isWideFaceplate ? 140 : 110) // 120 : 80, maxWidth: 140)
 									.lineLimit(1)
 									.truncationMode(.tail)
 									.disableAutocorrection(true)
 								
 								if !isWideFaceplate {
-									Spacer(minLength: 0)
+									Spacer(minLength: 8)
 								}
 								
 								Button {

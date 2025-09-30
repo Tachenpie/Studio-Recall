@@ -14,6 +14,7 @@ import AppKit
 
 struct DeviceView: View {
     let device: Device
+	var isThumbnail: Bool = false
     
     var body: some View {
         ZStack {
@@ -38,6 +39,9 @@ struct DeviceView: View {
                 drawnDevice
             }
         }
+		.background(deviceBackground)
+		.cornerRadius(4)
+		.modifier(_DeviceViewSizer(isThumbnail: isThumbnail))
     }
     
     private var drawnDevice: some View {
@@ -56,16 +60,8 @@ struct DeviceView: View {
                 }
             }
         }
-//        .padding()
-//        .frame(
-//            width: device.type == .series500 ?
-//                CGFloat((device.slotWidth ?? 1) * 120) : nil,
-//            height: device.type == .rack ?
-//                CGFloat((device.rackUnits ?? 1) * 60) : nil
-//        )
         .background(deviceBackground)
         .cornerRadius(4)
-//		.padding()
 		.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
@@ -178,4 +174,16 @@ struct EditableDeviceView: View {
                     )
         }
     }
+}
+
+private struct _DeviceViewSizer: ViewModifier {
+	let isThumbnail: Bool
+	func body(content: Content) -> some View {
+		if isThumbnail {
+			content.clipped()               // respect outer frame
+		} else {
+			content
+				.frame(maxWidth: .infinity, maxHeight: .infinity)
+		}
+	}
 }

@@ -14,6 +14,9 @@ struct RackChassisView: View {
 	@EnvironmentObject var sessionManager: SessionManager
 	
 	@Environment(\.canvasZoom) private var canvasZoom
+	@Environment(\.isInteracting) private var isInteracting
+	
+	@ObservedObject private var dragContext = DragContext.shared
 	
 	@State private var hoveredIndex: Int? = nil
 	@State private var hoveredValid: Bool = false
@@ -22,6 +25,7 @@ struct RackChassisView: View {
 	@State private var dragStart: CGPoint? = nil
 	@State private var showEdit = false
 	@State private var editUnits: Int = 0
+	@State private var rowLayoutsCache: [[SlotLayout]] = []
 	
 	var onDelete: (() -> Void)? = nil
 	
@@ -66,48 +70,85 @@ struct RackChassisView: View {
 			.frame(width: faceW)
 			.zIndex(2)
 			
+//			// --- 2) CHASSIS FACE (fixed size; no GeometryReader) ---
+//			ZStack(alignment: .topLeading) {
+//				
+//				let showDropGrid = (dragContext.currentPayload != nil)
+//				// A) GRID (empty-cell drop targets)
+//				VStack(spacing: rowSpacing) {
+//					ForEach(0..<rack.rows, id: \.self) { r in
+//						HStack(spacing: 0) {
+//							ForEach(0..<RackGrid.columnsPerRow, id: \.self) { c in
+//								if rack.slots[r][c] == nil {
+//									Rectangle()
+//										.fill(showDropGrid ? Color.white.opacity(0.06) : .clear)
+//										.overlay(showDropGrid
+//											? AnyView(Rectangle().stroke(Color.secondary.opacity(0.6),
+//															   style: StrokeStyle(lineWidth: 1, dash: [4])))
+//												 : AnyView(EmptyView())
+//										)
+//										.contentShape(Rectangle())
+//										.onDrop(of: [UTType.deviceDragPayload],
+//												delegate: ChassisDropDelegate(
+//													fixedCell: (r, c),
+//													indexFor: nil,
+//													rowX0: -.infinity,
+//													rowWidthPts: .infinity,
+//													slots: $rack.slots,
+//													hoveredIndex: $hoveredIndex,
+//													hoveredValid: $hoveredValid,
+//													hoveredRange: $hoveredRange,
+//													hoveredRows:  $hoveredRows,
+//													library: library,
+//													kind: .rack,
+//													onCommit: { sessionManager.saveSessions() }
+//												))
+//								} else {
+//									Color.clear.allowsHitTesting(false)
+//								}
+//							}
+//						}
+//						.frame(height: rowH)
+//					}
+//				}
+//				.frame(width: innerW)
+//				.padding(facePadding)
 			// --- 2) CHASSIS FACE (fixed size; no GeometryReader) ---
 			ZStack(alignment: .topLeading) {
-				// A) GRID (empty-cell drop targets)
-				VStack(spacing: rowSpacing) {
-					ForEach(0..<rack.rows, id: \.self) { r in
-						HStack(spacing: 0) {
-							ForEach(0..<RackGrid.columnsPerRow, id: \.self) { c in
-								if rack.slots[r][c] == nil {
+				
+				let showDropGrid = (dragContext.currentPayload != nil)
+				
+				// A) GRID (visual only, no per-cell drop targets)
+				if showDropGrid {
+					VStack(spacing: rowSpacing) {
+						ForEach(0..<rack.rows, id: \.self) { r in
+							HStack(spacing: 0) {
+								ForEach(0..<RackGrid.columnsPerRow, id: \.self) { c in
+									let empty = (rack.slots[r][c] == nil)
 									Rectangle()
-										.fill(Color.white.opacity(0.06))
+										.fill(empty ? Color.white.opacity(0.06) : .clear)
 										.overlay(
-											Rectangle().stroke(Color.secondary.opacity(0.6),
-															   style: StrokeStyle(lineWidth: 1, dash: [4]))
+											Group {
+												if !isInteracting {
+													Rectangle().stroke(
+														Color.secondary.opacity(0.6),
+														style: StrokeStyle(lineWidth: 1, dash: [4])
+													)
+												}
+											}
 										)
-										.contentShape(Rectangle())
-										.onDrop(of: [UTType.deviceDragPayload],
-												delegate: ChassisDropDelegate(
-													fixedCell: (r, c),
-													indexFor: nil,
-													rowX0: -.infinity,
-													rowWidthPts: .infinity,
-													slots: $rack.slots,
-													hoveredIndex: $hoveredIndex,
-													hoveredValid: $hoveredValid,
-													hoveredRange: $hoveredRange,
-													hoveredRows:  $hoveredRows,
-													library: library,
-													kind: .rack,
-													onCommit: { sessionManager.saveSessions() }
-												))
-								} else {
-									Color.clear.allowsHitTesting(false)
+										.allowsHitTesting(false) // ← critical
 								}
 							}
+							.frame(height: rowH)
 						}
-						.frame(height: rowH)
 					}
+					.frame(width: innerW)
+					.padding(facePadding)
 				}
-				.frame(width: innerW)
-				.padding(facePadding)
-				
-				if let rows = hoveredRows, let cols = hoveredRange {
+
+
+				if showDropGrid, let rows = hoveredRows, let cols = hoveredRange {
 					// Position/size in points (include row spacing)
 					let x = facePadding + CGFloat(cols.lowerBound) * colW
 					let w = CGFloat(cols.count) * colW
@@ -125,11 +166,13 @@ struct RackChassisView: View {
 						.position(x: x + w/2, y: y + h/2)
 						.allowsHitTesting(false)
 						.zIndex(5)
+						.transaction { $0.animation = nil }
+//						.drawingGroup(opaque: false)
 				}
 				
 				// B) DEVICES — inch-accurate overlay
 				ForEach(rack.slots.indices, id: \.self) { row in
-					let rowLayouts = buildRowLayout(row: row, ppi: ppi)
+					let rowLayouts = (row < rowLayoutsCache.count) ? rowLayoutsCache[row] : [] //buildRowLayout(row: row, ppi: ppi)
 					let yTop = facePadding + CGFloat(row) * (rowH + rowSpacing)
 					
 					ForEach(rowLayouts, id: \.instance.id) { L in
@@ -173,70 +216,121 @@ struct RackChassisView: View {
 					.allowsHitTesting(true)
 				}
 			}
+			.modifier(ConditionalDrawingGroup(active: isInteracting))
+			.shadow(radius: isInteracting ? 0 : 16)
 			.contentShape(Rectangle())
 			.frame(width: faceW, height: faceH)
 			.background(Color.black.opacity(0.8))
 			.cornerRadius(8)
 			.overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.85), lineWidth: 1))
 			.allowsHitTesting(true)
-			.onDrop(
-				of: [UTType.deviceDragPayload, .item, .data, .plainText, .utf8PlainText],
-				delegate: ChassisDropDelegate(
-					fixedCell: nil,
-					indexFor: { pt in
-						// Clamp inside the inner face (same coord space as ZStack)
-						let xL = facePadding
-						let xR = facePadding + innerW
-						let innerH = faceH - 2 * facePadding
-						let yT = facePadding
-						let yB = facePadding + innerH
-						
-						let clamped = CGPoint(
-							x: max(xL, min(pt.x, xR - 0.5)),
-							y: max(yT, min(pt.y, yB - 0.5))
-						)
-						
-						// --- Column from simple width ---
-						var (r, c0) = cellIndex(for: clamped, colW: colW, rowH: rowH) // we’ll overwrite r next
-						
-						// --- Row using step = rowH + rowSpacing (so gaps map to the row above) ---
-						let stepY = rowH + rowSpacing
-						let relY  = clamped.y - yT
-						var rFromSpacing = Int(floor(relY / stepY))        // map spacing to the row above
-						
-						// Snap start so the full span fits (right-most / bottom-most)
-						if let payload = DragContext.shared.currentPayload,
-						   let dev = library.device(for: payload.deviceId) {
+			.background {
+				// Keep this in the same coordinate space as the ZStack
+				Color.clear.onDrop(
+					of: [UTType.deviceDragPayload],
+					delegate: ChassisDropDelegate(
+						fixedCell: nil,
+						indexFor: { pt in
+							// Inner face bounds (same coord space as ZStack top-left)
+							let xL = facePadding
+							let xR = facePadding + innerW
+							let innerH = faceH - 2 * facePadding
+							let yT = facePadding
+							let yB = facePadding + innerH
 							
-							let spanCols = max(1, dev.rackWidth.rawValue)
-							let spanRows = max(1, dev.rackUnits ?? 1)
+							// Clamp pointer to the inner face
+							let p = CGPoint(
+								x: max(xL, min(pt.x, xR - 0.5)),
+								y: max(yT, min(pt.y, yB - 0.5))
+							)
 							
-							let maxStartCol = RackGrid.columnsPerRow - spanCols
-							let maxStartRow = rack.rows - spanRows
+							// Columns: simple width division
+							let c = Int(floor((p.x - xL) / colW))
 							
-							c0 = min(max(c0, 0), maxStartCol)
-							rFromSpacing = min(max(rFromSpacing, 0), maxStartRow)
+							// Rows: use step = rowH + rowSpacing so the gaps map to the row ABOVE
+							let step = rowH + rowSpacing
+							let r = Int(floor((p.y - yT) / step))
+							
+							// Clamp to valid indices
+							let rr = max(0, min(r, rack.rows - 1))
+							let cc = max(0, min(c, RackGrid.columnsPerRow - 1))
+							return (rr, cc)
+						},
+						rowX0: facePadding,
+						rowWidthPts: innerW,
+						slots: $rack.slots,
+						hoveredIndex: $hoveredIndex,
+						hoveredValid: $hoveredValid,
+						hoveredRange: $hoveredRange,
+						hoveredRows:  $hoveredRows,
+						library: library,
+						kind: .rack,
+						onCommit: {
+							sessionManager.saveSessions()
+							DragContext.shared.endDrag()
 						}
-						
-						// replace row computed by cellIndex with spacing-aware one
-						r = rFromSpacing
-						return (r, c0)
-					},
-					rowX0: facePadding,
-					rowWidthPts: innerW,
-					slots: $rack.slots,
-					hoveredIndex: $hoveredIndex,
-					hoveredValid: $hoveredValid,
-					hoveredRange: $hoveredRange,
-					hoveredRows:  $hoveredRows,
-					library: library,
-					kind: .rack,
-					onCommit: {
-						sessionManager.saveSessions()
-						DragContext.shared.endDrag()
-					}
+					)
 				)
-			)
+			}
+//			.allowsHitTesting(true)
+//			.onDrop(
+//				of: [UTType.deviceDragPayload],
+//				delegate: ChassisDropDelegate(
+//					fixedCell: nil,
+//					indexFor: { pt in
+//						// Clamp inside the inner face (same coord space as ZStack)
+//						let xL = facePadding
+//						let xR = facePadding + innerW
+//						let innerH = faceH - 2 * facePadding
+//						let yT = facePadding
+//						let yB = facePadding + innerH
+//						
+//						let clamped = CGPoint(
+//							x: max(xL, min(pt.x, xR - 0.5)),
+//							y: max(yT, min(pt.y, yB - 0.5))
+//						)
+//						
+//						// --- Column from simple width ---
+//						var (r, c0) = cellIndex(for: clamped, colW: colW, rowH: rowH) // we’ll overwrite r next
+//						
+//						// --- Row using step = rowH + rowSpacing (so gaps map to the row above) ---
+//						let stepY = rowH + rowSpacing
+//						let relY  = clamped.y - yT
+//						var rFromSpacing = Int(floor(relY / stepY))        // map spacing to the row above
+//						
+//						// Snap start so the full span fits (right-most / bottom-most)
+//						if let payload = DragContext.shared.currentPayload,
+//						   let dev = library.device(for: payload.deviceId) {
+//							
+//							let spanCols = max(1, dev.rackWidth.rawValue)
+//							let spanRows = max(1, dev.rackUnits ?? 1)
+//							
+//							let maxStartCol = RackGrid.columnsPerRow - spanCols
+//							let maxStartRow = rack.rows - spanRows
+//							
+//							c0 = min(max(c0, 0), maxStartCol)
+//							rFromSpacing = min(max(rFromSpacing, 0), maxStartRow)
+//						}
+//						
+//						// replace row computed by cellIndex with spacing-aware one
+//						r = rFromSpacing
+//						return (r, c0)
+//					},
+//					rowX0: facePadding,
+//					rowWidthPts: innerW,
+//					slots: $rack.slots,
+//					hoveredIndex: $hoveredIndex,
+//					hoveredValid: $hoveredValid,
+//					hoveredRange: $hoveredRange,
+//					hoveredRows:  $hoveredRows,
+//					library: library,
+//					kind: .rack,
+//					onCommit: {
+//						sessionManager.saveSessions()
+//						DragContext.shared.endDrag()
+//					}
+//				)
+//			)
 			.zIndex(1)
 			.background(
 				GeometryReader { proxy in
@@ -248,6 +342,10 @@ struct RackChassisView: View {
 			)
 		}
 		.sheet(isPresented: $showEdit) { editSheet }
+		.onAppear { rebuildRowLayouts(ppi: settings.pointsPerInch) }
+		.onChange(of: rack.slots) { _, _ in rebuildRowLayouts(ppi: settings.pointsPerInch) }
+		.onChange(of: rack.rows)  { _, _ in rebuildRowLayouts(ppi: settings.pointsPerInch) }
+		.onChange(of: settings.pointsPerInch) { _, ppi in rebuildRowLayouts(ppi: ppi) }
 	}
 	
 	// MARK: - Per-row prelayout (inch-accurate)
@@ -264,6 +362,11 @@ struct RackChassisView: View {
 		let externalLeft: Bool
 		let externalRight: Bool
 	}
+	
+	private func rebuildRowLayouts(ppi: CGFloat) {
+		rowLayoutsCache = (0..<rack.rows).map { r in buildRowLayout(row: r, ppi: ppi) }
+	}
+
 
 	// MARK: - Per-row prelayout (inch-accurate)
 	private func buildRowLayout(row: Int, ppi: CGFloat) -> [SlotLayout] {

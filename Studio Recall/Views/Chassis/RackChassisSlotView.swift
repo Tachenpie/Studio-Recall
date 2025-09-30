@@ -24,6 +24,8 @@ struct RackChassisSlotView: View {
 	@EnvironmentObject var library: DeviceLibrary
 	@EnvironmentObject var sessionManager: SessionManager
 	
+	@Environment(\.isInteracting) private var isInteracting
+	
 	@Binding var hoveredIndex: Int?
 	@Binding var hoveredValid: Bool
 	@Binding var hoveredRange: Range<Int>?
@@ -81,6 +83,7 @@ struct RackChassisSlotView: View {
 						.allowsHitTesting(false)
 				} else {
 					DeviceView(device: device)
+						.modifier(ConditionalDrawingGroup(active: isInteracting))
 						.frame(width: metrics.size.width, height: metrics.size.height)
 						.allowsHitTesting(false)
 				}
@@ -92,6 +95,7 @@ struct RackChassisSlotView: View {
 					faceMetrics: metrics
 				)
 				.frame(width: faceW, height: slotH)
+				.environment(\.isRegionEditing, false)
 				.zIndex(1)
 				if let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) {
 					let session = $sessionManager.sessions[i]

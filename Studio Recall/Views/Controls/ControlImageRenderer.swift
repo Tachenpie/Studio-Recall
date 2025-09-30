@@ -10,6 +10,13 @@ import SwiftUI
 import AppKit
 #endif
 
+
+#if DEBUG
+private let LOG_ROTATE = true   // flip to false to silence
+#else
+private let LOG_ROTATE = false
+#endif
+
 // --- Region-edit preview toggle (flows from Faceplate/Editor) ---
 private struct RegionEditingKey: EnvironmentKey { static let defaultValue: Bool = false }
 extension EnvironmentValues {
@@ -179,62 +186,125 @@ struct VisualEffect: ViewModifier {
 	
 	func body(content: Content) -> some View {
 		if isRegionEditing {
+			if LOG_ROTATE {
+				print("[Rotate] SKIP (isRegionEditing) id=\(control.id) type=\(control.type) region=\(regionIndex)")
+			}
+			
 			// While region editing, show the raw (unrotated/unmodified) patch
 			return AnyView(content)
 		}
 		// 1) Apply mapping (or none) to produce a base view
+		
+		let effective: VisualMapping? = {
+			if let m = mapping { return m }
+			switch control.type {
+				case .knob:
+					return .rotate(min: -135, max: 135, pivot: .init(x: 0.5, y: 0.5), taper: .linear)
+				case .concentricKnob:
+					if regionIndex == 0 {
+						return control.outerMapping ?? .rotate(min: -135, max: 135, pivot: .init(x: 0.5, y: 0.5), taper: control.outerTaper ?? .linear)
+					} else {
+						return control.innerMapping ?? .rotate(min: -135, max: 135, pivot: .init(x: 0.5, y: 0.5), taper: control.innerTaper ?? .linear)
+					}
+				default:
+					return nil
+			}
+		}()
+		
+		if LOG_ROTATE {
+			if mapping == nil, let eff = effective {
+				print("[Rotate] FALLBACK mapping id=\(control.id) type=\(control.type) region=\(regionIndex) kind=\(eff.kind) deg=[\(eff.degMin ?? -135), \(eff.degMax ?? 135)] pivot=\(eff.pivot?.debugString ?? "nil")")
+			} else {
+				print("[Rotate] USING mapping id=\(control.id) type=\(control.type) region=\(regionIndex) kind=\(String(describing: mapping?.kind))")
+			}
+		}
+		
 		let base: AnyView = {
-			guard let mapping = mapping else { return AnyView(content) }
+			guard let mapping = effective else { return AnyView(content) }
 			
 			switch mapping.kind {
+				// MARK: rotate
 				case .rotate:
 					let pivot = mapping.pivot ?? CGPoint(x: 0.5, y: 0.5)
+					
 					let angle: Double = {
-						if control.type == .knob {
-							let taper = mapping.taper
-							return mapping.rotationDegrees(for: control.value,
-														   lo: control.knobMin,
-														   hi: control.knobMax,
-														   taper: taper)
+						switch control.type {
+							case .knob:
+								return mapping.rotationDegrees(for: control)
+								
+							case .steppedKnob:
+								if let steps = control.stepAngles,
+								   let idx = control.stepIndex,
+								   steps.indices.contains(idx) {
+									let ang = steps[idx]
+									if LOG_ROTATE { print("[Rotate] stepped \(control.name) idx=\(idx) deg=\(ang.rounded1)") }
+									return ang
+								} else {
+									let count   = control.stepAngles?.count
+									?? control.stepValues?.count
+									?? control.options?.count
+									?? 1
+									let maxIdx  = max(count - 1, 1)
+									let idx     = min(max(control.stepIndex ?? 0, 0), maxIdx)
+									let t       = Double(idx) / Double(maxIdx)
+									let a0      = mapping.degMin ?? -135
+									let a1      = mapping.degMax ??  135
+									let ang     = a0 + (a1 - a0) * t
+									if LOG_ROTATE { print("[Rotate] stepped (fallback) \(control.name) idx=\(idx)/\(maxIdx) t=\(t.rounded3) deg=\(ang.rounded1)") }
+									return ang
+								}
+								
+							case .multiSwitch:
+								if let list = control.optionAngles,
+								   let idx = control.selectedIndex,
+								   list.indices.contains(idx) {
+									let ang = list[idx]
+									if LOG_ROTATE { print("[Rotate] switch \(control.name) idx=\(idx) deg=\(ang)") }
+									return ang
+								} else {
+									let count   = control.optionAngles?.count
+									?? control.options?.count
+									?? 1
+									let maxIdx  = max(count - 1, 1)
+									let idx     = min(max(control.selectedIndex ?? 0, 0), maxIdx)
+									let t       = Double(idx) / Double(maxIdx)
+									let a0      = mapping.degMin ?? 0
+									let a1      = mapping.degMax ?? 180
+									let ang     = a0 + (a1 - a0) * t
+									if LOG_ROTATE { print("[Rotate] switch (fallback) \(control.name) idx=\(idx)/\(maxIdx) t=\(t.rounded3) deg=\(ang.rounded1)") }
+									return ang
+								}
+								
+							case .concentricKnob:
+								// Per-ring normalization (keep your existing behavior)
+								if regionIndex == 0 {
+									return mapping.rotationDegrees(
+										for: control.outerValue,
+										lo: control.outerMin,
+										hi: control.outerMax,
+										taper: control.outerTaper ?? mapping.taper
+									)
+								} else {
+									return mapping.rotationDegrees(
+										for: control.innerValue,
+										lo: control.innerMin,
+										hi: control.innerMax,
+										taper: control.innerTaper ?? mapping.taper
+									)
+								}
+								
+							default:
+								return mapping.rotationDegrees(for: control)
 						}
-						if control.type == .steppedKnob,
-//						   let a = control.stepAngles, let i = control.stepIndex, i < a.count {
-//							return a[i]
-							let a = control.stepAngles, let i = control.stepIndex {
-							let clamped = min(max(i, 0), a.count - 1)
-							return a[clamped]
-						}
-						if control.type == .multiSwitch,
-						   let a = control.optionAngles, let i = control.selectedIndex, i < a.count {
-							return a[i]
-						}
-						if control.type == .concentricKnob {
-							let taper = mapping.taper // per-ring (per-region) taper from the Mapping editor
-							if regionIndex == 0 {
-								// Outer ring
-								return mapping.rotationDegrees(
-									for: control.outerValue,
-									lo: control.outerMin,
-									hi: control.outerMax,
-									taper: taper
-								)
-							} else {
-								// Inner knob
-								return mapping.rotationDegrees(
-									for: control.innerValue,
-									lo: control.innerMin,
-									hi: control.innerMax,
-									taper: taper
-								)
-							}
-						}
-
-						return mapping.rotationDegrees(for: control)
 					}()
+					
 					return AnyView(
-						content.rotationEffect(.degrees(angle),
-											   anchor: UnitPoint(x: pivot.x, y: pivot.y))
+						content.rotationEffect(
+							.degrees(angle),
+							anchor: UnitPoint(x: pivot.x, y: pivot.y)
+						)
 					)
+
 
 				case .brightness:
 					let on = booleanState(for: control, resolve: resolve)
@@ -793,3 +863,12 @@ private extension CGRect { var nonEmpty: CGRect? { isNull || isEmpty ? nil : sel
 private extension Array {
 	subscript(safe i: Index) -> Element? { indices.contains(i) ? self[i] : nil }
 }
+
+private extension Double {
+	var rounded1: String { String(format: "%.1f", self) }
+	var rounded3: String { String(format: "%.3f", self) }
+}
+private extension CGPoint {
+	var debugString: String { "(\(Double(x).rounded3), \(Double(y).rounded3))" }
+}
+

@@ -5,7 +5,9 @@
 //  Created by True Jackie on 9/11/25.
 //
 import SwiftUI
+#if os(macOS)
 import AppKit
+#endif
 
 // MARK: - Runtime controls overlay (shared)
 struct RuntimeControlsOverlay: View {
@@ -143,7 +145,12 @@ struct RuntimeControlsOverlay: View {
 					.highPriorityGesture(doubleTap)
 				
 			case .steppedKnob:
-				SteppedKnobHit(frame: frame, value: value, onHover: onHover)
+				SteppedKnobHit(
+					frame: frame,
+					value: value,
+					onHover: onHover,
+					count: max(1, def.stepAngles?.count ?? def.stepValues?.count ?? 0)
+				)
 					.highPriorityGesture(doubleTap)
 				
 			case .multiSwitch:
@@ -414,7 +421,33 @@ private struct SteppedKnobHit: View {
 	let frame: CGRect
 	@Binding var value: ControlValue
 	let onHover: (Bool) -> Void
+	let count: Int
+	
 	@State private var start: Int?
+	@State private var clickDir: Int = 1
+	@State private var optionClickDir: Int  = -1
+	
+	// Helpers
+	private var hi: Int { max(0, count - 1) }
+	private var current: Int { value.asStep ?? 0 }
+	
+	private func clamped(_ i: Int) -> Int { min(max(0, i), hi) }
+	
+	private func stepNormal() {
+		if hi == 0 { return }
+		// Flip direction at the ends
+		if current >= hi { clickDir = -1 }
+		if current <= 0  { clickDir =  1 }
+		value = .steppedKnob(clamped(current + clickDir))
+	}
+	
+	private func stepOption() {
+		if hi == 0 { return }
+		// Flip option direction at the ends (inverse starting direction)
+		if current <= 0  { optionClickDir =  1 }
+		if current >= hi { optionClickDir = -1 }
+		value = .steppedKnob(clamped(current + optionClickDir))
+	}
 	
 	var body: some View {
 		Rectangle().fill(Color.clear)
@@ -422,15 +455,28 @@ private struct SteppedKnobHit: View {
 			.contentShape(Rectangle())
 			.background(Color.clear)
 			.onHover(perform: onHover)
+			
+			// Drag to step
 			.highPriorityGesture(
 				DragGesture(minimumDistance: 0)
 					.onChanged { g in
-						if start == nil { start = (value.asStep ?? 0) }
+						if start == nil { start = current }
 						let d = Int(round(-g.translation.height / 12.0))
-						value = .steppedKnob(max(0, (start ?? 0) + d))
+						value = .steppedKnob(clamped((start ?? 0) + d))
 					}
-					.onEnded { _ in start = nil }
-				, including: .all
+					.onEnded { g in
+						defer { start = nil }
+						// Treat very small movement as a click
+						let moved = abs(g.translation.height) + abs(g.translation.width)
+						if moved < 3 {
+#if os(macOS)
+							let isOption = NSApp.currentEvent?.modifierFlags.contains(.option) ?? false
+#else
+							let isOption = false
+#endif
+							if isOption { stepOption() } else { stepNormal() }
+						}
+					}
 			)
 	}
 }

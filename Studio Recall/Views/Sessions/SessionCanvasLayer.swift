@@ -55,27 +55,5 @@ struct SessionCanvasLayer: View {
 				rackRects: rackRects
 			)
         }
-//#if os(macOS)
-//		.overlay(
-//			DropCatcher(
-//				name: "ROOT-CANVAS",
-//				types: [UTType.deviceDragPayload, .item, .data, .utf8PlainText],
-//				onEnter: { loc, types in
-//					print("🧲[ROOT-CANVAS] ENTER @\(loc) types=\(types)")
-//				},
-//				onUpdate: { loc in
-//					print("🧲[ROOT-CANVAS] UPDATE @\(loc)")
-//				},
-//				onExit: {
-//					print("🧲[ROOT-CANVAS] EXIT")
-//				},
-//				onDrop: { pb, loc in
-//					print("🧲[ROOT-CANVAS] DROP types=\(pb.types?.map(\.rawValue) ?? []) @\(loc)")
-//				},
-//				debugTint: true  // temporarily paint a faint pink so you *see* it covers the layer
-//			)
-//		)
-//#endif
-
     }
 }

@@ -18,6 +18,7 @@ struct DeviceEditorView: View {
 	
 	@State private var showingImagePicker = false
 	@State private var showingControlEditor = false
+	@State private var tempCategorySelection: Set<String> = []
 	
 	// Bindings to bridge optional Ints to Steppers/ImagePicker
 	private var rackUnitsBinding: Binding<Int> {
@@ -51,58 +52,133 @@ struct DeviceEditorView: View {
 	var body: some View {
 		HStack(spacing: 0) {
 			// LEFT: Form
-			Form {
-				Section("Identity") {
-					TextField("Device Name", text: Binding(
-						get: { editableDevice.device.name },
-						set: { newValue in
-							let old = editableDevice.device.name
-							editableDevice.device.name = newValue
-							undoManager?.registerUndo(withTarget: editableDevice) { $0.device.name = old }
+			VStack(alignment: .leading, spacing: 18) {
+
+				InspectorSection(title: "Device") {
+					Grid(horizontalSpacing: 12, verticalSpacing: 10) {
+						GridRow {
+							FieldLabel("Device Name")
+							TextField("Device Name", text: Binding(
+								get: { editableDevice.device.name },
+								set: { newValue in
+									let old = editableDevice.device.name
+									editableDevice.device.name = newValue
+									undoManager?.registerUndo(withTarget: editableDevice) { $0.device.name = old }
+								}
+							))
+							.textFieldStyle(.roundedBorder)
+							.frame(maxWidth: 280, alignment: .leading)
 						}
-					))
-				}
-				
-				Section("Rack Size") {
-					if editableDevice.device.type == .rack {
-						Picker("Width", selection: $editableDevice.device.rackWidth) {
-							ForEach(RackWidth.allCases) { w in
-								Text(w.label).tag(w)
-							}
-						}
-						Stepper("Height: \(rackUnitsBinding.wrappedValue)U",
-								value: rackUnitsBinding, in: 1...24)
-						
-						// Live readout
-						#if DEBUG
-						let sr = sizingReadout
-						Group {
-						LabeledContent("Span (in)") { Text(String(format: "%.2f", sr.span)) }
-						LabeledContent("Body (in)") { Text(String(format: "%.2f", sr.body)) }
-							LabeledContent("Wings (in)") {
-								Text("L \(String(format: "%.2f", sr.leftWing)) • R \(String(format: "%.2f", sr.rightWing))")
-							}
-						}
-						.font(.caption)
-#endif
-					} else {
-						Stepper("Width: \(slotWidthBinding.wrappedValue) slot\(slotWidthBinding.wrappedValue == 1 ? "" : "s")",
-								value: slotWidthBinding, in: 1...10)
-						Text("Height: 5.25 in")
-							.foregroundStyle(.secondary)
 					}
 				}
 				
-				Section("Categories") {
-					CategoryEditor(editableDevice: editableDevice)
+				InspectorSection(title: "Rack Size") {
+					Grid(horizontalSpacing: 12, verticalSpacing: 10) {
+						if editableDevice.device.type == .rack {
+							// RACK
+							GridRow {
+								FieldLabel("Width")
+								Picker("", selection: $editableDevice.device.rackWidth) {
+									ForEach(RackWidth.allCases) { w in
+										Text(w.label).tag(w)
+									}
+								}
+								.labelsHidden()
+								.frame(maxWidth: 220, alignment: .leading)
+							}
+							
+							GridRow {
+								FieldLabel("Height")
+								Stepper(value: rackUnitsBinding, in: 1...10) {
+									// Stable, left-aligned label next to the arrows
+									Text("\(rackUnitsBinding.wrappedValue)U")
+										.frame(width: 60, alignment: .leading)
+								}
+								.frame(maxWidth: 220, alignment: .leading)   // keeps it out of the far right
+							}
+						} else {
+							// 500-SERIES (non-rack)
+							GridRow {
+								FieldLabel("Width")
+								Stepper(value: slotWidthBinding, in: 1...10) {
+									Text("\(slotWidthBinding.wrappedValue) slot\(slotWidthBinding.wrappedValue == 1 ? "" : "s")")
+										.frame(width: 120, alignment: .leading)
+								}
+								.frame(maxWidth: 220, alignment: .leading)
+							}
+						}
+					}
 				}
 				
-				Section("Controls") {
-					Button("Edit Controls…") { showingControlEditor = true }
+				InspectorSection(title: "Categories") {
+					// ORIGINAL vs PENDING
+					let originals = Set(editableDevice.device.categories)
+					let pending   = tempCategorySelection
+					let allNames  = Array(originals.union(pending)).sorted {
+						$0.localizedCaseInsensitiveCompare($1) == .orderedAscending
+					}
+					
+					Grid(horizontalSpacing: 12, verticalSpacing: 10) {
+						
+						// Row 1: chips (two-row viewport with vertical scroll if needed)
+						GridRow {
+							FieldLabel("") // keep column alignment
+							ScrollView(.vertical) {
+								let chipShape = RoundedRectangle(cornerRadius: 6)
+								LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 6)], spacing: 6) {
+									ForEach(allNames, id: \.self) { name in
+										let isAdded   =  pending.contains(name) && !originals.contains(name)
+										let isRemoved =  originals.contains(name) && !pending.contains(name)
+										
+										let bg: Color = isAdded
+										? Color.accentColor.opacity(0.18)
+										: (isRemoved ? .clear : Color.gray.opacity(0.18))
+										let strokeColor: Color = isAdded
+										? .accentColor
+										: (isRemoved ? Color.secondary.opacity(0.5) : .clear)
+										let strokeWidth: CGFloat = (isAdded || isRemoved) ? 1 : 0
+										let fg: Color = isAdded ? .accentColor : (isRemoved ? .secondary : .primary)
+										
+										Text(name)
+											.font(.caption)
+											.padding(.horizontal, 8).padding(.vertical, 3)
+											.background(chipShape.fill(bg))
+											.overlay(chipShape.stroke(strokeColor, lineWidth: strokeWidth))
+											.foregroundStyle(fg)
+											.opacity(isRemoved ? 0.7 : 1.0)
+									}
+								}
+								.padding(.top, 2)
+							}
+							.scrollIndicators(.automatic)
+							.frame(height: 60)                 // ≈ two chip rows; scrolls only if needed
+							.frame(maxWidth: 280, alignment: .leading)
+						}
+						
+						// Row 2: always-visible editor (aligned to the same right column)
+						GridRow {
+							FieldLabel("")
+							CategoryEditorInline(selection: $tempCategorySelection)
+								.environmentObject(library)
+								.frame(maxWidth: 280, alignment: .leading)
+								.onAppear {
+									if tempCategorySelection.isEmpty {
+										tempCategorySelection = Set(editableDevice.device.categories)
+									}
+								}
+						}
+					}
+				}
+				
+				InspectorSection(title: "Controls") {
+					HStack {
+						Button("Edit Controls…") { showingControlEditor = true }
+						Spacer()
+					}
 				}
 			}
-			.frame(minWidth: 360, idealWidth: 420, maxWidth: 520)
-			.padding()
+			.frame(minWidth: 360, idealWidth: 420, maxWidth: .infinity, alignment: .trailing)
+			.padding(16)
 			
 			Divider()
 			
@@ -147,11 +223,23 @@ struct DeviceEditorView: View {
 		.padding(.vertical)
 		.toolbar {
 			ToolbarItem(placement: .cancellationAction) {
-				Button("Cancel") { onCancel() }
+				Button("Cancel") {
+					// no category write-back; parent handles dismissal
+					onCancel()
+				}
 			}
 			ToolbarItem(placement: .confirmationAction) {
-				Button("Save") { onCommit(editableDevice.device) }
-					.keyboardShortcut(.defaultAction)
+				Button("Save") {
+					// 1) Commit the inline selection into the device
+					let committed = Array(tempCategorySelection)
+						.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+					editableDevice.device.categories = committed
+					
+					// 2) Hand the fully-updated Device back to the parent to persist
+					onCommit(editableDevice.device)
+				}
+				.buttonStyle(.borderedProminent)
+				.keyboardShortcut(.defaultAction)
 			}
 		}
 		.sheet(isPresented: $showingControlEditor) {
@@ -211,9 +299,119 @@ struct DeviceEditorView: View {
 		
 		return (spanIn, bodyIn, leftWing, rightWing)
 	}
-
 }
 
+private struct CategoryEditorInline: View {
+	@Binding var selection: Set<String>
+	@EnvironmentObject var library: DeviceLibrary
+	
+	@State private var query = ""
+	
+	private var allUniverse: [String] {
+		// Union of every known source so "Add" shows up immediately.
+		var set = Set(library.allCategories)
+		set.formUnion(library.categories)
+		set.formUnion(selection) // include in-flight user additions
+		return set.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+	}
+	
+	private var visible: [String] {
+		guard !query.isEmpty else { return allUniverse }
+		return allUniverse.filter { $0.localizedCaseInsensitiveContains(query) }
+	}
+	
+	var body: some View {
+		VStack(alignment: .leading, spacing: 8) {
+			VStack(spacing: 8) {
+				TextField("Add or search categories", text: $query)
+					.textFieldStyle(.roundedBorder)
+					.onSubmit {
+						newCategory(query)
+						query = ""                      // show full list again
+					}
+				
+				HStack(spacing: 8) {
+					HStack {
+						Button("Add") {
+							newCategory(query)
+							query = ""
+							// Add category to library/selection immediately, device on save
+						}
+						.disabled(query.isEmpty)
+										
+						Button("Clear") {
+							query = ""
+						}
+						.disabled(query.isEmpty)
+					}
+				}
+			}
+			
+			// Native macOS selection (blue highlight, no checkmarks)
+			List(visible, id: \.self, selection: $selection) { name in
+				Text(name)
+					.lineLimit(1)
+					.truncationMode(.tail)
+					.tag(name)
+			}
+			.listStyle(.inset)
+			.alternatingRowBackgrounds()
+			.border(Color.gray)
+			.environment(\.defaultMinListRowHeight, 22)
+			.frame(minHeight: 180, maxHeight: 240)
+		}
+//		.frame(width: 250)
+		.frame(maxWidth: .infinity, alignment: .leading) // grid row clamps this to 280 above
+		.padding(.top, 4)
+	}
+	
+	private func newCategory(_ categoryToAdd: String) {
+		let newCategory = categoryToAdd.trimmingCharacters(in: .whitespacesAndNewlines)
+		guard !newCategory.isEmpty else { return }
+		selection.insert(newCategory)
+		library.categories.insert(newCategory)
+	}
+}
+
+private struct InspectorSection<Content: View>: View {
+	let title: String
+	@ViewBuilder var content: Content
+	
+	init(title: String, @ViewBuilder content: () -> Content) {
+		self.title = title
+		self.content = content()
+	}
+	
+	var body: some View {
+		VStack(alignment: .leading, spacing: 8) {
+			Text(title.uppercased())
+				.font(.caption)
+				.fontWeight(.semibold)
+				.foregroundStyle(.secondary)
+				.textCase(.uppercase)
+				.padding(.bottom, 2)
+			
+			content
+				.frame(maxWidth: .infinity, alignment: .leading)
+			
+//			Divider().padding(.top, 8)
+		}
+	}
+}
+
+private struct FieldLabel: View {
+	let text: String
+	
+	init(_ text: String) {
+		self.text = text
+	}
+	
+	var body: some View {
+		Text(text)
+			.foregroundStyle(.secondary)
+			.frame(width: 96, alignment: .trailing)
+	}
+}
 
 
 #if DEBUG

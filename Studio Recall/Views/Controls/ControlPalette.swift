@@ -34,7 +34,12 @@ struct ControlPalette: View {
 						ExistingControlsList(
 							controls: filtered(editableDevice.device.controls, by: searchText),
 							selectedId: $selectedControlId,
-							onDelete: deleteControl
+							onDelete: deleteControl,
+							onRename: { id, newName in
+								if let i = editableDevice.device.controls.firstIndex(where: { $0.id == id }) {
+									editableDevice.device.controls[i].name = newName
+								}
+							}
 						)
 					}
 				}
@@ -52,7 +57,12 @@ struct ControlPalette: View {
 					ExistingControlsList(
 						controls: filtered(editableDevice.device.controls, by: searchText),
 						selectedId: $selectedControlId,
-						onDelete: deleteControl
+						onDelete: deleteControl,
+						onRename: { id, newName in
+							if let i = editableDevice.device.controls.firstIndex(where: { $0.id == id }) {
+								editableDevice.device.controls[i].name = newName
+							}
+						}
 					)
 				}
 				.padding(12)
@@ -88,6 +98,12 @@ struct ControlPalette: View {
 		if let i = editableDevice.device.controls.firstIndex(where: { $0.id == id }) {
 			_ = editableDevice.device.controls.remove(at: i)
 			if selectedControlId == id { selectedControlId = nil }
+		}
+	}
+	
+	private func renameControl(_ id: UUID, to newName: String) {
+		if let i = editableDevice.device.controls.firstIndex(where: { $0.id == id }) {
+			editableDevice.device.controls[i].name = newName.trimmingCharacters(in: .whitespacesAndNewlines)
 		}
 	}
 }
@@ -192,6 +208,7 @@ private struct ExistingControlsList: View {
 	let controls: [Control]
 	@Binding var selectedId: UUID?
 	var onDelete: (UUID) -> Void
+	var onRename: (UUID, String) -> Void
 	
 	var body: some View {
 		if controls.isEmpty {
@@ -208,7 +225,8 @@ private struct ExistingControlsList: View {
 							control: c,
 							isSelected: c.id == selectedId,
 							onSelect: { selectedId = c.id },
-							onDelete: { onDelete(c.id) }
+							onDelete: { onDelete(c.id) },
+							onRename: { newName in onRename(c.id, newName) }
 						)
 						Divider().opacity(0.08).padding(.leading, 26)
 					}
@@ -233,8 +251,20 @@ private struct ExistingRow: View {
 	let isSelected: Bool
 	let onSelect: () -> Void
 	let onDelete: () -> Void
+	let onRename: (String) -> Void
 	
 	@State private var isHovering = false
+	@FocusState private var isNameFocused: Bool
+	
+	private var nameBinding: Binding<String> {
+		Binding(
+			get: {
+				let display = control.name.isEmpty ? control.type.displayName : control.name
+				return display
+			},
+			set: { onRename($0) }
+		)
+	}
 	
 	var body: some View {
 		HStack(spacing: 8) {
@@ -243,9 +273,14 @@ private struct ExistingRow: View {
 				Image(systemName: iconForType(control.type))
 					.frame(width: 18, alignment: .leading)
 				
-				Text(displayName(control))
+				TextField("Name", text: nameBinding)
+					.textFieldStyle(.roundedBorder)
+//					.onChange(of: draftName) { _, new in onRename(new) } // live update
+					.onSubmit { onRename(nameBinding.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)) }                    // commit on Return
 					.lineLimit(1)
 					.truncationMode(.tail)
+					.focused($isNameFocused)
+					.font(.callout)
 			}
 			.padding(.horizontal, 8)
 			.padding(.vertical, 6)
@@ -280,6 +315,8 @@ private struct ExistingRow: View {
 		.padding(.vertical, 4)
 		.contentShape(Rectangle())
 		.onTapGesture(perform: onSelect)
+		.onChange(of: isNameFocused) { _, now in if now { onSelect() } }  // ← focus → selection
+		.onChange(of: isSelected) { _, now in if now { isNameFocused = true } } // ← selection → focus
 #if os(macOS)
 		.onHover { isHovering = $0 }
 #endif

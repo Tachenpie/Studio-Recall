@@ -30,6 +30,7 @@ struct ControlEditorWindow: View {
 	@State private var pan:  CGSize  = .zero
 	@State private var isPanning: Bool = false
 	@State private var showDetectSheet = false
+	@State private var zoomFocusN: CGPoint? = nil
 	
 	// Detect tab shared state
 	@State private var pendingDrafts: [ControlDraft] = [] // existing; keep it here
@@ -111,11 +112,12 @@ struct ControlEditorWindow: View {
 				}
 				
 				ToolbarItem(placement: .primaryAction) {
-					Button(action: { zoom = 1.0; pan = .zero }) {
+					Button(action: { zoom = 1.0; pan = .zero; zoomFocusN = nil }) {
 						Image(systemName: "arrow.up.left.and.down.right.magnifyingglass")
 					}
 					.help("Reset zoom & pan")
 				}
+				
 				// Quick Add menu for keyboard-only users
 				ToolbarItem(placement: .primaryAction) {
 					Menu {
@@ -123,6 +125,7 @@ struct ControlEditorWindow: View {
 							Button(t.rawValue.capitalized) {
 								addControl(of: t)
 							}
+							.onChange(of: selectedControlId) { _, _ in updateZoomFocusFromSelection() }
 						}
 					} label: {
 						Label("Add Control", systemImage: "plus")
@@ -147,6 +150,7 @@ struct ControlEditorWindow: View {
 					activeRegionIndex: $activeRegionIndex,
 					zoom: $zoom,
 					pan: $pan,
+					zoomFocusN: $zoomFocusN,
 					externalOverlay: { parentSize, canvasSize, zoom, pan in
 						// If we don’t have an image, skip.
 						guard let data = editableDevice.device.imageData,
@@ -182,7 +186,7 @@ struct ControlEditorWindow: View {
 						Image(systemName: isPanning ? "hand.draw.fill" : "hand.draw")
 					}
 					.help("Pan view (\(isPanning ? "On" : "Hold ⌘ to pan"))")
-					Button(action: { zoom = 1.0; pan = .zero }) {
+					Button(action: { zoom = 1.0; pan = .zero; zoomFocusN = nil }) {
 						Image(systemName: "arrow.up.left.and.down.right.magnifyingglass")
 					}
 					.help("Reset zoom & pan")
@@ -191,13 +195,19 @@ struct ControlEditorWindow: View {
 					// Zoom slider
 					HStack(spacing: 6) {
 						Button(
-							action: { zoom = max(0.5, zoom / 1.25) }
+							action: {
+								updateZoomFocusFromSelection()
+								zoom = max(0.5, zoom / 1.25)
+							}
 						) {
 							Image(systemName: "minus.magnifyingglass")
 						}
 						Slider(value: $zoom, in: 0.5...8, step: 0.01).frame(width: 120)
 						Button(
-							action: { zoom = min(8, zoom * 1.25) }
+							action: {
+								updateZoomFocusFromSelection()
+								zoom = min(8, zoom * 1.25)
+							}
 						) {
 							Image(systemName: "plus.magnifyingglass")
 						}
@@ -266,17 +276,23 @@ struct ControlEditorWindow: View {
 									isWideFaceplate: isWideFaceplate
 								)
 								.frame(maxWidth: .infinity, maxHeight: .infinity)
+								.onChange(of: detectSelectedID) { _, _ in updateZoomFocusFromSelection() }
+								.onChange(of: detectSelectedIDs) { _, _ in updateZoomFocusFromSelection() }
 							} else {
 								ContentUnavailableView("No faceplate image",
 													   systemImage: "rectangle.portrait.on.rectangle.portrait")
 							}
 						}
 					case .palette:
-						ScrollView { ControlPalette(
+						ScrollView {
+							ControlPalette(
 							editableDevice: editableDevice,
 							selectedControlId: $selectedControlId,
 							isWideFaceplate: isWideFaceplate
-						).padding() }
+							)
+							.padding()
+							.onChange(of: selectedControlId) { _, _ in updateZoomFocusFromSelection() }
+						}
 						.frame(maxWidth: .infinity, maxHeight: .infinity)
 					case .inspector:
 						ScrollView {
@@ -288,21 +304,11 @@ struct ControlEditorWindow: View {
 								isWideFaceplate: isWideFaceplate
 							)
 							.frame(maxWidth: .infinity, alignment: .leading)
+							.onChange(of: selectedControlId) { _, _ in updateZoomFocusFromSelection() }
 						}
 						.frame(maxWidth: .infinity, maxHeight: .infinity)
 				}
 			}
-		}
-	}
-	
-	@ViewBuilder
-	private func detectSidebarContent(_ content: some View) -> some View {
-		// Keep the list compact and left-aligned; scroll if it overflows vertically.
-		ScrollView {
-			content
-				.frame(maxWidth: detectContentMax, alignment: .topLeading)
-				.padding(.horizontal, 12)
-				.padding(.bottom, 12)
 		}
 	}
 
@@ -319,6 +325,23 @@ struct ControlEditorWindow: View {
 		editableDevice.device.controls.append(c)
 		selectedControlId = c.id
 		sidebarTab = .inspector
+	}
+	
+	private func updateZoomFocusFromSelection() {
+		guard let data = editableDevice.device.imageData,
+			  let img  = NSImage(data: data),
+			  let cg   = img.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+			zoomFocusN = nil
+			return
+		}
+		let px = CGSize(width: cg.width, height: cg.height)
+		if let id = detectSelectedID ?? detectSelectedIDs.first,
+		   let d  = pendingDrafts.first(where: { $0.id == id }) {
+			zoomFocusN = CGPoint(x: max(0, min(1, d.center.x / px.width)),
+								 y: max(0, min(1, d.center.y / px.height)))
+		} else {
+			zoomFocusN = nil
+		}
 	}
 }
 

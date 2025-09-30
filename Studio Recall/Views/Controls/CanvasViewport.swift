@@ -27,6 +27,7 @@ struct CanvasViewport<Content: View, Overlay: View>: View {
 	let aspect: CGFloat                         // width / height
 	@Binding var zoom: CGFloat
 	@Binding var pan: CGSize
+	@Binding var focusN: CGPoint?
 	
 	/// Render inner content sized to `canvasSize`
 	let content: (_ canvasSize: CGSize) -> Content
@@ -48,7 +49,6 @@ struct CanvasViewport<Content: View, Overlay: View>: View {
 	var body: some View {
 		GeometryReader { geo in
 			let canvasSize = fittedSize(container: geo.size, aspect: aspect)
-			
 			// OUTER container (fills parent; attach pan/pinch/hover/drop here)
 			ZStack {
 				// INNER canvas (unscaled, centered box that we scale/offset)
@@ -128,6 +128,37 @@ struct CanvasViewport<Content: View, Overlay: View>: View {
 					}
 				}
 #endif
+				.onChange(of: zoom) { _, newZoom in
+					guard let focusN else { return }
+					let canvasPt = CGPoint(x: focusN.x * canvasSize.width,
+										   y: focusN.y * canvasSize.height)
+					// keep focus at parent center when zoom changes
+					let parentCenter = CGPoint(x: geo.size.width * 0.5, y: geo.size.height * 0.5)
+					// Solve for new pan so: toParent(canvasPt, ..., newZoom, panNew) == parentCenter
+					let originX = (geo.size.width  - canvasSize.width)  * 0.5
+					let originY = (geo.size.height - canvasSize.height) * 0.5
+					let centerShiftX = canvasSize.width  * 0.5 * (1 - newZoom)
+					let centerShiftY = canvasSize.height * 0.5 * (1 - newZoom)
+					let panX = parentCenter.x - originX - centerShiftX - canvasPt.x * newZoom
+					let panY = parentCenter.y - originY - centerShiftY - canvasPt.y * newZoom
+					pan = CGSize(width: panX, height: panY)
+					panStart = pan
+				}
+				.onChange(of: focusN) { _, _ in
+					// Snap the newly requested focus to center at current zoom.
+					guard let focusN else { return }
+					let canvasPt = CGPoint(x: focusN.x * canvasSize.width,
+										   y: focusN.y * canvasSize.height)
+					let parentCenter = CGPoint(x: geo.size.width * 0.5, y: geo.size.height * 0.5)
+					let originX = (geo.size.width  - canvasSize.width)  * 0.5
+					let originY = (geo.size.height - canvasSize.height) * 0.5
+					let centerShiftX = canvasSize.width  * 0.5 * (1 - zoom)
+					let centerShiftY = canvasSize.height * 0.5 * (1 - zoom)
+					let panX = parentCenter.x - originX - centerShiftX - canvasPt.x * zoom
+					let panY = parentCenter.y - originY - centerShiftY - canvasPt.y * zoom
+					pan = CGSize(width: panX, height: panY)
+					panStart = pan
+				}
 		}
 	}
 
@@ -142,6 +173,19 @@ struct CanvasViewport<Content: View, Overlay: View>: View {
 			let w = container.width
 			return .init(width: w, height: w / aspect)
 		}
+	}
+	
+	@inline(__always)
+	func toParent(pointInCanvas c: CGPoint,
+				  parentSize: CGSize, canvasSize: CGSize,
+				  zoom: CGFloat, pan: CGSize) -> CGPoint {
+		let originX = (parentSize.width  - canvasSize.width)  * 0.5
+		let originY = (parentSize.height - canvasSize.height) * 0.5
+		let centerShiftX = canvasSize.width  * 0.5 * (1 - zoom)
+		let centerShiftY = canvasSize.height * 0.5 * (1 - zoom)
+		let x = originX + centerShiftX + pan.width  + c.x * zoom
+		let y = originY + centerShiftY + pan.height + c.y * zoom
+		return CGPoint(x: x, y: y)
 	}
 	
 	/// Convert a point (in the parent view that contains the centered, zoomed canvas)

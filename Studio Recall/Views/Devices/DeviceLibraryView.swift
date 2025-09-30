@@ -23,7 +23,8 @@ enum DeviceSheet: Identifiable {
 
 struct DeviceLibraryView: View {
     @EnvironmentObject var library: DeviceLibrary
-    @State private var editingDevice: EditableDevice? = nil
+	
+	@State private var editingDevice: EditableDevice? = nil
     @State private var activeSheet: DeviceSheet? = nil
 
     var body: some View {
@@ -96,31 +97,36 @@ struct DeviceLibraryView: View {
                 }
             case .editor(let editable):
                 NavigationStack {
-                                    DeviceEditorView(
-                                        editableDevice: editable,
-                                        onCommit: { device in
-                                            if library.devices.contains(where: { $0.id == device.id }) {
-                                                library.update(device)
-                                            } else {
-                                                library.add(device)
-                                            }
-                                            activeSheet = nil
-                                        },
-                                        onCancel: { activeSheet = nil }
-                                    )
-                                }
-                                .frame(minWidth: 1000, minHeight: 400)
-                            }
+					DeviceEditorView(
+						editableDevice: editable,
+						onCommit: { device in
+							if library.devices.contains(where: { $0.id == device.id }) {
+								library.update(device)
+							} else {
+								library.add(device)
+							}
+							activeSheet = nil
+						},
+						onCancel: { activeSheet = nil }
+					)
+				}
+				.frame(minWidth: 1000, minHeight: 400)
+			}
         }
+		.preference(key: LibraryEditingDeviceKey.self, value: activeSheet != nil)
     }
 
     // MARK: - Device Row
     private func deviceRow(for device: Device) -> some View {
         VStack(spacing: 6) {
-            // --- Device Preview (draggable visual) ---
-            DeviceView(device: device)
-                .frame(width: 80, height: 40)
-                .shadow(radius: 3)
+			// --- Device Preview (draggable visual) ---
+			// Letterbox (never crop), never overflow captions, and let the ROW handle hover/tap/drag.
+			DeviceView(device: device, isThumbnail: true)
+				.aspectRatio(deviceAspect(device), contentMode: .fit)
+				.frame(width: 120, height: 60, alignment: .center)
+				.clipped()
+				.allowsHitTesting(false)   // ← ensures onDrag on the row works anywhere over the tile
+				.shadow(radius: 3)
 
             // --- Metadata below preview ---
             VStack(spacing: 2) {
@@ -133,49 +139,50 @@ struct DeviceLibraryView: View {
 
 				if device.type == .rack {
 					Text("\(device.rackUnits ?? 1)U, \(device.rackWidth.label) Rack")
-					.font(.caption)
-					.fontWeight(.medium)
+					.font(.caption2)
+					.foregroundColor(.secondary)
 				} else {
 					Text("\(device.slotWidth ?? 1) slots")
-						.font(.caption)
+						.font(.caption2)
+						.foregroundColor(.secondary)
 				}
 					
             }
         }
         .padding(8)
         .frame(maxWidth: .infinity)
-        .background(HoverHighlight())
+//        .background(HoverHighlight())
+		.modifier(RowHoverHighlight())
         .cornerRadius(8)
         .contentShape(Rectangle())
+		.contextMenu {
+			Button("Edit") { activeSheet = .editor(EditableDevice(device: device)) }
+			Divider()
+			Button(role: .destructive) {
+				library.delete(device)
+			} label: {
+				Label("Delete", systemImage: "trash")
+			}
+		}
 		.onDrag {
 			let payload = DragPayload(deviceId: device.id)
 			DragContext.shared.beginDrag(payload: payload)
 			
 			let provider = NSItemProvider()
-			// primary custom type
 			provider.registerDataRepresentation(
 				forTypeIdentifier: UTType.deviceDragPayload.identifier,
 				visibility: .all
 			) { completion in
 				completion(try? JSONEncoder().encode(payload), nil); return nil
 			}
-			// fallbacks
-			provider.registerDataRepresentation(forTypeIdentifier: UTType.data.identifier, visibility: .all) { completion in
-				completion(Data(), nil); return nil
-			}
-			provider.registerDataRepresentation(forTypeIdentifier: UTType.item.identifier, visibility: .all) { completion in
-				completion(Data(), nil); return nil
-			}
-			provider.registerDataRepresentation(forTypeIdentifier: UTType.utf8PlainText.identifier, visibility: .all) { completion in
-				completion(Data("device".utf8), nil); return nil
-			}
-			
-//			print("📦 onDrag start – device=\(device.name) utis=\(provider.registeredTypeIdentifiers)")
 			return provider
 		} preview: {
-			DeviceView(device: device)
-//				.frame(width: 80, height: 40)
-				.shadow(radius: 4)
+			// keep preview tiny to avoid heavy snapshot work
+			DeviceView(device: device, isThumbnail: true)
+				.aspectRatio(deviceAspect(device), contentMode: .fit)
+				.frame(width: 120, height: 60)
+				.clipped()
+				.shadow(radius: 3)
 		}
     }
 
@@ -199,7 +206,7 @@ struct DeviceLibraryView: View {
             )
         }
     }
-    
+	
     private func groupedDevices() -> [(String, [Device])] {
         let devices = library.devices.sorted {
             library.sortAscending
@@ -230,4 +237,28 @@ struct DeviceLibraryView: View {
         }
     }
 
+	// MARK: - Thumbnail helpers
+	private func deviceAspect(_ device: Device) -> CGFloat {
+		switch device.type {
+			case .rack:
+				// Use BODY width (19 / 8.5 / 5.5 in) vs 1.75U height
+				let wIn = DeviceMetrics.bodyInches(for: device.rackWidth)
+				let hIn = 1.75 * CGFloat(device.rackUnits ?? 1)
+				return max(0.1, wIn / hIn)
+			case .series500:
+				// 500-series: 1.5" per slot × height 5.25"
+				let wIn = 1.5 * CGFloat(device.slotWidth ?? 1)
+				let hIn = 5.25
+				return max(0.1, wIn / hIn)
+		}
+	}
+}
+
+private struct RowHoverHighlight: ViewModifier {
+	@State private var isHovering = false
+	func body(content: Content) -> some View {
+		content
+			.background(isHovering ? Color.accentColor.opacity(0.08) : Color.clear)
+			.onHover { isHovering = $0 }
+	}
 }

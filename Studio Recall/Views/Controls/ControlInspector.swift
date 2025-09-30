@@ -275,6 +275,12 @@ struct ControlInspector: View {
 		binding.innerValue.wrappedValue = min(max(v, min(lo, hi)), max(lo, hi))
 	}
 	
+	private func clampStepIndex(_ idx: Int, for c: Control) -> Int {
+		let count = c.stepAngles?.count ?? c.stepValues?.count ?? 0
+		guard count > 0 else { return 0 }
+		return min(max(idx, 0), count - 1)
+	}
+
 	// MARK: - Per-type section
 	@ViewBuilder
 	private func perTypeSection(binding: Binding<Control>) -> some View {
@@ -855,9 +861,14 @@ private struct MappingEditor: View {
 						
 					case .rotate:
 						if current != .rotate {
+							let isTwoStateSwitch = (control.type == .multiSwitch) && ((control.options?.count ?? 2) <= 2)
+							let minDeg: Double = isTwoStateSwitch ? 0   : -135
+							let maxDeg: Double = isTwoStateSwitch ? 180 :  135
+							let pivotX: CGFloat = isTwoStateSwitch ? 0.5 : 0.5
+							let pivotY: CGFloat = isTwoStateSwitch ? 0.5 : 0.5
 							region.mapping = .rotate(
-								min: -135, max: 135,
-								pivot: CGPoint(x: 0.5, y: 0.5),
+								min: minDeg, max: maxDeg,
+								pivot: CGPoint(x: pivotX, y: pivotY),
 								taper: .linear
 							)
 						}
@@ -924,6 +935,20 @@ private struct MappingEditor: View {
 								))
 								
 								Divider().padding(.vertical, 4)
+								
+								if control.type == .multiSwitch, (control.options?.count ?? 2) <= 2 {
+									HStack(spacing: 8) {
+										Text("Preset").frame(width: 80, alignment: .leading)
+										Button("Switch (0° ↔︎ 180°)") {
+											var r = regionBinding.wrappedValue
+											r.mapping = .rotate(min: 0, max: 180,
+																pivot: CGPoint(x: 0.5, y: 0.5),
+																taper: .linear)
+											regionBinding.wrappedValue = r
+										}
+										.buttonStyle(.bordered)
+									}
+								}
 								
 								// NEW: Preview buttons (we are in MappingEditor so we have `control` and `activeRegionIndex`)
 								HStack(spacing: 8) {
