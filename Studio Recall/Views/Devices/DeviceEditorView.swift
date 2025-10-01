@@ -20,6 +20,8 @@ struct DeviceEditorView: View {
 	@State private var showingControlEditor = false
 	@State private var tempCategorySelection: Set<String> = []
 	
+	@FocusState private var nameFocused: Bool
+	
 	// Bindings to bridge optional Ints to Steppers/ImagePicker
 	private var rackUnitsBinding: Binding<Int> {
 		Binding(
@@ -68,6 +70,7 @@ struct DeviceEditorView: View {
 							))
 							.textFieldStyle(.roundedBorder)
 							.frame(maxWidth: 280, alignment: .leading)
+							.focused($nameFocused)
 						}
 					}
 				}
@@ -221,10 +224,16 @@ struct DeviceEditorView: View {
 			.frame(minWidth: 380)
 		}
 		.padding(.vertical)
+		.onAppear {
+			settings.parentInteracting = true
+			nameFocused = true
+		}
+		.onDisappear { settings.parentInteracting = false }
 		.toolbar {
 			ToolbarItem(placement: .cancellationAction) {
 				Button("Cancel") {
 					// no category write-back; parent handles dismissal
+					settings.parentInteracting = false
 					onCancel()
 				}
 			}
@@ -237,6 +246,7 @@ struct DeviceEditorView: View {
 					
 					// 2) Hand the fully-updated Device back to the parent to persist
 					onCommit(editableDevice.device)
+					settings.parentInteracting = false
 				}
 				.buttonStyle(.borderedProminent)
 				.keyboardShortcut(.defaultAction)

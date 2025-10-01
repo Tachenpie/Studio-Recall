@@ -6,8 +6,21 @@
 //
 
 import AppKit
+import ImageIO
 
 extension NSImage {
+	/// Returns the pixel dimensions of the image (backing CGImage).
+	var pixelSize: CGSize {
+		if let cg = self.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+			return CGSize(width: cg.width, height: cg.height)
+		}
+		// Fallback: use points * scale
+		let rep = self.representations.first
+		let w = rep?.pixelsWide ?? Int(self.size.width)
+		let h = rep?.pixelsHigh ?? Int(self.size.height)
+		return CGSize(width: w, height: h)
+	}
+	
     /// Returns a resized copy of this NSImage, constrained to a max width/height
     func resized(maxDimension: CGFloat) -> NSImage? {
         let ratio = min(maxDimension / size.width, maxDimension / size.height, 1)
@@ -58,4 +71,64 @@ extension NSImage {
 		return out
 	}
 
+}
+
+private final class LODCache {
+	static let shared = NSCache<NSString, NSImage>()
+}
+
+extension NSImage {
+	/// Create or fetch a downsampled variant suitable for zoomed-out rendering.
+	/// Pass a stable cacheKey (e.g. device.id + imageData.count) to avoid pointer reuse collisions.
+	func lodImage(maxPixel: CGFloat, cacheKey: String? = nil) -> NSImage? {
+		// Prefer a stable key; fall back to the (unsafe) pointer key for legacy call sites.
+		let baseKey: String
+		if let cacheKey { baseKey = cacheKey }
+		else { baseKey = String(format: "ptr:%p", unsafeBitCast(self, to: Int.self)) }
+		let key = "\(baseKey)-px:\(Int(maxPixel.rounded()))" as NSString
+		
+		if let cached = LODCache.shared.object(forKey: key) { return cached }
+		
+		if let tiff = self.tiffRepresentation,
+		   let src  = CGImageSourceCreateWithData(tiff as CFData, nil) {
+			let options: [CFString: Any] = [
+				kCGImageSourceCreateThumbnailFromImageAlways: true,
+				kCGImageSourceThumbnailMaxPixelSize: Int(maxPixel.rounded()),
+				kCGImageSourceCreateThumbnailWithTransform: true
+			]
+			if let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, options as CFDictionary) {
+				// Give SwiftUI a real intrinsic size so aspectRatio is stable
+				let pxSize = NSSize(width: CGFloat(cg.width), height: CGFloat(cg.height))
+				let img = NSImage(cgImage: cg, size: pxSize)
+				LODCache.shared.setObject(img, forKey: key)
+				return img
+			}
+		}
+		
+		// (fallback path unchanged)
+		let ratio = max(size.width, size.height) == 0 ? 1 : (maxPixel / max(size.width, size.height))
+		let newSize = NSSize(width: size.width * ratio, height: size.height * ratio)
+		let rep = NSBitmapImageRep(
+			bitmapDataPlanes: nil, pixelsWide: Int(newSize.width), pixelsHigh: Int(newSize.height),
+			bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true,
+			isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+		)
+		rep?.size = newSize
+		
+		guard let rep else { return nil }
+		NSGraphicsContext.saveGraphicsState()
+		if let ctx = NSGraphicsContext(bitmapImageRep: rep) {
+			NSGraphicsContext.current = ctx
+			ctx.imageInterpolation = .low
+			self.draw(in: NSRect(origin: .zero, size: newSize),
+					  from: .zero, operation: .copy, fraction: 1.0)
+			NSGraphicsContext.restoreGraphicsState()
+			let img = NSImage(size: newSize)
+			img.addRepresentation(rep)
+			LODCache.shared.setObject(img, forKey: key)
+			return img
+		}
+		NSGraphicsContext.restoreGraphicsState()
+		return nil
+	}
 }

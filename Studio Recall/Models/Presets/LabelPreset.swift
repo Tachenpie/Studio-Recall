@@ -5,7 +5,7 @@
 //  Created by True Jackie on 9/23/25.
 //
 
-
+import Foundation
 import SwiftUI
 
 enum LabelPreset: String, CaseIterable, Identifiable {
@@ -32,6 +32,39 @@ enum LabelPreset: String, CaseIterable, Identifiable {
 			case .whiteOnBlack:        return "⬛"
 			case .blackOnWhite:        return "⬜"
 		}
+	}
+}
+
+struct UserLabelPreset: Identifiable, Codable, Equatable {
+	var id = UUID()
+	var name: String
+	var style: LabelStyleSpec
+}
+
+enum LabelPresetStore {
+	private static let key = "label.user.presets.v1"
+	
+	static func load() -> [UserLabelPreset] {
+		guard let data = UserDefaults.standard.data(forKey: key) else { return [] }
+		return (try? JSONDecoder().decode([UserLabelPreset].self, from: data)) ?? []
+	}
+	
+	static func save(_ presets: [UserLabelPreset]) {
+		if let data = try? JSONEncoder().encode(presets) {
+			UserDefaults.standard.set(data, forKey: key)
+		}
+	}
+	
+	static func add(name: String, style: LabelStyleSpec) {
+		var list = load()
+		list.insert(UserLabelPreset(name: name, style: style), at: 0) // newest first
+		save(list)
+	}
+	
+	static func delete(id: UUID) {
+		var list = load()
+		list.removeAll { $0.id == id }
+		save(list)
 	}
 }
 

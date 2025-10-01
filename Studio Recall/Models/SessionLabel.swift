@@ -48,3 +48,33 @@ struct ColorData: Codable, Equatable {
     }
     var color: Color { Color(.sRGB, red: r, green: g, blue: b, opacity: a) }
 }
+
+// MARK: - Label default style
+enum LabelStyleDefaults {
+	private static let key = "LabelDefaultStyle"
+	
+	static func load() -> LabelStyleSpec {
+		guard let data = UserDefaults.standard.data(forKey: key),
+			  let spec = try? JSONDecoder().decode(LabelStyleSpec.self, from: data) else {
+			return .init()
+		}
+		return spec
+	}
+	
+	static func save(_ style: LabelStyleSpec) {
+		if let data = try? JSONEncoder().encode(style) {
+			UserDefaults.standard.set(data, forKey: key)
+		}
+	}
+	
+	static func reset() { UserDefaults.standard.removeObject(forKey: key) }
+}
+
+extension SessionLabel {
+	/// Convenience factory that applies the saved default style.
+	static func new(anchor: LabelAnchor, text: String = "Label", at offset: CGPoint = .zero) -> SessionLabel {
+		var l = SessionLabel(anchor: anchor, offset: offset, text: text)
+		l.style = LabelStyleDefaults.load()
+		return l
+	}
+}

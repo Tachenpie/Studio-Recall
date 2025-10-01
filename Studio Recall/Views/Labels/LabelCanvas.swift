@@ -9,6 +9,9 @@
 import SwiftUI
 
 struct LabelCanvas: View {
+	@EnvironmentObject private var sessionManager: SessionManager
+	@EnvironmentObject private var settings: AppSettings
+	
     // All labels in the session (or filtered upstream)
     @Binding var labels: [SessionLabel]
 
@@ -54,6 +57,7 @@ struct LabelCanvas: View {
 						binding.wrappedValue.anchor = .session
 						binding.wrappedValue.offset = abs
 					}
+					sessionManager.saveSessions()
 				},
                           onEdit: { editing = binding.wrappedValue },
 						  onDelete: {
@@ -66,10 +70,14 @@ struct LabelCanvas: View {
             }
         }
         .zIndex(100_000) // float above all
-		.sheet(item: $editing) { item in
+		.sheet(item: $editing, onDismiss: {
+			settings.parentInteracting = false
+		}) { item in
 			if let idx = labels.firstIndex(where: { $0.id == item.id }) {
 				LabelInspector(label: $labels[idx])
 					.frame(minWidth: 360)
+					.environmentObject(sessionManager)
+					.onAppear { settings.parentInteracting = true }
 			} else {
 				// Fallback if the label was deleted while the sheet was opening
 				Text("Label not found").padding()

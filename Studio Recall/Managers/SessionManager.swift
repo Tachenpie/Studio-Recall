@@ -16,6 +16,9 @@ final class SessionManager: ObservableObject {
 	}
 
 	@Published var showTemplateManager: Bool = false
+	@Published var renderStyle: RenderStyle {
+		didSet { UserDefaults.standard.set(renderStyle.rawValue, forKey: "renderStyle") }
+	}
 	
 	/// Convenience to find current session index quickly.
 	var currentSessionIndex: Int? {
@@ -59,6 +62,9 @@ final class SessionManager: ObservableObject {
         let savedChassis = UserDefaults.standard.integer(forKey: "lastChassisSlotCount")
         self.lastChassisSlotCount = savedChassis > 0 ? savedChassis : 10
 
+		let raw = UserDefaults.standard.string(forKey: "renderStyle")
+		self.renderStyle = RenderStyle(rawValue: raw ?? "") ?? .photoreal
+		
         loadSessions()
 		loadTemplates()
 		if let raw = UserDefaults.standard.string(forKey: "DefaultTemplateID"),

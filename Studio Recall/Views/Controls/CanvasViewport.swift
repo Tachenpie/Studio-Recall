@@ -42,6 +42,8 @@ struct CanvasViewport<Content: View, Overlay: View>: View {
 	// Internal
 	@State private var panStart: CGSize = .zero
 	@State private var zoomStart: CGFloat = 1.0
+	@State private var lastZoom: CGFloat = 1
+	
 #if os(macOS)
 	@State private var hoverPoint: CGPoint? = nil   // in parent coords
 #endif
@@ -128,8 +130,9 @@ struct CanvasViewport<Content: View, Overlay: View>: View {
 					}
 				}
 #endif
-				.onChange(of: zoom) { _, newZoom in
-					guard let focusN else { return }
+				.onChange(of: zoom) { oldZoom, newZoom in
+					guard oldZoom != newZoom else { return }
+					guard let focusN else { lastZoom = newZoom; return }
 					let canvasPt = CGPoint(x: focusN.x * canvasSize.width,
 										   y: focusN.y * canvasSize.height)
 					// keep focus at parent center when zoom changes
@@ -143,22 +146,23 @@ struct CanvasViewport<Content: View, Overlay: View>: View {
 					let panY = parentCenter.y - originY - centerShiftY - canvasPt.y * newZoom
 					pan = CGSize(width: panX, height: panY)
 					panStart = pan
+					lastZoom = newZoom
 				}
-				.onChange(of: focusN) { _, _ in
-					// Snap the newly requested focus to center at current zoom.
-					guard let focusN else { return }
-					let canvasPt = CGPoint(x: focusN.x * canvasSize.width,
-										   y: focusN.y * canvasSize.height)
-					let parentCenter = CGPoint(x: geo.size.width * 0.5, y: geo.size.height * 0.5)
-					let originX = (geo.size.width  - canvasSize.width)  * 0.5
-					let originY = (geo.size.height - canvasSize.height) * 0.5
-					let centerShiftX = canvasSize.width  * 0.5 * (1 - zoom)
-					let centerShiftY = canvasSize.height * 0.5 * (1 - zoom)
-					let panX = parentCenter.x - originX - centerShiftX - canvasPt.x * zoom
-					let panY = parentCenter.y - originY - centerShiftY - canvasPt.y * zoom
-					pan = CGSize(width: panX, height: panY)
-					panStart = pan
-				}
+//				.onChange(of: focusN) { _, _ in
+//					// Snap the newly requested focus to center at current zoom.
+//					guard let focusN else { return }
+//					let canvasPt = CGPoint(x: focusN.x * canvasSize.width,
+//										   y: focusN.y * canvasSize.height)
+//					let parentCenter = CGPoint(x: geo.size.width * 0.5, y: geo.size.height * 0.5)
+//					let originX = (geo.size.width  - canvasSize.width)  * 0.5
+//					let originY = (geo.size.height - canvasSize.height) * 0.5
+//					let centerShiftX = canvasSize.width  * 0.5 * (1 - zoom)
+//					let centerShiftY = canvasSize.height * 0.5 * (1 - zoom)
+//					let panX = parentCenter.x - originX - centerShiftX - canvasPt.x * zoom
+//					let panY = parentCenter.y - originY - centerShiftY - canvasPt.y * zoom
+//					pan = CGSize(width: panX, height: panY)
+//					panStart = pan
+//				}
 		}
 	}
 

@@ -5,10 +5,12 @@
 //  Created by True Jackie on 9/23/25.
 //
 
-
 import SwiftUI
+import AppKit
 
 struct LabelView: View {
+	@EnvironmentObject private var sessionManager: SessionManager
+	
     @Binding var label: SessionLabel
     @Environment(\.canvasZoom) private var zoom     // you already have this in RackChassisView
     let onBeginDrag: () -> Void
@@ -23,19 +25,22 @@ struct LabelView: View {
 	
 	var body: some View {
 		let s = label.style
+		let z = max(CGFloat(zoom), 0.0001)
+
 		let font: Font = {
-			if s.fontName.hasPrefix(".") { return .system(size: s.fontSize, weight: .medium, design: .rounded) }
+			if s.fontName.hasPrefix(".") {
+				return .system(size: s.fontSize, weight: .medium, design: .rounded)
+			}
 			return .custom(s.fontName, size: s.fontSize)
 		}()
-		let scale: CGFloat = (s.scalesWithZoom ? 1 : (1 / max(zoom, 0.0001)))
 		
 		Group {
 			if isEditingText {
-				// inside `if isEditingText { ... }`
-				let screenCap: CGFloat = 260            // desired max on-screen width
-				let scale: CGFloat = (label.style.scalesWithZoom ? 1 : (1 / max(zoom, 0.0001)))
-				let localCap = screenCap / scale        // convert to local space (pre-scale)
-				
+				// Cap editor to ~220 px *on screen*, converted to local coords.
+				// Clamp to a safe finite range so minWidth ≤ maxWidth.
+				let cap = max(80, min(220 / z, 1200))        // 80…1200 local points
+				let minW = min(120, cap)                     // never larger than cap
+
 				TextField("Label", text: $draftText, onCommit: commitEdit)
 					.textFieldStyle(.roundedBorder)
 					.foregroundStyle(.primary)
@@ -46,31 +51,40 @@ struct LabelView: View {
 						textFieldFocused = true
 					}
 					.onExitCommand { cancelEdit() }     // ESC to cancel
+					.disableAutocorrection(true)
 					.lineLimit(1)
 					.truncationMode(.tail)              // show ellipsis rather than expanding
 					.fixedSize(horizontal: false, vertical: true)
-					.frame(minWidth: 120, maxWidth: localCap)   // ← cap in local coords
-					.padding(.horizontal, 6)
-					.padding(.vertical, 4)
+					.frame(minWidth: minW, maxWidth: cap)
+					.padding(.horizontal, 8)
+					.padding(.vertical, 6)
+					.background(
+						RoundedRectangle(cornerRadius: 8)
+							.fill(Color(nsColor: .textBackgroundColor))
+							.overlay(
+								RoundedRectangle(cornerRadius: 8)
+									.stroke(Color.accentColor.opacity(0.35), lineWidth: 1)
+							)
+					)
+					.clipShape(RoundedRectangle(cornerRadius: 8))
 			} else {
+				// Background with per-style opacity — text stays fully vector & crisp
+				let background = RoundedRectangle(cornerRadius: s.cornerRadius)
+					.fill(s.background.color.opacity(s.opacity))
+					.overlay(
+						RoundedRectangle(cornerRadius: s.cornerRadius)
+							.stroke(s.borderColor.color, lineWidth: max(0, s.borderWidth))
+					)
+				
 				Text(label.text)
 					.font(font)
 					.foregroundStyle(s.textColor.color)
 					.padding(.horizontal, s.paddingH)
-					.padding(.vertical, s.paddingV)
-					.background(
-						RoundedRectangle(cornerRadius: s.cornerRadius)
-							.fill(s.background.color)
-							.overlay(
-								RoundedRectangle(cornerRadius: s.cornerRadius)
-									.stroke(s.borderColor.color, lineWidth: max(0, s.borderWidth))
-							)
-					)
-					.opacity(s.opacity)
-					.shadow(radius: s.shadow)
+					.padding(.vertical,   s.paddingV)
+					.background(background)
+					.shadow(radius: (zoom <= 1.0 ? s.shadow : 0))
 			}
 		}
-		.scaleEffect(scale, anchor: .topLeading)
 		.contentShape(Rectangle())
 		
 		// DOUBLE-CLICK → inline edit (not the inspector)
@@ -87,7 +101,15 @@ struct LabelView: View {
 		// CONTEXT MENU with human preset names
 		.contextMenu {
 			ForEach(LabelPreset.allCases) { p in
-				Button("\(p.icon)  \(p.displayName)") { label.style = .preset(p) }
+				Button("\(p.icon)  \(p.displayName)") { commitStyle(style: .preset(p)) }//label.style = .preset(p) }
+			}
+			Divider()
+			let customs = LabelPresetStore.load()
+			if !customs.isEmpty {
+				Text("User Presets")
+				ForEach(customs) { c in
+					Button(c.name) { commitStyle(style: c.style) } //label.style = c.style }
+				}
 			}
 			Divider()
 			Button(label.isLocked ? "Unlock" : "Lock") { label.isLocked.toggle() }
@@ -108,13 +130,20 @@ struct LabelView: View {
 	private func commitEdit() {
 		label.text = draftText.trimmingCharacters(in: .whitespacesAndNewlines)
 		isEditingText = false
+		sessionManager.saveSessions()
 	}
 	private func cancelEdit() {
 		isEditingText = false
 	}
+	private func commitStyle(style: LabelStyleSpec) {
+		label.style = style
+		sessionManager.saveSessions()
+	}
+	
 	
 	private var dragGesture: some Gesture {
-		DragGesture(minimumDistance: 0)
+		// Give double-tap a chance to fire; 3-4 px should be ok on macOS.
+		DragGesture(minimumDistance: 3)
 			.onChanged { v in
 				onBeginDrag()
 				let d = v.translation

@@ -25,6 +25,8 @@ struct RackChassisSlotView: View {
 	@EnvironmentObject var sessionManager: SessionManager
 	
 	@Environment(\.isInteracting) private var isInteracting
+	@Environment(\.canvasLOD) private var lod
+	@Environment(\.renderStyle) private var renderStyle
 	
 	@Binding var hoveredIndex: Int?
 	@Binding var hoveredValid: Bool
@@ -73,30 +75,67 @@ struct RackChassisSlotView: View {
 			
 			// MARK: face + controls (aligned to rendered face)
 			let faceGroup = ZStack(alignment: .topLeading) {
-				if let data = device.imageData, let nsimg = NSImage(data: data) {
-					Image(nsImage: nsimg)
-						.resizable()
-						.interpolation(.high)
-						.antialiased(true)
-						.aspectRatio(nsimg.size, contentMode: .fit)
-						.frame(width: metrics.size.width, height: metrics.size.height)
-						.allowsHitTesting(false)
-				} else {
-					DeviceView(device: device)
-						.modifier(ConditionalDrawingGroup(active: isInteracting))
-						.frame(width: metrics.size.width, height: metrics.size.height)
-						.allowsHitTesting(false)
+				Group {
+					if renderStyle == .representative {
+						// Fast path: vector face, no PNG
+						DeviceView(device: device, metrics: metrics)
+					} else {
+						if let data = device.imageData, let nsimg = NSImage(data: data) {
+							let key = device.id.uuidString + "#" + String(data.count)
+							
+							switch lod {
+								case .full:
+									Image(nsImage: nsimg)
+										.resizable()
+										.interpolation(.high)
+										.antialiased(true)
+										.aspectRatio(nsimg.size, contentMode: .fit)
+									
+								case .medium:
+									let target = max(metrics.size.width, metrics.size.height) * 0.75
+									if let down = nsimg.lodImage(maxPixel: target, cacheKey: key) {
+										Image(nsImage: down)
+											.resizable()
+											.interpolation(.low)
+											.aspectRatio(down.size, contentMode: .fit)
+									} else {
+										Image(nsImage: nsimg)
+											.resizable()
+											.interpolation(.low)
+											.aspectRatio(nsimg.size, contentMode: .fit)
+									}
+									
+								case .low:
+									if let tiny = nsimg.lodImage(maxPixel: 240, cacheKey: key) {
+										Image(nsImage: tiny)
+											.resizable()
+											.interpolation(.low)
+											.aspectRatio(tiny.size, contentMode: .fit)
+									} else {
+										Rectangle().fill(Color.secondary.opacity(0.12))
+									}
+							}
+						} else {
+							DeviceView(device: device)
+								.modifier(ConditionalDrawingGroup(active: isInteracting || settings.parentInteracting))
+						}
+					}
+				}
+				.frame(width: metrics.size.width, height: metrics.size.height)
+				.allowsHitTesting(false)
+
+				if renderStyle == .representative || lod == .full {
+					RuntimeControlsOverlay(
+						device: device,
+						instance: instanceBinding,
+						prelayout: L,
+						faceMetrics: metrics
+					)
+					.frame(width: metrics.size.width, height: metrics.size.height)
+					.environment(\.isRegionEditing, false)
+					.zIndex(1)
 				}
 				
-				RuntimeControlsOverlay(
-					device: device,
-					instance: instanceBinding,
-					prelayout: L,
-					faceMetrics: metrics
-				)
-				.frame(width: faceW, height: slotH)
-				.environment(\.isRegionEditing, false)
-				.zIndex(1)
 				if let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) {
 					let session = $sessionManager.sessions[i]
 					LabelCanvas(

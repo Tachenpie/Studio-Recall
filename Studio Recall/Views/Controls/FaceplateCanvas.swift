@@ -34,6 +34,9 @@ struct FaceplateCanvas: View {
 	private let gridStep: CGFloat = 0.0025
 	private let minRegion: CGFloat = 0.004
 	
+	// Callback
+	var onNewControlDropped: ((UUID) -> Void)? = nil
+	
 	var body: some View {
 		let aspect = computeAspectRatio()
 		let showBadges = !(isEditingRegion || draggingControlId != nil)
@@ -70,14 +73,6 @@ struct FaceplateCanvas: View {
 								},
 								onlyRegionIndex: idx
 							)
-//							.frame(
-//								width:  region.rect.width  * canvasSize.width,
-//								height: region.rect.height * canvasSize.height
-//							)
-//							.position(
-//								x: region.rect.midX * canvasSize.width,
-//								y: region.rect.midY * canvasSize.height
-//							)
 							.compositingGroup()
 							.mask { RegionClipShape(shape: region.shape) }
 							.allowsHitTesting(false)
@@ -85,6 +80,14 @@ struct FaceplateCanvas: View {
 						}
 					}
 					
+					if !isEditingRegion {
+						let hits: [ControlHitOverlay.Hit] = editableDevice.device.controls.flatMap { c in
+							c.regions.map { r in ControlHitOverlay.Hit(controlId: c.id, rect: r.rect) }
+						}
+						ControlHitOverlay(canvasSize: canvasSize, hits: hits, selectedControlId: $selectedControlId)
+					}
+
+
 					// Visual-only overlay stays in canvas space
 					if let sel = selectedControlBinding, isEditingRegion {
 						ForEach(sel.wrappedValue.regions.indices, id: \.self) { idx in
@@ -135,8 +138,10 @@ struct FaceplateCanvas: View {
 						// NEW: external overlay (e.g. detection boxes) in parent-space
 						if let externalOverlay {
 							externalOverlay(parentSize, canvasSize, zoom, pan)
+								.allowsHitTesting(false)
 						}
 					}
+						.allowsHitTesting(isEditingRegion)
 				)
 			},
 			onDropString: { raw, localPoint, canvasSize in
@@ -148,6 +153,7 @@ struct FaceplateCanvas: View {
 				// no snapping here
 				editableDevice.device.controls.append(c)
 				selectedControlId = c.id
+				onNewControlDropped?(c.id)
 				return true
 			}
 		)
@@ -224,5 +230,30 @@ struct FaceplateCanvas: View {
 
 	private func snap(_ v: CGFloat) -> CGFloat {
 		(v.clamped(to: 0...1) / gridStep).rounded() * gridStep
+	}
+}
+
+private struct ControlHitOverlay: View {
+	struct Hit: Identifiable {
+		let id = UUID()
+		let controlId: UUID
+		let rect: CGRect   // normalized (0…1)
+	}
+	let canvasSize: CGSize
+	let hits: [Hit]
+	@Binding var selectedControlId: UUID?
+	
+	var body: some View {
+		ZStack {
+			ForEach(hits) { h in
+				Color.clear
+					.frame(width:  h.rect.width  * canvasSize.width,
+						   height: h.rect.height * canvasSize.height)
+					.position(x: h.rect.midX * canvasSize.width,
+							  y: h.rect.midY * canvasSize.height)
+					.contentShape(Rectangle())
+					.onTapGesture { selectedControlId = h.controlId }
+			}
+		}
 	}
 }

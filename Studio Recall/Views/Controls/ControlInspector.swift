@@ -17,6 +17,11 @@ struct ControlInspector: View {
 	@Binding var isEditingRegion: Bool
 	@Binding var activeRegionIndex: Int
 	var isWideFaceplate: Bool
+	var focusNameForId: UUID? = nil
+	
+	@FocusState private var nameFocused: Bool
+	
+	enum RingSel: Hashable { case outer, inner }
 	
 	var body: some View {
 		if isWideFaceplate {
@@ -96,7 +101,15 @@ struct ControlInspector: View {
 			VStack(alignment: .leading, spacing: 10) {
 				HStack {
 					Text("Name").frame(width: 80, alignment: .leading)
-					TextField("Label", text: binding.name).textFieldStyle(.roundedBorder)
+					TextField("Label", text: binding.name)
+						.textFieldStyle(.roundedBorder)
+						.focused($nameFocused)
+						.onAppear {
+							if focusNameForId == binding.id { nameFocused = true }
+						}
+						.onChange(of: focusNameForId) { _, req in
+							if req == binding.id { nameFocused = true }
+						}
 				}
 				
 				HStack {
@@ -146,28 +159,64 @@ struct ControlInspector: View {
 							binding.regions.wrappedValue = [r]
 						}
 						isEditingRegion = true
+						if let p = concentricPairIndices(binding.wrappedValue) {
+							activeRegionIndex = p.outer
+						}
 					}
 				} else {
 					// Choose which ring to edit (concentric only)
 					if binding.wrappedValue.type == .concentricKnob,
-					   binding.regions.wrappedValue.count >= 2,
-					   let pair = concentricPairIndices(binding.wrappedValue) {
+					   binding.regions.wrappedValue.count >= 2 {
+					   
+						let ringBinding = Binding<RingSel>(
+							get: {
+								guard let p = concentricPairIndices(binding.wrappedValue) else { return .outer }
+								return (activeRegionIndex == p.inner) ? .inner : .outer
+							},
+							set: { newSel in
+								if let p = concentricPairIndices(binding.wrappedValue) {
+									activeRegionIndex = (newSel == .outer ? p.outer : p.inner)
+								}
+							}
+						)
 						
-						Picker("Edit region", selection: $activeRegionIndex) {
-							Text("Outer").tag(pair.outer)
-							Text("Inner").tag(pair.inner)
+						Picker("Edit region", selection: ringBinding) {
+							Text("Outer").tag(RingSel.outer)
+							Text("Inner").tag(RingSel.inner)
 						}
 						.pickerStyle(.segmented)
 						.onAppear {
 							// Default to “Outer” the first time (or after create/delete)
-							if !binding.regions.wrappedValue.indices.contains(activeRegionIndex) {
-								activeRegionIndex = pair.outer
+							if let p = concentricPairIndices(binding.wrappedValue) {
+								activeRegionIndex = (ringBinding.wrappedValue == .outer ? p.outer : p.inner)
+							} else {
+								let count = binding.regions.wrappedValue.count
+								if !binding.regions.wrappedValue.indices.contains(activeRegionIndex) {
+									activeRegionIndex = count > 0 ? 0 : -1
+								}
 							}
 						}
 						.onChange(of: binding.regions.wrappedValue) { _, _ in
 							// Keep selection valid if regions are added/removed
-							if !binding.regions.wrappedValue.indices.contains(activeRegionIndex) {
-								activeRegionIndex = pair.outer
+							if let p = concentricPairIndices(binding.wrappedValue) {
+								activeRegionIndex = (ringBinding.wrappedValue == .outer ? p.outer : p.inner)
+							} else {
+								let count = binding.regions.wrappedValue.count
+								if !binding.regions.wrappedValue.indices.contains(activeRegionIndex) {
+									activeRegionIndex = count > 0 ? 0 : -1
+								}
+							}
+						}
+						.onChange(of: isEditingRegion) { _, editing in
+							guard editing else { return }
+							// When toggling Edit on, re-point the active index to the current ring indices
+							if let p = concentricPairIndices(binding.wrappedValue) {
+								activeRegionIndex = (ringBinding.wrappedValue == .outer ? p.outer : p.inner)
+							} else {
+								let count = binding.regions.wrappedValue.count
+								if !binding.regions.wrappedValue.indices.contains(activeRegionIndex) {
+									activeRegionIndex = count > 0 ? 0 : -1
+								}
 							}
 						}
 					}

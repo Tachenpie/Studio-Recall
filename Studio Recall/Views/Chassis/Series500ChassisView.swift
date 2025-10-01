@@ -67,11 +67,12 @@ struct Series500ChassisView: View {
 			// 2) CHASSIS FACE (drop target)
 			HStack(spacing: spacing) { chassisContent }
 				.background(Color.black)
-				.cornerRadius(8)
+//				.cornerRadius(8)
 				.overlay(
 					Group {
 						if !isInteracting {
-							RoundedRectangle(cornerRadius: 8).stroke(Color.gray, lineWidth: 1)
+							Rectangle()
+								.stroke(Color.gray, lineWidth: 1)
 						}
 					}
 				)

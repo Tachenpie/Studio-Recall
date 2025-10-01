@@ -48,31 +48,43 @@ struct RegionHitLayer: View {
 	
 	var body: some View {
 		// Region frame in parent space (matches your CanvasViewport math)
-		let frame = regionFrameInParent(rect: rect)
-		let regionSize = CGSize(width: frame.width, height: frame.height)
 		
 		ZStack(alignment: .topLeading) {
-			// FULL-PARENT hit surface (no offset/position → no coord drift)
-//			Rectangle()
-//				.fill(Color.clear)
-//				.frame(width: parentSize.width, height: parentSize.height)
-//				.contentShape(Rectangle())
-//				.gesture(isPanMode || !isEnabled ? nil : dragGesture(regionFrame: frame, localSize: regionSize))
-//				.allowsHitTesting(isEnabled && !isPanMode)
 			if isConcentricOuterRegion {
-				let outer = regionFrameInParent(rect: rect)
-				let inner = regionFrameInParent(rect: regions[1].rect)
-				DonutShape(outerRect: outer, innerRect: inner)
-					.fill(Color.clear, style: FillStyle(eoFill: true))
-					.contentShape(DonutShape(outerRect: outer, innerRect: inner))
-					.gesture(isPanMode || !isEnabled ? nil : dragGesture(regionFrame: outer, localSize: regionSize))
-					.allowsHitTesting(isEnabled && !isPanMode)
+				if let pair = concentricPairIndices() {
+					let outerFrame = regionFrameInParent(rect: rect)
+					let innerFrame = regionFrameInParent(rect: regions[pair.inner].rect)
+					
+					let outerLocal = CGRect(origin: .zero, size: outerFrame.size)
+					let innerLocal = CGRect(
+						x: (innerFrame.minX - outerFrame.minX),
+						y: (innerFrame.minY - outerFrame.minY),
+						width: innerFrame.width,
+						height: innerFrame.height
+					)
+					
+					let donut = DonutShape(outerRect: outerLocal, innerRect: innerLocal)
+					
+					donut
+						.fill(Color.clear, style: FillStyle(eoFill: true))
+						.contentShape(donut)
+						.frame(width: outerFrame.width, height: outerFrame.height)
+						.position(x: outerFrame.midX, y: outerFrame.midY)
+						.gesture(isPanMode || !isEnabled ? nil : dragGesture(regionFrame: outerFrame, localSize: outerFrame.size))
+						.allowsHitTesting(isEnabled && !isPanMode)
+				} else {
+					EmptyView()
+				}
 			} else {
+				let regionFrame = regionFrameInParent(rect: rect)
+				let localSize = regionFrame.size
+				
 				RegionClipShape(shape: shape)
 					.fill(Color.clear)
-					.frame(width: parentSize.width, height: parentSize.height)
+					.frame(width: localSize.width, height: localSize.height)
+					.position(x: regionFrame.midX, y: regionFrame.midY)
 					.contentShape(RegionClipShape(shape: shape))   // ✅ hit testing matches shape
-					.gesture(isPanMode || !isEnabled ? nil : dragGesture(regionFrame: frame, localSize: regionSize))
+					.gesture(isPanMode || !isEnabled ? nil : dragGesture(regionFrame: regionFrame, localSize: localSize))
 					.allowsHitTesting(isEnabled && !isPanMode)
 			}
 		}
@@ -80,16 +92,17 @@ struct RegionHitLayer: View {
 	
 	// MARK: - Mapping (parent px delta → normalized delta)
 	private var isConcentricOuterRegion: Bool {
-		controlType == .concentricKnob && regionIndex == 0 && regions.count > 1
+		guard let pair = concentricPairIndices() else { return false }
+		return pair.outer == regionIndex
 	}
 	
-	private var innerRect: CGRect? {
-		guard isConcentricOuterRegion else { return nil }
-		return regions[1].rect.denormalized(to: canvasSize, zoom: zoom, pan: pan, parentSize: parentSize)
-	}
+//	private var innerRect: CGRect? {
+//		guard isConcentricOuterRegion else { return nil }
+//		return regions[1].rect.denormalized(to: canvasSize, zoom: zoom, pan: pan, parentSize: parentSize)
+//	}
 	
 	private func parentDeltaToNormalized(dx: CGFloat, dy: CGFloat) -> (CGFloat, CGFloat) {
-//		(dx / (canvasSize.width * zoom), dy / (canvasSize.height * zoom))
+		//		(dx / (canvasSize.width * zoom), dy / (canvasSize.height * zoom))
 		(dx / canvasSize.width, dy / canvasSize.height)
 	}
 	
@@ -147,7 +160,7 @@ struct RegionHitLayer: View {
 				
 				// Parent px deltas → canvas-normalized deltas
 				let resizeScale = 1.0 / zoom
-//				let (nx, ny) = parentDeltaToNormalized(dx: g.translation.width, dy: g.translation.height)
+				//				let (nx, ny) = parentDeltaToNormalized(dx: g.translation.width, dy: g.translation.height)
 				let (nx, ny) = parentDeltaToNormalized(
 					dx: g.translation.width * resizeScale,
 					dy: g.translation.height * resizeScale
@@ -229,57 +242,57 @@ struct RegionHitLayer: View {
 					}
 					
 				} else {
-						// ---- Rectangular anchored resizing (linear, no drift) ----
-						let minW: CGFloat = 0.01
-						let minH: CGFloat = 0.01
-						switch h {
-							case .left:
-								let newL = (dragStartRect.minX + nx).clamped(to: 0...(dragStartRect.maxX - minW))
-								r.origin.x   = newL
-								r.size.width = dragStartRect.maxX - newL
-								
-							case .right:
-								let newR = (dragStartRect.maxX + nx).clamped(to: (dragStartRect.minX + minW)...1)
-								r.size.width = newR - dragStartRect.minX
-								
-							case .top:
-								let newT = (dragStartRect.minY + ny).clamped(to: 0...(dragStartRect.maxY - minH))
-								r.origin.y    = newT
-								r.size.height = dragStartRect.maxY - newT
-								
-							case .bottom:
-								let newB = (dragStartRect.maxY + ny).clamped(to: (dragStartRect.minY + minH)...1)
-								r.size.height = newB - dragStartRect.minY
-								
-							case .topLeft:
-								let newL = (dragStartRect.minX + nx).clamped(to: 0...(dragStartRect.maxX - minW))
-								let newT = (dragStartRect.minY + ny).clamped(to: 0...(dragStartRect.maxY - minH))
-								r.origin.x   = newL
-								r.size.width = dragStartRect.maxX - newL
-								r.origin.y   = newT
-								r.size.height = dragStartRect.maxY - newT
-								
-							case .topRight:
-								let newR = (dragStartRect.maxX + nx).clamped(to: (dragStartRect.minX + minW)...1)
-								let newT = (dragStartRect.minY + ny).clamped(to: 0...(dragStartRect.maxY - minH))
-								r.size.width  = newR - dragStartRect.minX
-								r.origin.y    = newT
-								r.size.height = dragStartRect.maxY - newT
-								
-							case .bottomLeft:
-								let newL = (dragStartRect.minX + nx).clamped(to: 0...(dragStartRect.maxX - minW))
-								let newB = (dragStartRect.maxY + ny).clamped(to: (dragStartRect.minY + minH)...1)
-								r.origin.x   = newL
-								r.size.width = dragStartRect.maxX - newL
-								r.size.height = newB - dragStartRect.minY
-								
-							case .bottomRight:
-								let newR = (dragStartRect.maxX + nx).clamped(to: (dragStartRect.minX + minW)...1)
-								let newB = (dragStartRect.maxY + ny).clamped(to: (dragStartRect.minY + minH)...1)
-								r.size.width  = newR - dragStartRect.minX
-								r.size.height = newB - dragStartRect.minY
-						}
+					// ---- Rectangular anchored resizing (linear, no drift) ----
+					let minW: CGFloat = 0.01
+					let minH: CGFloat = 0.01
+					switch h {
+						case .left:
+							let newL = (dragStartRect.minX + nx).clamped(to: 0...(dragStartRect.maxX - minW))
+							r.origin.x   = newL
+							r.size.width = dragStartRect.maxX - newL
+							
+						case .right:
+							let newR = (dragStartRect.maxX + nx).clamped(to: (dragStartRect.minX + minW)...1)
+							r.size.width = newR - dragStartRect.minX
+							
+						case .top:
+							let newT = (dragStartRect.minY + ny).clamped(to: 0...(dragStartRect.maxY - minH))
+							r.origin.y    = newT
+							r.size.height = dragStartRect.maxY - newT
+							
+						case .bottom:
+							let newB = (dragStartRect.maxY + ny).clamped(to: (dragStartRect.minY + minH)...1)
+							r.size.height = newB - dragStartRect.minY
+							
+						case .topLeft:
+							let newL = (dragStartRect.minX + nx).clamped(to: 0...(dragStartRect.maxX - minW))
+							let newT = (dragStartRect.minY + ny).clamped(to: 0...(dragStartRect.maxY - minH))
+							r.origin.x   = newL
+							r.size.width = dragStartRect.maxX - newL
+							r.origin.y   = newT
+							r.size.height = dragStartRect.maxY - newT
+							
+						case .topRight:
+							let newR = (dragStartRect.maxX + nx).clamped(to: (dragStartRect.minX + minW)...1)
+							let newT = (dragStartRect.minY + ny).clamped(to: 0...(dragStartRect.maxY - minH))
+							r.size.width  = newR - dragStartRect.minX
+							r.origin.y    = newT
+							r.size.height = dragStartRect.maxY - newT
+							
+						case .bottomLeft:
+							let newL = (dragStartRect.minX + nx).clamped(to: 0...(dragStartRect.maxX - minW))
+							let newB = (dragStartRect.maxY + ny).clamped(to: (dragStartRect.minY + minH)...1)
+							r.origin.x   = newL
+							r.size.width = dragStartRect.maxX - newL
+							r.size.height = newB - dragStartRect.minY
+							
+						case .bottomRight:
+							let newR = (dragStartRect.maxX + nx).clamped(to: (dragStartRect.minX + minW)...1)
+							let newB = (dragStartRect.maxY + ny).clamped(to: (dragStartRect.minY + minH)...1)
+							r.size.width  = newR - dragStartRect.minX
+							r.size.height = newB - dragStartRect.minY
 					}
+				}
 				// Live clamp to 0…1 (safety)
 				r.size.width  = max(0.001, r.size.width)
 				r.size.height = max(0.001, r.size.height)
@@ -303,9 +316,9 @@ struct RegionHitLayer: View {
 				NSCursor.pop()
 #endif
 			}
-
+		
 	}
-
+	
 	// MARK: - Hit testing (LOCAL to rect)
 	private func pickHandle(localPoint p: CGPoint, size s: CGSize) -> ResizeHandle? {
 		// Distances to each edge (allow outside; negative means outside)
@@ -340,7 +353,7 @@ struct RegionHitLayer: View {
 		if p.x >= 0, p.y >= 0, p.x <= s.width, p.y <= s.height { return nil }
 		return nil
 	}
-
+	
 	
 	// MARK: - Types
 	private enum DragMode { case idle, dragging }
@@ -518,6 +531,33 @@ struct RegionHitLayer: View {
 				return clampSquare(xL, yT, size)
 		}
 	}
+	
+	// Pick outer/inner by area so order in the array can’t break us.
+	private func concentricPairIndices() -> (outer: Int, inner: Int)? {
+		guard controlType == .concentricKnob, regions.count >= 2 else { return nil }
+		let sorted = regions.enumerated()
+			.sorted { (a, b) in
+				let aa = a.element.rect.width * a.element.rect.height
+				let bb = b.element.rect.width * b.element.rect.height
+				return aa > bb
+			}
+		return (outer: sorted[0].offset, inner: sorted[1].offset)
+	}
+	
+	// Convert the inner rect into the local coords of the outer patch (used by the mask).
+	private func innerRectInOuterLocal(outer: CGRect, inner: CGRect, regionSize: CGSize) -> CGRect {
+		// 'outer' & 'inner' are normalized (0…1) rects in canvas space.
+		let ox = outer.minX, oy = outer.minY
+		let ow = max(outer.width,  .leastNonzeroMagnitude)
+		let oh = max(outer.height, .leastNonzeroMagnitude)
+		return CGRect(
+			x: (inner.minX - ox) / ow * regionSize.width,
+			y: (inner.minY - oy) / oh * regionSize.height,
+			width:  inner.width  / ow * regionSize.width,
+			height: inner.height / oh * regionSize.height
+		)
+	}
+
 }
 
 // MARK: - macOS cursors

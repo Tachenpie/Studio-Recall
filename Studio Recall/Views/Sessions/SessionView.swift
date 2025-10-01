@@ -65,6 +65,9 @@ struct SessionView: View {
 							let unitRow = DeviceMetrics.rackSize(units: 1, scale: settings.pointsPerInch)
 							let unitMod = DeviceMetrics.moduleSize(units: 1, scale: settings.pointsPerInch)
 							let topBarH: CGFloat = 24
+							let zoom = CGFloat(session.wrappedValue.canvasZoom)
+							let pan  = session.wrappedValue.canvasPan
+							let viewport = geo.size
 							
 							let rackRectsCG: [CGRect] = session.wrappedValue.racks.map { r in
 								let rows = r.slots.count
@@ -86,25 +89,34 @@ struct SessionView: View {
 							let rackPositions   = session.wrappedValue.racks.map(\.position)
 							let chassisPositions = session.wrappedValue.series500Chassis.map(\.position)
 							
+							let visibleRect = CGRect(
+								x: (-pan.x) / zoom,
+								y: (-pan.y) / zoom,
+								width:  viewport.width  / zoom,
+								height: viewport.height / zoom
+							)
+							
 							// While interacting, draw a single bitmap; when idle, draw live content.
 							// This removes per-frame re-render churn during pan/zoom.
-//							RasterizeWhileInteracting(isActive: Binding(get: { shouldRasterize }, set: { _ in })) {
-//								SessionCanvasLayer(session: session, canvasSize: geo.size, rackRects: rackRects)
-//									.environment(\.canvasZoom, CGFloat(session.wrappedValue.canvasZoom))
-//									.environment(\.isSnapshotting, shouldRasterize)
-//							}
-//							.scaleEffect(session.wrappedValue.canvasZoom, anchor: .topLeading)
-//							.offset(x: session.wrappedValue.canvasPan.x, y: session.wrappedValue.canvasPan.y)
-//							// Prevent implicit animations on every zoom/pan tick
-//							.transaction { $0.animation = nil }
-							let isInteractingNow = parentInteracting || isPanningNow || isZoomingNow || (dragContext.currentPayload != nil)
+							let isInteractingNow = parentInteracting || settings.parentInteracting || isPanningNow || isZoomingNow || (dragContext.currentPayload != nil)
 							
-							SessionCanvasLayer(session: session, canvasSize: geo.size, rackRects: rackRects)
-								.environment(\.canvasZoom, CGFloat(session.wrappedValue.canvasZoom))
-								.environment(\.isInteracting, isInteractingNow)   // ← NEW
-								.scaleEffect(session.wrappedValue.canvasZoom, anchor: .topLeading)
-								.offset(x: session.wrappedValue.canvasPan.x, y: session.wrappedValue.canvasPan.y)
-								.transaction { $0.animation = nil }
+							let lod: CanvasLOD = (zoom < 0.6) ? .low : ((zoom < 1.1) ? .medium : .full)
+							
+							SessionCanvasLayer(
+								session: session,
+								canvasSize: geo.size,
+								rackRectsCG: rackRectsCG,
+								chassisRectsCG: chassisRectsCG,
+								rackRects: rackRects,
+								visibleRect: visibleRect
+							)
+							.environment(\.canvasZoom, zoom)
+							.environment(\.isInteracting, isInteractingNow)
+							.environment(\.canvasLOD, lod)
+							.environment(\.renderStyle, sessionManager.renderStyle)
+							.scaleEffect(zoom, anchor: .topLeading)
+							.offset(x: pan.x, y: pan.y)
+							.transaction { $0.animation = nil }
 
 							// 3) Minimap stays separate and short
 							Group {
@@ -163,6 +175,15 @@ struct SessionView: View {
 				}
 				
 				ToolbarItemGroup(placement: .automatic) {
+					Picker("View", selection: renderStyleBinding) {
+						Label("Photo", systemImage: "photo").tag(RenderStyle.photoreal)
+						Label("Rep.",  systemImage: "rectangle.3.group.bubble.left").tag(RenderStyle.representative)
+					}
+					.pickerStyle(.segmented)
+					.help("Switch between photo faceplates and fast representative view")
+				}
+				
+				ToolbarItemGroup(placement: .automatic) {
 					Button {
 						showMinimap.toggle()
 					} label: {
@@ -173,42 +194,13 @@ struct SessionView: View {
 				
 					HStack(spacing: 8) {
 						Image(systemName: "minus.magnifyingglass")
+
 						// --- Slider binding (inside ToolbarItem .status) ---
-						Slider(
-							value: Binding(
-								get: {
-									if let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) {
-										return sessionManager.sessions[i].canvasZoom
-									} else {
-										return 1.2
-									}
-								},
-								set: { newZoom in
-									guard let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) else { return }
-									let oldZoom = sessionManager.sessions[i].canvasZoom
-									let clamped = min(max(newZoom, 0.5), 4.0)
-									
-									// keep center stable
-									if let window = NSApp.keyWindow {
-										let canvasSize = window.contentView?.bounds.size ?? .zero
-										let screenCenter = CGPoint(x: canvasSize.width/2, y: canvasSize.height/2)
-										let oldPan = sessionManager.sessions[i].canvasPan
-										let worldCenterX = (screenCenter.x - oldPan.x) / oldZoom
-										let worldCenterY = (screenCenter.y - oldPan.y) / oldZoom
-										let newPan = CGPoint(
-											x: screenCenter.x - worldCenterX * clamped,
-											y: screenCenter.y - worldCenterY * clamped
-										)
-										sessionManager.sessions[i].canvasPan = newPan
-									}
-									
-									sessionManager.sessions[i].canvasZoom = clamped
-								}
-							),
-							in: 0.5...4.0
-						)
-						.frame(width: 140)
+						Slider(value: zoomBinding, in: 0.5...4.0)
+							.frame(width: 140)
+
 						Image(systemName: "plus.magnifyingglass")
+						
 						Button {
 							if let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) {
 								withAnimation {
@@ -277,6 +269,47 @@ struct SessionView: View {
 				SaveTemplateNameSheet(sessionManager: sessionManager)
 			}
     }
+
+	// MARK: - Helper bindings (reduce type-checker load)
+	private var renderStyleBinding: Binding<RenderStyle> {
+		Binding<RenderStyle>(
+			get: { sessionManager.renderStyle },
+			set: { sessionManager.renderStyle = $0 }
+		)
+	}
+	
+	private var zoomBinding: Binding<Double> {
+		Binding<Double>(
+			get: {
+				if let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) {
+					return sessionManager.sessions[i].canvasZoom
+				} else {
+					return 1.2
+				}
+			},
+			set: { newZoom in
+				guard let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) else { return }
+				let oldZoom = sessionManager.sessions[i].canvasZoom
+				let clamped = min(max(newZoom, 0.5), 4.0)
+				
+				// keep center visually stable while zooming
+				if let window = NSApp.keyWindow {
+					let canvasSize = window.contentView?.bounds.size ?? .zero
+					let screenCenter = CGPoint(x: canvasSize.width/2, y: canvasSize.height/2)
+					let oldPan = sessionManager.sessions[i].canvasPan
+					let worldCenterX = (screenCenter.x - oldPan.x) / oldZoom
+					let worldCenterY = (screenCenter.y - oldPan.y) / oldZoom
+					let newPan = CGPoint(
+						x: screenCenter.x - worldCenterX * clamped,
+						y: screenCenter.y - worldCenterY * clamped
+					)
+					sessionManager.sessions[i].canvasPan = newPan
+				}
+				
+				sessionManager.sessions[i].canvasZoom = clamped
+			}
+		)
+	}
 
 	// MARK: - Gestures
 	private func magnifyGesture(session: Binding<Session>) -> some Gesture {
@@ -418,65 +451,6 @@ private struct MinimapOverlay: View {
 private extension CGPoint {
 	static func - (lhs: CGPoint, rhs: CGPoint) -> CGPoint { .init(x: lhs.x - rhs.x, y: lhs.y - rhs.y) }
 }
-
-// MARK: - Rasterizer for buttery pan/zoom (env-object aware + fail-safe)
-//private struct RasterizeWhileInteracting<Content: View>: View {
-//	@Binding var isActive: Bool
-//	let content: Content
-//	
-//	// pull in the env objects used by the canvas subtree
-//	@EnvironmentObject private var settings: AppSettings
-//	@EnvironmentObject private var library: DeviceLibrary
-//	@EnvironmentObject private var sessionManager: SessionManager
-//	
-//	@State private var snapshot: NSImage? = nil
-//	@State private var canSnapshot: Bool = true   // permanently disable if flattening fails once
-//	
-//	init(isActive: Binding<Bool>, @ViewBuilder content: () -> Content) {
-//		self._isActive = isActive
-//		self.content = content()
-//	}
-//	
-//	var body: some View {
-//		ZStack {
-//			if isActive, canSnapshot, let img = snapshot {
-//				Image(nsImage: img).interpolation(.high)
-//			} else {
-//				// live tree (idle OR snapshot not supported)
-//				content
-////					.compositingGroup()
-////					.drawingGroup(opaque: false, colorMode: .linear)
-//			}
-//		}
-//		.onAppear { DragContext.shared.endDrag() }
-//		.onChange(of: isActive) { _, active in
-//			guard active else { snapshot = nil; return }
-//			guard canSnapshot else { return }
-//			
-//#if os(macOS)
-//			// Inject the same EnvironmentObjects the live tree expects.
-//			let renderContent = content
-//				.environmentObject(settings)
-//				.environmentObject(library)
-//				.environmentObject(sessionManager)
-//			
-//			let renderer = ImageRenderer(content: renderContent)
-//			renderer.isOpaque = false
-//			renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
-//			
-//			if let img = renderer.nsImage {
-//				snapshot = img
-//			} else {
-//				// Some subviews (e.g., AppKit drag adaptors) can't be flattened.
-//				// Fall back to live mode for this run.
-//				canSnapshot = false
-//				snapshot = nil
-//			}
-//#endif
-//		}
-//		.onDisappear { snapshot = nil }
-//	}
-//}
 
 // MARK: - Interaction flag for perf tuning during pan/zoom/drag
 private struct IsInteractingKey: EnvironmentKey { static let defaultValue = false }

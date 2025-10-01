@@ -9,6 +9,7 @@ import SwiftUI
 struct SessionContainerView: View {
     @State private var selectedDevice: Device? = nil
     @EnvironmentObject var library: DeviceLibrary
+	@EnvironmentObject var settings: AppSettings
    
 	@State private var libraryIsEditing: Bool = false
 	
@@ -18,11 +19,12 @@ struct SessionContainerView: View {
                 .environmentObject(library)
 				.onPreferenceChange(LibraryEditingDeviceKey.self) { editing in
 					libraryIsEditing = editing
+					settings.parentInteracting = editing
 				}
         } detail: {
             SessionView()
                 .environmentObject(library)
-				.environment(\.isInteracting, libraryIsEditing)
+				.environment(\.isInteracting, settings.parentInteracting || libraryIsEditing)
         }
     }
 }

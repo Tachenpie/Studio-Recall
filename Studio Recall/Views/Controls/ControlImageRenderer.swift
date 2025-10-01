@@ -12,7 +12,7 @@ import AppKit
 
 
 #if DEBUG
-private let LOG_ROTATE = true   // flip to false to silence
+private let LOG_ROTATE = false   // flip to false to silence
 #else
 private let LOG_ROTATE = false
 #endif
@@ -109,6 +109,17 @@ struct ControlImageRenderer: View {
 									if region.mapping?.kind == .sprite {
 										// For sprites (multiSwitch etc.), no mask — let lever extend
 										Rectangle()
+									} else if control.type == .concentricKnob,
+											  let pair = concentricPairIndices(control.regions),
+											  pair.outer == idx {
+										let outerRectLocal = CGRect(origin: .zero, size: geo.size)
+										let innerLocal = innerRectInOuterLocal(
+											outer: region.rect,
+											inner: control.regions[pair.inner].rect,
+											regionSize: geo.size
+										)
+										DonutShape(outerRect: outerRectLocal, innerRect: innerLocal)
+											.fill(style: FillStyle(eoFill: true))
 									} else {
 										// Keep normal region clipping for knobs, lights, etc.
 										RegionClipShape(shape: region.shape)
@@ -201,7 +212,8 @@ struct VisualEffect: ViewModifier {
 				case .knob:
 					return .rotate(min: -135, max: 135, pivot: .init(x: 0.5, y: 0.5), taper: .linear)
 				case .concentricKnob:
-					if regionIndex == 0 {
+					let pair = concentricPairIndices(control.regions)
+					if pair?.outer == regionIndex {
 						return control.outerMapping ?? .rotate(min: -135, max: 135, pivot: .init(x: 0.5, y: 0.5), taper: control.outerTaper ?? .linear)
 					} else {
 						return control.innerMapping ?? .rotate(min: -135, max: 135, pivot: .init(x: 0.5, y: 0.5), taper: control.innerTaper ?? .linear)
@@ -276,8 +288,10 @@ struct VisualEffect: ViewModifier {
 								}
 								
 							case .concentricKnob:
+								let pair = concentricPairIndices(control.regions)
+								let isConcentricOuter = (control.type == .concentricKnob && pair?.outer == regionIndex)
 								// Per-ring normalization (keep your existing behavior)
-								if regionIndex == 0 {
+								if isConcentricOuter {
 									return mapping.rotationDegrees(
 										for: control.outerValue,
 										lo: control.outerMin,
@@ -619,8 +633,6 @@ struct VisualEffect: ViewModifier {
 		}
 	}
 
-
-	
 	// Resolve on/off — supports linkTarget for .light
 	private func booleanState(for c: Control, resolve: (UUID) -> Control?) -> Bool {
 		var base: Bool
@@ -872,3 +884,25 @@ private extension CGPoint {
 	var debugString: String { "(\(Double(x).rounded3), \(Double(y).rounded3))" }
 }
 
+// Pick outer/inner by area so order in the array can’t break us.
+private func concentricPairIndices(_ regions: [ImageRegion]) -> (outer: Int, inner: Int)? {
+	guard regions.count >= 2 else { return nil }
+	let areas = regions.enumerated().map { (i, r) in (i, r.rect.width * r.rect.height) }
+	let outer = areas.max(by: { $0.1 < $1.1 })!.0
+	let inner = areas.min(by: { $0.1 < $1.1 })!.0
+	return (outer, inner)
+}
+
+// Convert the inner rect into the local coords of the outer patch (used by the mask).
+private func innerRectInOuterLocal(outer: CGRect, inner: CGRect, regionSize: CGSize) -> CGRect {
+	// 'outer' & 'inner' are normalized (0…1) rects in canvas space.
+	let ox = outer.minX, oy = outer.minY
+	let ow = max(outer.width,  .leastNonzeroMagnitude)
+	let oh = max(outer.height, .leastNonzeroMagnitude)
+	return CGRect(
+		x: (inner.minX - ox) / ow * regionSize.width,
+		y: (inner.minY - oy) / oh * regionSize.height,
+		width:  inner.width  / ow * regionSize.width,
+		height: inner.height / oh * regionSize.height
+	)
+}

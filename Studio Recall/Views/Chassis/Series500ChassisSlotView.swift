@@ -18,6 +18,8 @@ struct Series500ChassisSlotView: View {
 	@EnvironmentObject var sessionManager: SessionManager
     
 	@Environment(\.isInteracting) private var isInteracting
+	@Environment(\.displayScale) private var displayScale
+	@Environment(\.renderStyle) private var renderStyle
 	
     @Binding var hoveredIndex: Int?
     @Binding var hoveredRange: Range<Int>?
@@ -39,7 +41,11 @@ struct Series500ChassisSlotView: View {
 
 	private func deviceView(_ device: Device, instance: DeviceInstance) -> some View {
 		let units = device.slotWidth ?? 1
-		let moduleSize = DeviceMetrics.moduleSize(units: units, scale: settings.pointsPerInch)
+		let rawSlot = DeviceMetrics.moduleSize(units: units, scale: settings.pointsPerInch)
+		
+		let slotW = (rawSlot.width  * displayScale).rounded() / displayScale
+		let slotH = (rawSlot.height * displayScale).rounded() / displayScale
+		let slotSize = CGSize(width: slotW, height: slotH)
 		
 		guard let topIndex = indexOfInstance(instance) else {
 			return AnyView(EmptyView())
@@ -53,41 +59,77 @@ struct Series500ChassisSlotView: View {
 			}
 		)
 		
-		let body = ZStack(alignment: .topLeading) {
-			EditableDeviceView(device: .constant(device))
-				.frame(width: moduleSize.width, height: moduleSize.height)
+		let fm = DeviceMetrics.faceRenderMetrics(
+			faceWidthPts: slotSize.width,
+			slotHeightPts: slotSize.height,
+			imageData: device.imageData
+		)
+		
+		let faceW = (fm.size.width  * displayScale).rounded() / displayScale
+		let faceH = (fm.size.height * displayScale).rounded() / displayScale
+		let vOffset = ((slotSize.height - faceH) * 0.5 * displayScale).rounded() / displayScale
+		let snappedFM = FaceRenderMetrics(size: CGSize(width: faceW, height: faceH), vOffset: vOffset)
+		
+		let faceGroup = ZStack(alignment: .topLeading) {
+			// Face bitmap
+			DeviceView(device: device, metrics: snappedFM)
+				.frame(width: snappedFM.size.width, height: snappedFM.size.height)
 				.allowsHitTesting(false)
-				.modifier(ConditionalDrawingGroup(active: isInteracting))
+				.modifier(ConditionalDrawingGroup(active: renderStyle == .photoreal && isInteracting))
 			
-			RuntimeControlsOverlay(device: device, instance: instanceBinding, prelayout: nil, faceMetrics: nil)
-				.frame(width: moduleSize.width, height: moduleSize.height)
-				.zIndex(1)
+			// Runtime overlay - use the same metrics
+			RuntimeControlsOverlay(
+				device: device,
+				instance: instanceBinding,
+				prelayout: nil,
+				faceMetrics: snappedFM
+			)
+			.frame(width: snappedFM.size.width, height: snappedFM.size.height)
+			.zIndex(1)
+			.allowsHitTesting(true)
+			
+			// Labels anchored to the device
+			if let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) {
+				let session = $sessionManager.sessions[i]
+				LabelCanvas(
+					labels: session.labels,
+					anchor: .deviceInstance(instance.id),
+					parentOrigin: .zero
+				)
 				.allowsHitTesting(true)
+			}
+		}
+		.offset(y: snappedFM.vOffset)
+			
+		let body = ZStack(alignment: .topLeading) {
+			faceGroup
 			
 			// ✅ Draggable rails with screws (500-series: top & bottom)
-				.overlay(alignment: .top) {
-					RailH()
-						.contentShape(Rectangle())
-						.onDrag {
-							deviceDragProvider(instance: instance, device: device) // top rail drag
-						} preview: {
-							DeviceView(device: device)
-								.frame(width: 140, height: 60)
-								.shadow(radius: 6)
+			.overlay(alignment: .top) {
+				RailH(height: 3)
+//					.compositingGroup()
+					.contentShape(Rectangle())
+					.onDrag {
+						deviceDragProvider(instance: instance, device: device) // top rail drag
+					} preview: {
+						DeviceView(device: device)
+							.frame(width: 140, height: 60)
+							.shadow(radius: 6)
+					}
+					.contextMenu {
+						Button("Edit Device...") {
+							editingDevice = device
+							isPresentingEditor = true
 						}
-						.contextMenu {
-							Button("Edit Device...") {
-								editingDevice = device
-								isPresentingEditor = true
-							}
-							Button("Remove from rack", role: .destructive) {
-								removeInstance(instance, of: device)
-							}
+						Button("Remove from rack", role: .destructive) {
+							removeInstance(instance, of: device)
 						}
-				}
-
-				.overlay(alignment: .bottom) {
-				RailH()
+					}
+			}
+		
+			.overlay(alignment: .bottom) {
+				RailH(height: 3)
+//					.compositingGroup()
 					.contentShape(Rectangle())
 					.onDrag {
 						deviceDragProvider(instance: instance, device: device) // bottom rail drag
@@ -106,65 +148,28 @@ struct Series500ChassisSlotView: View {
 						}
 					}
 			}
-			
-			if let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) {
-				let session = $sessionManager.sessions[i]
-				LabelCanvas(
-					labels: session.labels,
-					anchor: .deviceInstance(instance.id),
-					parentOrigin: .zero
-				)
-				.allowsHitTesting(true)
-			}
-
 		}
-			.frame(width: moduleSize.width, height: moduleSize.height)
-//			.clipShape(RoundedRectangle(cornerRadius: 6))
-			.clipShape(Rectangle())
-//			.allowsHitTesting(false)
-			.padding(.vertical, 4)
-//			.onDrag {
-//				let payload = DragPayload(instanceId: instance.id, deviceId: device.id)
-//				DragContext.shared.beginDrag(payload: payload)
-//				if let data = try? JSONEncoder().encode(payload) {
-//					return NSItemProvider(item: data as NSData,
-//										  typeIdentifier: UTType.deviceDragPayload.identifier)
-//				}
-//				return NSItemProvider()
-//			} preview: {
-//				DeviceView(device: device).frame(width: 60, height: 80).shadow(radius: 4)
-//			}
-			.overlay(
-//				RoundedRectangle(cornerRadius: 6)
-				Rectangle()
-					.stroke(highlightColor(), lineWidth: 3)
-					.allowsHitTesting(false)
+		.frame(width: slotSize.width, height: slotSize.height, alignment: .topLeading)
+		.clipShape(Rectangle())
+		.padding(.vertical, 4)
+		.overlay(
+			Rectangle()
+				.stroke(highlightColor(), lineWidth: 3)
+				.allowsHitTesting(false)
+		)
+		.sheet(item: $editingDevice) { device in
+			DeviceEditorView(
+				editableDevice: EditableDevice(device: device),
+				onCommit: { updated in
+					// Save updated device back into your devices array / library
+					library.update(updated)
+					editingDevice = nil
+				},
+				onCancel: {
+					editingDevice = nil
+				}
 			)
-			.sheet(item: $editingDevice) { device in
-				DeviceEditorView(
-					editableDevice: EditableDevice(device: device),
-					onCommit: { updated in
-						// Save updated device back into your devices array / library
-						library.update(updated)
-						editingDevice = nil
-					},
-					onCancel: {
-						editingDevice = nil
-					}
-				)
-			}
-//			.onDrop(of: [UTType.deviceDragPayload],
-//					delegate: Series500DropDelegate(
-//						fixedIndex: index,
-//						indexFor: nil,
-//						slots: $slots,
-//						hoveredIndex: $hoveredIndex,
-//						hoveredRange: $hoveredRange,
-//						hoveredValid: $hoveredValid,
-//						library: library,
-//						onCommit: { sessionManager.saveSessions() }
-//					)
-//			)
+		}
 
 		return AnyView(body)
 	}
@@ -185,18 +190,6 @@ struct Series500ChassisSlotView: View {
 				}
 			)
 			.contentShape(Rectangle()) // <- important for drops
-//			.onDrop(of: [UTType.deviceDragPayload],
-//					delegate: Series500DropDelegate(
-//						fixedIndex: index,
-//						indexFor: nil,
-//						slots: $slots,
-//						hoveredIndex: $hoveredIndex,
-//						hoveredRange: $hoveredRange,
-//						hoveredValid: $hoveredValid,
-//						library: library,
-//						onCommit: { sessionManager.saveSessions() }
-//					)
-//			)
 	}
 
     private func highlightColor() -> Color {
@@ -215,6 +208,7 @@ struct Series500ChassisSlotView: View {
 		let count = max(1, device.slotWidth ?? 1)
 		let end = min(start + count, slots.count)
 		for i in start..<end { slots[i] = nil }
+		sessionManager.saveSessions()
 	}
 
 	private func deviceDragProvider(instance: DeviceInstance, device: Device) -> NSItemProvider {
@@ -233,21 +227,26 @@ struct Series500ChassisSlotView: View {
 	}
 	
 	private struct RailH: View {
+		var height: CGFloat = 3
+		
 		var body: some View {
-//			RoundedRectangle(cornerRadius: 3)
 			Rectangle()
-				.fill(.ultraThinMaterial)
+				.fill(LinearGradient(
+					colors: [
+						Color.black.opacity(0.22),
+						Color.black.opacity(0.06),
+						Color.black.opacity(0.22)
+					],
+					startPoint: .top, endPoint: .bottom
+				))
 				.overlay(
-//					RoundedRectangle(cornerRadius: 3)
 					Rectangle()
-						.stroke(.secondary.opacity(0.35), lineWidth: 1)
+						.stroke(Color.black.opacity(0.35), lineWidth: 0.5)
 				)
-				.frame(height: 5)
-				.opacity(0.9)
+				.frame(height: height)
+				.overlay(RailScrewsH())
+				.opacity(0.95)
 				.help("Drag to move this module")
-				.overlay( // screw dots
-					RailScrewsH()
-				)
 		}
 	}
 	

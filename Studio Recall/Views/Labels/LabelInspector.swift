@@ -9,8 +9,14 @@ import SwiftUI
 import AppKit
 
 struct LabelInspector: View {
+	@EnvironmentObject var sessionManager: SessionManager
+	
 	@Binding var label: SessionLabel
 	@Environment(\.dismiss) private var dismiss
+	@Environment(\.canvasZoom) private var canvasZoom
+	
+	@State private var showSavePresetSheet = false
+	@State private var newPresetName: String = ""
 	@State private var families: [String] = NSFontManager.shared.availableFontFamilies.sorted()
 	@FocusState private var textFocused: Bool
 	
@@ -22,6 +28,17 @@ struct LabelInspector: View {
 			
 			// Header
 			Text("Label").font(.title2).bold()
+			
+			// Preview
+			VStack(alignment: .leading, spacing: 6) {
+				Text("Preview").font(.caption).foregroundStyle(.secondary)
+				LabelStylePreview(
+					text: draft.text,
+					style: draft.style,
+					scale: CGFloat(canvasZoom)
+				)
+				.accessibilityLabel("Label preview at \(Int((canvasZoom) * 100))%")
+			}
 			
 			// Text
 			VStack(alignment: .leading, spacing: 6) {
@@ -137,18 +154,79 @@ struct LabelInspector: View {
 			// Presets row (taller so buttons don’t clip)
 			VStack(alignment: .leading, spacing: 6) {
 				Text("Presets").font(.caption).foregroundStyle(.secondary)
+				
 				ScrollView(.horizontal, showsIndicators: false) {
 					HStack(spacing: 8) {
+						// Built-ins
 						ForEach(LabelPreset.allCases) { p in
-							Button("\(p.icon)  \(p.displayName)") {
+							Button {
 								draft.style = .preset(p)
+							} label: {
+								PresetChip(title: p.displayName, style: .preset(p))
 							}
 							.buttonStyle(.bordered)
 							.controlSize(.large)
 						}
+						
+						// User presets
+						let customs = LabelPresetStore.load()
+						if !customs.isEmpty {
+							Divider().frame(height: 22)
+							ForEach(customs) { c in
+								Button {
+									draft.style = c.style
+								} label: {
+									PresetChip(title: c.name, style: c.style)
+								}
+								.buttonStyle(.borderedProminent)
+								.controlSize(.large)
+								.contextMenu {
+									Button("Delete", role: .destructive) {
+										LabelPresetStore.delete(id: c.id)
+									}
+								}
+							}
+						}
 					}
 					.frame(height: 44)
 				}
+				
+				HStack(spacing: 8) {
+					Button("Save Preset…") {
+						// Pre-fill with label text if available, fallback to readable style name.
+						newPresetName = draft.text.isEmpty ? "Preset \(Date().formatted(date: .numeric, time: .omitted))" : draft.text
+						showSavePresetSheet = true
+					}
+					.buttonStyle(.bordered)
+					
+					Button("Use as Default") {
+						LabelStyleDefaults.save(draft.style)
+					}
+					Button("Reset to App Default") {
+						draft.style = LabelStyleDefaults.load()
+					}
+					.help("Reload the saved default; use Reset in app preferences to reset to system defaults")
+					Spacer()
+				}
+			}
+			.sheet(isPresented: $showSavePresetSheet) {
+				VStack(alignment: .leading, spacing: 12) {
+					Text("Save Label Preset").font(.title2).bold()
+					TextField("Preset name", text: $newPresetName)
+						.textFieldStyle(.roundedBorder)
+						.frame(width: 300)
+					HStack {
+						Spacer()
+						Button("Cancel") { showSavePresetSheet = false }
+						Button("Save") {
+							LabelPresetStore.add(name: newPresetName, style: draft.style)
+							showSavePresetSheet = false
+						}
+						.keyboardShortcut(.defaultAction)
+					}
+				}
+				.padding(20)
+				.frame(minWidth: 360)
 			}
 			
 			Spacer(minLength: 8)
@@ -159,6 +237,7 @@ struct LabelInspector: View {
 				Button("Cancel") { dismiss() }
 				Button("Done") {
 					label = draft
+					sessionManager.saveSessions()
 					dismiss()
 				}
 				.keyboardShortcut(.defaultAction)
@@ -166,5 +245,76 @@ struct LabelInspector: View {
 		}
 		.padding(16)
 		.frame(minWidth: 440)
+	}
+}
+
+private struct PresetChip: View {
+	var title: String
+	var style: LabelStyleSpec
+	var body: some View {
+		HStack(spacing: 6) {
+			Text(title)
+			RoundedRectangle(cornerRadius: 4)
+				.fill(style.background.color)
+				.overlay(RoundedRectangle(cornerRadius: 4).stroke(style.borderColor.color, lineWidth: max(1, style.borderWidth)))
+				.overlay(Text("Aa").font(.system(size: 10)).foregroundStyle(style.textColor.color))
+				.frame(width: 28, height: 16)
+		}
+	}
+}
+
+private struct LabelStylePreview: View {
+	var text: String
+	var style: LabelStyleSpec
+	var scale: CGFloat = 1
+	
+	var body: some View {
+		ZStack {
+			Checkerboard(cell: 8)
+				.clipShape(RoundedRectangle(cornerRadius: 8))
+				.overlay(
+					RoundedRectangle(cornerRadius: 8)
+						.stroke(Color.black.opacity(0.06), lineWidth: 1)
+				)
+			
+			Text(text.isEmpty ? "Label" : text)
+				.font(.custom(style.fontName, size: style.fontSize * scale))
+				.foregroundStyle(style.textColor.color)
+				.padding(.horizontal, style.paddingH * scale)
+				.padding(.vertical, style.paddingV * scale)
+				.background(style.background.color)
+				.overlay(
+					RoundedRectangle(cornerRadius: style.cornerRadius * scale)
+						.stroke(style.borderColor.color, lineWidth: max(0, style.borderWidth) * scale)
+				)
+				.cornerRadius(style.cornerRadius * scale)
+				.opacity(style.opacity)
+				.shadow(radius: style.shadow * scale)
+		}
+		.frame(maxWidth: .infinity, minHeight: 90, maxHeight: 130)
+		.clipShape(RoundedRectangle(cornerRadius: 8))
+	}
+}
+
+private struct Checkerboard: View {
+	var cell: CGFloat = 8
+	var light = Color(.sRGB, white: 0.92, opacity: 1)
+	var dark  = Color(.sRGB, white: 0.82, opacity: 1)
+	
+	var body: some View {
+		Canvas { context, size in
+			let cols = Int(ceil(size.width  / cell))
+			let rows = Int(ceil(size.height / cell))
+			for r in 0..<rows {
+				for c in 0..<cols {
+					let isDark = (r + c) % 2 == 1
+					let rect = CGRect(x: CGFloat(c) * cell,
+									  y: CGFloat(r) * cell,
+									  width: cell, height: cell)
+					context.fill(Path(rect), with: .color(isDark ? dark : light))
+				}
+			}
+		}
+		.allowsHitTesting(false)
 	}
 }

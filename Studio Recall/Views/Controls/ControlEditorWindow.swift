@@ -31,6 +31,8 @@ struct ControlEditorWindow: View {
 	@State private var isPanning: Bool = false
 	@State private var showDetectSheet = false
 	@State private var zoomFocusN: CGPoint? = nil
+//	@State private var focusNameRequest: UUID? = nil
+	@State private var focusNameInPalette: UUID? = nil
 	
 	// Detect tab shared state
 	@State private var pendingDrafts: [ControlDraft] = [] // existing; keep it here
@@ -174,6 +176,10 @@ struct ControlEditorWindow: View {
 								imagePixelSize: pixelSize
 							)
 						)
+					},
+					onNewControlDropped: { id in
+						selectedControlId = id
+						focusNameInPalette = id
 					}
 				)
 			}
@@ -288,7 +294,8 @@ struct ControlEditorWindow: View {
 							ControlPalette(
 							editableDevice: editableDevice,
 							selectedControlId: $selectedControlId,
-							isWideFaceplate: isWideFaceplate
+							isWideFaceplate: isWideFaceplate,
+							focusNameForId: focusNameInPalette
 							)
 							.padding()
 							.onChange(of: selectedControlId) { _, _ in updateZoomFocusFromSelection() }
@@ -325,9 +332,17 @@ struct ControlEditorWindow: View {
 		editableDevice.device.controls.append(c)
 		selectedControlId = c.id
 		sidebarTab = .inspector
+		focusNameInPalette = c.id
 	}
 	
 	private func updateZoomFocusFromSelection() {
+		if let id = selectedControlId,
+		   let c  = editableDevice.device.controls.first(where: { $0.id == id }) {
+			// prefer the control center
+			zoomFocusN = CGPoint(x: max(0,min(1,c.x)), y: max(0,min(1,c.y)))
+			return
+		}
+		// fallback to Detect selection (unchanged)
 		guard let data = editableDevice.device.imageData,
 			  let img  = NSImage(data: data),
 			  let cg   = img.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
@@ -617,7 +632,7 @@ private struct DetectDraftsOverlay: View {
 				let b = parentPointToCanvas(value.location)
 				let x0 = min(a.x, b.x), y0 = min(a.y, b.y)
 				let x1 = max(a.x, b.x), y1 = max(a.y, b.y)
-				lassoRectCanvas = CGRect(x: x0, y: y0, width: x1 - x0, height: y1 - y1)
+				lassoRectCanvas = CGRect(x: x0, y: y0, width: x1 - x0, height: y1 - y0)
 				if let rect = lassoRectCanvas {
 					selectedIDs = Set(draftItems.compactMap { d in
 						let rC = pxRectToCanvas(d.rect)

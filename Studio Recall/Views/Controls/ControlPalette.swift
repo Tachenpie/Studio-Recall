@@ -17,23 +17,56 @@ struct ControlPalette: View {
 	@State private var searchText: String = ""
 	
 	let isWideFaceplate: Bool
+	var focusNameForId: UUID? = nil
+	
+	@FocusState private var focusedRowId: UUID?
 	
 	var body: some View {
-		ScrollView {
-			if isWideFaceplate {
-				HStack(alignment: .top, spacing: 12) {
-					VStack {
+		ScrollViewReader { outerProxy in
+			ScrollView {
+				if isWideFaceplate {
+					HStack(alignment: .top, spacing: 12) {
+						VStack {
+							SectionHeader(title: "New Controls")
+							NewControlsGrid() // simple grid of tiles
+						}
+						Divider().opacity(0.1).padding(.leading, 6)
+						VStack {
+							SectionHeader(title: "Controls on Faceplate")
+							// Anchor so the OUTER scroll view can snap to the list section
+							Color.clear.frame(height: 0).id("existing-list")
+							SearchField(text: $searchText)
+							
+							ExistingControlsList(
+								controls: filtered(editableDevice.device.controls, by: $searchText.wrappedValue),
+								selectedId: $selectedControlId,
+								focused: $focusedRowId,
+								onDelete: deleteControl,
+								onRename: { id, newName in
+									if let i = editableDevice.device.controls.firstIndex(where: { $0.id == id }) {
+										editableDevice.device.controls[i].name = newName
+									}
+								}
+							)
+						}
+					}
+					.padding(12)
+				} else {
+					VStack(spacing: 12) {
 						SectionHeader(title: "New Controls")
 						NewControlsGrid() // simple grid of tiles
-					}
-					Divider().opacity(0.1).padding(.leading, 6)
-					VStack {
+						
+						Divider().opacity(0.1).padding(.top, 6)
+						
 						SectionHeader(title: "Controls on Faceplate")
+						// Anchor for the OUTER scroll view
+						Color.clear.frame(height: 0).id("existing-list")
 						SearchField(text: $searchText)
 						
 						ExistingControlsList(
-							controls: filtered(editableDevice.device.controls, by: searchText),
+							controls: filtered(editableDevice.device.controls, by: $searchText.wrappedValue),
 							selectedId: $selectedControlId,
+							focused: $focusedRowId,
 							onDelete: deleteControl,
 							onRename: { id, newName in
 								if let i = editableDevice.device.controls.firstIndex(where: { $0.id == id }) {
@@ -42,55 +75,41 @@ struct ControlPalette: View {
 							}
 						)
 					}
+					.padding(12)
 				}
-				.padding(12)
-			} else {
-				VStack(spacing: 12) {
-					SectionHeader(title: "New Controls")
-					NewControlsGrid() // simple grid of tiles
-					
-					Divider().opacity(0.1).padding(.top, 6)
-					
-					SectionHeader(title: "Controls on Faceplate")
-					SearchField(text: $searchText)
-					
-					ExistingControlsList(
-						controls: filtered(editableDevice.device.controls, by: searchText),
-						selectedId: $selectedControlId,
-						onDelete: deleteControl,
-						onRename: { id, newName in
-							if let i = editableDevice.device.controls.firstIndex(where: { $0.id == id }) {
-								editableDevice.device.controls[i].name = newName
-							}
-						}
-					)
+			}
+#if os(macOS)
+			.background(Color(NSColor.controlBackgroundColor))
+#else
+			.background(Color(UIColor.secondarySystemBackground))
+#endif
+			.onChange(of: focusNameForId) { _, req in
+				guard let req else { return }
+				searchText = ""
+				selectedControlId = req
+				focusedRowId = req
+				withAnimation(.easeInOut(duration: 0.2)) {
+					outerProxy.scrollTo("existing-list", anchor: .top)
 				}
-				.padding(12)
 			}
 		}
-#if os(macOS)
-		.background(Color(NSColor.controlBackgroundColor))
-#else
-		.background(Color(UIColor.secondarySystemBackground))
-#endif
 	}
 	
 	// Filtering kept simple & explicit (helps type-checker)
 	private func filtered(_ items: [Control], by query: String) -> [Control] {
 		let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-		let base: [Control]
 		if q.isEmpty {
-			base = items
+			return items                 // ← keep device order (stable while editing)
 		} else {
-			base = items.filter { c in
+			let filtered = items.filter { c in
 				let name = (c.name.isEmpty ? c.type.displayName : c.name).lowercased()
 				return name.contains(q)
 			}
-		}
-		return base.sorted { a, b in
-			let an = a.name.isEmpty ? a.type.displayName : a.name
-			let bn = b.name.isEmpty ? b.type.displayName : b.name
-			return an.localizedCaseInsensitiveCompare(bn) == .orderedAscending
+			return filtered.sorted { a, b in
+				let an = a.name.isEmpty ? a.type.displayName : a.name
+				let bn = b.name.isEmpty ? b.type.displayName : b.name
+				return an.localizedCaseInsensitiveCompare(bn) == .orderedAscending
+			}
 		}
 	}
 	
@@ -207,6 +226,8 @@ private struct NewControlTile: View {
 private struct ExistingControlsList: View {
 	let controls: [Control]
 	@Binding var selectedId: UUID?
+	
+	var focused: FocusState<UUID?>.Binding
 	var onDelete: (UUID) -> Void
 	var onRename: (UUID, String) -> Void
 	
@@ -217,31 +238,46 @@ private struct ExistingControlsList: View {
 				.frame(maxWidth: .infinity, alignment: .leading)
 				.padding(.vertical, 8)
 		} else {
-			// Cap height so it scrolls instead of expanding forever
-			ScrollView {
-				LazyVStack(spacing: 0) {
-					ForEach(controls) { c in
-						ExistingRow(
-							control: c,
-							isSelected: c.id == selectedId,
-							onSelect: { selectedId = c.id },
-							onDelete: { onDelete(c.id) },
-							onRename: { newName in onRename(c.id, newName) }
-						)
-						Divider().opacity(0.08).padding(.leading, 26)
+			ScrollViewReader { proxy in
+				// Cap height so it scrolls instead of expanding forever
+				ScrollView {
+					LazyVStack(spacing: 0) {
+						ForEach(controls) { c in
+							VStack(spacing: 0) {
+								ExistingRow(
+									control: c,
+									isSelected: c.id == selectedId,
+									focused: focused,
+									onSelect: { selectedId = c.id },
+									onDelete: { onDelete(c.id) },
+									onRename: { newName in onRename(c.id, newName) }
+								)
+								Divider().opacity(0.08).padding(.leading, 26)
+							}
+							.id(c.id)
+						}
+					}
+					.padding(4)
+				}
+				.frame(maxHeight: 240)
+				.onChange(of: selectedId) { _, target in
+						guard let target else { return }
+					// Defer one tick so the row exists in the stack before scrolling
+					DispatchQueue.main.async {
+						withAnimation(.easeInOut(duration: 0.2)) {
+							proxy.scrollTo(target, anchor: .center)
+						}
 					}
 				}
-				.padding(4)
+				.background(
+					RoundedRectangle(cornerRadius: 10, style: .continuous)
+						.fill(.thinMaterial.opacity(0.2))
+						.overlay(
+							RoundedRectangle(cornerRadius: 10, style: .continuous)
+								.stroke(.separator.opacity(0.35), lineWidth: 1)
+						)
+				)
 			}
-			.frame(maxHeight: 240)
-			.background(
-				RoundedRectangle(cornerRadius: 10, style: .continuous)
-					.fill(.thinMaterial.opacity(0.2))
-					.overlay(
-						RoundedRectangle(cornerRadius: 10, style: .continuous)
-							.stroke(.separator.opacity(0.35), lineWidth: 1)
-					)
-			)
 		}
 	}
 }
@@ -249,12 +285,12 @@ private struct ExistingControlsList: View {
 private struct ExistingRow: View {
 	let control: Control
 	let isSelected: Bool
+	let focused: FocusState<UUID?>.Binding
 	let onSelect: () -> Void
 	let onDelete: () -> Void
 	let onRename: (String) -> Void
 	
 	@State private var isHovering = false
-	@FocusState private var isNameFocused: Bool
 	
 	private var nameBinding: Binding<String> {
 		Binding(
@@ -275,12 +311,14 @@ private struct ExistingRow: View {
 				
 				TextField("Name", text: nameBinding)
 					.textFieldStyle(.roundedBorder)
-//					.onChange(of: draftName) { _, new in onRename(new) } // live update
 					.onSubmit { onRename(nameBinding.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)) }                    // commit on Return
 					.lineLimit(1)
 					.truncationMode(.tail)
-					.focused($isNameFocused)
+					.focused(focused, equals: control.id)
 					.font(.callout)
+					.onAppear {
+						if isSelected { focused.wrappedValue = control.id }
+					}
 			}
 			.padding(.horizontal, 8)
 			.padding(.vertical, 6)
@@ -315,8 +353,10 @@ private struct ExistingRow: View {
 		.padding(.vertical, 4)
 		.contentShape(Rectangle())
 		.onTapGesture(perform: onSelect)
-		.onChange(of: isNameFocused) { _, now in if now { onSelect() } }  // ← focus → selection
-		.onChange(of: isSelected) { _, now in if now { isNameFocused = true } } // ← selection → focus
+		.onChange(of: isSelected) { _, now in
+			if now { focused.wrappedValue = control.id }
+			else if focused.wrappedValue == control.id { focused.wrappedValue = nil }
+		} // ← selection → focus
 #if os(macOS)
 		.onHover { isHovering = $0 }
 #endif

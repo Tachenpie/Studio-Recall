@@ -151,7 +151,6 @@ struct DeviceLibraryView: View {
         }
         .padding(8)
         .frame(maxWidth: .infinity)
-//        .background(HoverHighlight())
 		.modifier(RowHoverHighlight())
         .cornerRadius(8)
         .contentShape(Rectangle())

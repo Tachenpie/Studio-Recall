@@ -14,6 +14,7 @@ struct RuntimeControlsOverlay: View {
 	@EnvironmentObject private var sessionManager: SessionManager
 	
 	@Environment(\.canvasZoom) private var zoom
+	@Environment(\.renderStyle) private var renderStyle
 	
 	let device: Device
 	@Binding var instance: DeviceInstance
@@ -43,10 +44,14 @@ struct RuntimeControlsOverlay: View {
 			
 			ZStack(alignment: .topLeading) {
 				// live visual projection of instance state over the faceplate
-				RuntimePatches(device: device, instance: $instance)
-					.frame(width: fm.size.width, height: fm.size.height)
-					.allowsHitTesting(false)
-				
+				if renderStyle == .photoreal {
+					RuntimePatches(device: device, instance: $instance)
+						.frame(width: fm.size.width, height: fm.size.height)
+						.allowsHitTesting(false)
+				} else {
+					RepresentativeGlyphs(device: device, instance: $instance, faceSize: fm.size)
+						.allowsHitTesting(false)
+				}
 				ForEach(device.controls) { def in
 					let frame = def.bounds(in: fm.size)
 					
@@ -125,7 +130,6 @@ struct RuntimeControlsOverlay: View {
 				}
 			}
 			.frame(width: fm.size.width, height: fm.size.height, alignment: .topLeading)
-			.frame(width: faceW, height: slotH, alignment: .topLeading)
 			.background(Color.clear.preference(key: HoverBubbleActiveKey.self,
 											   value: bubbleVisibleFor != nil))
 		}

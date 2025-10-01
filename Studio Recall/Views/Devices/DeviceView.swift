@@ -15,34 +15,74 @@ import AppKit
 struct DeviceView: View {
     let device: Device
 	var isThumbnail: Bool = false
-    
-    var body: some View {
-        ZStack {
-            if let data = device.imageData,
-               let nsImage = NSImage(data: data) {
-//                Image(nsImage: nsImage)
-//                    .resizable()
-//                    .scaledToFit()
-//                    .frame(
-//                        width: device.type == .series500 ?
-//                            CGFloat((device.slotWidth ?? 1) * 120) : nil,
-//                        height: device.type == .rack ?
-//                            CGFloat((device.rackUnits ?? 1) * 60) : nil
-//                    )
-//                    .cornerRadius(4)
-				Image(nsImage: nsImage)
-					.resizable()
-					.scaledToFill()
-					.clipped()
-					.cornerRadius(4)
-            } else {
-                drawnDevice
-            }
-        }
+	var metrics: FaceRenderMetrics? = nil
+	
+	@Environment(\.displayScale) private var displayScale
+	@Environment(\.renderStyle)  private var renderStyle
+	
+	var body: some View {
+		Group {
+			if let m = metrics {
+				let w = (m.size.width  * displayScale).rounded() / displayScale
+				let h = (m.size.height * displayScale).rounded() / displayScale
+				
+				ZStack(alignment: .topLeading) {
+					if renderStyle == .photoreal {
+						if let data = device.imageData, let nsImage = NSImage(data: data) {
+							Image(nsImage: nsImage)
+								.resizable()
+								.interpolation(.high)
+								.antialiased(true)
+								.frame(width: w, height: h)
+								.allowsHitTesting(false)
+								.clipped()
+						} else {
+							drawnDevice
+								.frame(width: w, height: h)
+						}
+					} else {
+						RepresentativeFaceplate(device: device, size: CGSize(width: w, height: h))
+							.allowsHitTesting(false)
+					}
+				}
+			} else {
+				GeometryReader { geo in
+					// Compute the same fit metrics the overlay will use
+					let fm = DeviceMetrics.faceRenderMetrics(
+						faceWidthPts: geo.size.width,
+						slotHeightPts: geo.size.height,
+						imageData: device.imageData
+					)
+					ZStack(alignment: .topLeading) {
+						if renderStyle == .photoreal {
+							if let data = device.imageData,
+							   let nsImage = NSImage(data: data) {
+								// Render the face at the exact fitted size, then letterbox vertically
+								Image(nsImage: nsImage)
+									.resizable()
+									.interpolation(.high)
+									.antialiased(true)
+									.aspectRatio(nsImage.size, contentMode: .fit)
+									.frame(width: fm.size.width, height: fm.size.height)
+									.offset(y: fm.vOffset)
+									.allowsHitTesting(false)
+							} else {
+								drawnDevice
+									.frame(width: fm.size.width, height: fm.size.height)
+									.offset(y: fm.vOffset)
+							}
+						} else {
+							RepresentativeFaceplate(device: device, size: CGSize(width: fm.size.width, height: fm.size.height))
+						}
+					}
+					.frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
+				}
+			}
+		}
 		.background(deviceBackground)
-		.cornerRadius(4)
-		.modifier(_DeviceViewSizer(isThumbnail: isThumbnail))
-    }
+//		.modifier(_DeviceViewSizer(isThumbnail: isThumbnail))
+		.modifier(_DeviceViewSizer(shouldFill: metrics == nil && !isThumbnail))
+	}
     
     private var drawnDevice: some View {
         VStack(spacing: 16) {
@@ -176,14 +216,27 @@ struct EditableDeviceView: View {
     }
 }
 
+//private struct _DeviceViewSizer: ViewModifier {
+//	let isThumbnail: Bool
+//	func body(content: Content) -> some View {
+//		if isThumbnail {
+//			content.clipped()               // respect outer frame
+//		} else {
+//			content
+//				.frame(maxWidth: .infinity, maxHeight: .infinity)
+//		}
+//	}
+//}
+
 private struct _DeviceViewSizer: ViewModifier {
-	let isThumbnail: Bool
+	let shouldFill: Bool
 	func body(content: Content) -> some View {
-		if isThumbnail {
-			content.clipped()               // respect outer frame
+		if shouldFill {
+			// editor/thumbnail paths that should fill their container
+			content.frame(maxWidth: .infinity, maxHeight: .infinity)
 		} else {
-			content
-				.frame(maxWidth: .infinity, maxHeight: .infinity)
+			// runtime path (metrics provided): respect the exact frame we were given
+			content.clipped()
 		}
 	}
 }

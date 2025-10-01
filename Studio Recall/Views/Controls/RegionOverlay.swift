@@ -42,20 +42,10 @@ struct RegionOverlay: View {
 		
 		ZStack(alignment: .topLeading) {
 			// 1) Region-local container positioned at (x,y), sized (w,h)
-//			ZStack(alignment: .topLeading) {
-				// 1a) “marching ants” outline (no fill), drawn in LOCAL space
-//				let outline = Path { p in
-//					p.addPath(pathFor(shape: shape, in: CGRect(x: 0, y: 0, width: w, height: h)))
-//				}
-//				outline
-//					.stroke(.black, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: 0))
-//					.overlay(
-//						outline.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashUnit))
-//					)
-//					.allowsHitTesting(false)
-				if isConcentricOuterRegion {
-					let outer = CGRect(x: 0, y: 0, width: w, height: h)
-					let innerNorm = regions[1].rect.denormalized(to: canvasSize)
+			let pair = concentricPairIndices(regions)
+			if isConcentricOuterRegion {
+					let outerLocal = CGRect(x: 0, y: 0, width: w, height: h)
+					let innerNorm = regions[pair!.inner].rect.denormalized(to: canvasSize)
 					let innerLocal = CGRect(
 						x: (innerNorm.minX - x),
 						y: (innerNorm.minY - y),
@@ -63,7 +53,7 @@ struct RegionOverlay: View {
 						height: innerNorm.height
 					)
 					let donut = DonutShape(
-						outerRect: outer,
+						outerRect: outerLocal,
 						innerRect: innerLocal
 					)
 					
@@ -158,6 +148,7 @@ struct RegionOverlay: View {
 //		}
 		.frame(width: canvasSize.width, height: canvasSize.height, alignment: .topLeading)
 		.zIndex(10)
+		.allowsHitTesting(false)
 	}
 	
 	// MARK: - Helpers
@@ -185,12 +176,36 @@ struct RegionOverlay: View {
 	}
 	
 	private var isConcentricOuterRegion: Bool {
-		controlType == .concentricKnob && regionIndex == 0 && regions.count > 1
+		let pair = concentricPairIndices(regions)
+		return (controlType == .concentricKnob && pair?.outer == regionIndex)
 	}
 	
 	private var innerRect: CGRect? {
 		guard isConcentricOuterRegion else { return nil }
 		return regions[1].rect.denormalized(to: canvasSize)
+	}
+	
+	// Pick outer/inner by area so order in the array can’t break us.
+	private func concentricPairIndices(_ regions: [ImageRegion]) -> (outer: Int, inner: Int)? {
+		guard regions.count >= 2 else { return nil }
+		let areas = regions.enumerated().map { (i, r) in (i, r.rect.width * r.rect.height) }
+		let outer = areas.max(by: { $0.1 < $1.1 })!.0
+		let inner = areas.min(by: { $0.1 < $1.1 })!.0
+		return (outer, inner)
+	}
+	
+	// Convert the inner rect into the local coords of the outer patch (used by the mask).
+	private func innerRectInOuterLocal(outer: CGRect, inner: CGRect, regionSize: CGSize) -> CGRect {
+		// 'outer' & 'inner' are normalized (0…1) rects in canvas space.
+		let ox = outer.minX, oy = outer.minY
+		let ow = max(outer.width,  .leastNonzeroMagnitude)
+		let oh = max(outer.height, .leastNonzeroMagnitude)
+		return CGRect(
+			x: (inner.minX - ox) / ow * regionSize.width,
+			y: (inner.minY - oy) / oh * regionSize.height,
+			width:  inner.width  / ow * regionSize.width,
+			height: inner.height / oh * regionSize.height
+		)
 	}
 }
 
