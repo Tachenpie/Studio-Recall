@@ -13,5 +13,5 @@ final class AppSettings: ObservableObject {
 }
 
 extension AppSettings {
-    var pointsPerInch: CGFloat { 20 }  // tweak for UI density
+    var pointsPerInch: CGFloat { 80 }  // tweak for UI density
 }

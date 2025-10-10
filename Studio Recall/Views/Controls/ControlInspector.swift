@@ -74,6 +74,11 @@ struct ControlInspector: View {
 					// MARK: Mapping
 					mappingArea(binding)
 					
+					// MARK: Representative Orientation for knobs
+					if [.knob, .concentricKnob].contains(binding.wrappedValue.type) {
+						representativeOrientation(binding)
+					}
+					
 					Spacer(minLength: 8)
 					
 					// MARK: Duplicate and Delete
@@ -270,6 +275,29 @@ struct ControlInspector: View {
 		.disabled(isEditingRegion)
 	}
 	
+	private func representativeOrientation(_ binding: Binding<Control>) -> some View {
+		GroupBox("Representative") {
+			HStack {
+				Picker("Orientation", selection: Binding<Double?>(
+					get: { binding.repStartDeg.wrappedValue },
+					set: { binding.repStartDeg.wrappedValue = $0 }
+				)) {
+					Text("Top").tag(Double?.some(-225))
+					Text("Right").tag(Double?.some(-135))
+					Text("Bottom").tag(Double?.some(  45))
+					Text("Left").tag(Double?.some( 135))
+					Text("Custom…").tag(Double?.none) // then show NumberFields
+				}
+				NumberField(value: Binding(get: { binding.repStartDeg.wrappedValue ?? -225 },
+										   set: { binding.repStartDeg.wrappedValue = $0 }))
+				Text("° start")
+				NumberField(value: Binding(get: { binding.repSweepDeg.wrappedValue ?? 270 },
+										   set: { binding.repSweepDeg.wrappedValue = $0 }))
+				Text("° sweep")
+			}
+		}
+	}
+	
 	private func duplicateAndDelete(_ idx: Int) -> some View {
 		HStack {
 			Button {
@@ -361,7 +389,10 @@ struct ControlInspector: View {
 									Text("Value").frame(width: 80, alignment: .leading)
 									NumberField(value: Binding(
 										get: { binding.value.wrappedValue ?? lo },
-										set: { binding.value.wrappedValue = $0 }
+										set: {
+											binding.value.wrappedValue = $0
+											editableDevice.bumpRevision()
+										}
 									))
 								}
 							} else {
@@ -369,7 +400,10 @@ struct ControlInspector: View {
 									title: "Value",
 									value: Binding(
 										get: { binding.value.wrappedValue ?? lo },
-										set: { v in binding.value.wrappedValue = min(max(v, lo), hi) }
+										set: {
+											v in binding.value.wrappedValue = min(max(v, lo), hi)
+											editableDevice.bumpRevision()
+										}
 									),
 									range: lo...hi,
 									step: (hi - lo) / 100
@@ -410,6 +444,7 @@ struct ControlInspector: View {
 								let n = labels.count
 								let current = binding.stepIndex.wrappedValue ?? 0
 								binding.stepIndex.wrappedValue = min(current, max(0, n - 1))
+								editableDevice.bumpRevision()
 							}
 						))
 						.textFieldStyle(.roundedBorder)
@@ -480,7 +515,7 @@ struct ControlInspector: View {
 							Text("Value").frame(minWidth: 60, alignment: .leading)
 							Stepper(value: Binding(
 								get: { binding.stepIndex.wrappedValue ?? 0 },
-								set: { binding.stepIndex.wrappedValue = $0 }
+								set: { binding.stepIndex.wrappedValue = $0; editableDevice.bumpRevision() }
 							), in: safeIndexRange(binding.options.wrappedValue)) {
 								Text("\(binding.stepIndex.wrappedValue ?? 0)")
 							}
@@ -530,7 +565,7 @@ struct ControlInspector: View {
 							Text("Selected").frame(minWidth: 60, alignment: .leading)
 							Stepper(value: Binding(
 								get: { binding.selectedIndex.wrappedValue ?? 0 },
-								set: { binding.selectedIndex.wrappedValue = $0 }
+								set: { binding.selectedIndex.wrappedValue = $0; editableDevice.bumpRevision() }
 							), in: safeIndexRange(binding.options.wrappedValue)) {
 								Text("\(binding.selectedIndex.wrappedValue ?? 0)")
 							}
@@ -549,7 +584,7 @@ struct ControlInspector: View {
 					VStack(alignment: .leading, spacing: 8) {
 						Toggle("Pressed", isOn: Binding(
 							get: { binding.isPressed.wrappedValue ?? false },
-							set: { binding.isPressed.wrappedValue = $0 }
+							set: { binding.isPressed.wrappedValue = $0; editableDevice.bumpRevision() }
 						))
 						HStack {
 							HStack {
@@ -578,7 +613,7 @@ struct ControlInspector: View {
 					VStack(alignment: .leading, spacing: 8) {
 						Toggle("Manual On", isOn: Binding(
 							get: { binding.isPressed.wrappedValue ?? false },
-							set: { binding.isPressed.wrappedValue = $0 }
+							set: { binding.isPressed.wrappedValue = $0; editableDevice.bumpRevision() }
 						))
 						
 						HStack {
@@ -612,7 +647,7 @@ struct ControlInspector: View {
 						// Link this light to another control
 						Picker("Follow Control", selection: Binding(
 							get: { binding.linkTarget.wrappedValue ?? UUID?.none as UUID? },
-							set: { binding.linkTarget.wrappedValue = $0 }
+							set: { binding.linkTarget.wrappedValue = $0; editableDevice.bumpRevision() }
 						)) {
 							Text("None").tag(UUID?.none as UUID?)
 							ForEach(editableDevice.device.controls.filter { $0.id != binding.wrappedValue.id }) { c in
@@ -628,7 +663,7 @@ struct ControlInspector: View {
 						   target.type == .multiSwitch {
 							Picker("On when option", selection: Binding(
 								get: { binding.linkOnIndex.wrappedValue ?? 0 },
-								set: { binding.linkOnIndex.wrappedValue = $0 }
+								set: { binding.linkOnIndex.wrappedValue = $0; editableDevice.bumpRevision() }
 							)) {
 								let labels = target.options ?? []
 								ForEach(labels.indices, id: \.self) { i in
@@ -640,7 +675,7 @@ struct ControlInspector: View {
 
 						Toggle("Invert Link", isOn: Binding(
 							get: { binding.linkInverted.wrappedValue ?? false },
-							set: { binding.linkInverted.wrappedValue = $0 }
+							set: { binding.linkInverted.wrappedValue = $0; editableDevice.bumpRevision() }
 						))
 					}
 				}
@@ -697,7 +732,7 @@ struct ControlInspector: View {
 									Text("Outer").frame(width: 80, alignment: .leading)
 									NumberField(value: Binding(
 										get: { binding.outerValue.wrappedValue ?? lo },
-										set: { binding.outerValue.wrappedValue = $0 }
+										set: { binding.outerValue.wrappedValue = $0; editableDevice.bumpRevision() }
 									))
 								}
 							} else {
@@ -705,7 +740,7 @@ struct ControlInspector: View {
 									title: "Outer",
 									value: Binding(
 										get: { binding.outerValue.wrappedValue ?? lo },
-										set: { v in binding.outerValue.wrappedValue = min(max(v, lo), hi) }
+										set: { v in binding.outerValue.wrappedValue = min(max(v, lo), hi); editableDevice.bumpRevision() }
 									),
 									range: lo...hi,
 									step: (hi - lo) / 100
@@ -723,7 +758,7 @@ struct ControlInspector: View {
 									Text("Inner").frame(width: 80, alignment: .leading)
 									NumberField(value: Binding(
 										get: { binding.innerValue.wrappedValue ?? lo },
-										set: { binding.innerValue.wrappedValue = $0 }
+										set: { binding.innerValue.wrappedValue = $0; editableDevice.bumpRevision() }
 									))
 								}
 							} else {
@@ -731,7 +766,7 @@ struct ControlInspector: View {
 									title: "Inner",
 									value: Binding(
 										get: { binding.innerValue.wrappedValue ?? lo },
-										set: { v in binding.innerValue.wrappedValue = min(max(v, lo), hi) }
+										set: { v in binding.innerValue.wrappedValue = min(max(v, lo), hi); editableDevice.bumpRevision() }
 									),
 									range: lo...hi,
 									step: (hi - lo) / 100
@@ -746,11 +781,11 @@ struct ControlInspector: View {
 					VStack(alignment: .leading, spacing: 8) {
 						Toggle("Pressed", isOn: Binding(
 							get: { binding.isPressed.wrappedValue ?? false },
-							set: { binding.isPressed.wrappedValue = $0 }
+							set: { binding.isPressed.wrappedValue = $0; editableDevice.bumpRevision() }
 						))
 						Toggle("Lamp follows Press", isOn: Binding(
 							get: { binding.lampFollowsPress.wrappedValue ?? true },
-							set: { binding.lampFollowsPress.wrappedValue = $0 }
+							set: { binding.lampFollowsPress.wrappedValue = $0; editableDevice.bumpRevision() }
 						))
 						HStack {
 							HStack {
@@ -803,7 +838,7 @@ struct ControlInspector: View {
 						// Link this light to another control
 						Picker("Follow Control", selection: Binding(
 							get: { binding.linkTarget.wrappedValue ?? UUID?.none as UUID? },
-							set: { binding.linkTarget.wrappedValue = $0 }
+							set: { binding.linkTarget.wrappedValue = $0; editableDevice.bumpRevision() }
 						)) {
 							Text("None").tag(UUID?.none as UUID?)
 							ForEach(editableDevice.device.controls.filter { $0.id != binding.wrappedValue.id }) { c in

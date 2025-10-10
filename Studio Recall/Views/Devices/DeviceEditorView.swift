@@ -9,6 +9,7 @@ import SwiftUI
 
 struct DeviceEditorView: View {
 	@Environment(\.undoManager) private var undoManager
+	@Environment(\.openWindow) private var openWindow
 	@EnvironmentObject var library: DeviceLibrary
 	@EnvironmentObject var settings: AppSettings
 	
@@ -175,7 +176,7 @@ struct DeviceEditorView: View {
 				
 				InspectorSection(title: "Controls") {
 					HStack {
-						Button("Edit Controls…") { showingControlEditor = true }
+						Button("Edit Controls…") { showingControlEditor = true }// openWindow(id: "control-editor", value: editableDevice.device.id) }
 						Spacer()
 					}
 				}
@@ -253,7 +254,12 @@ struct DeviceEditorView: View {
 			}
 		}
 		.sheet(isPresented: $showingControlEditor) {
-			ControlEditorWindow(editableDevice: editableDevice)
+			ControlEditorWindow(
+				editableDevice: editableDevice,
+				onSave: {dev in
+					editableDevice.device = dev
+				}
+			)
 		}
 	}
 	

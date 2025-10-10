@@ -23,6 +23,8 @@ struct FaceplateCanvas: View {
 	@Binding var pan: CGSize
 	@Binding var zoomFocusN: CGPoint?
 	
+	var renderStyle: RenderStyle = .photoreal
+	
 	// Optional external overlay (parent-space), e.g. detection boxes.
 	// Signature matches CanvasViewport.overlayContent.
 	var externalOverlay: ((CGSize /*parent*/, CGSize /*canvas*/, CGFloat /*zoom*/, CGSize /*pan*/) -> AnyView)? = nil
@@ -48,38 +50,55 @@ struct FaceplateCanvas: View {
 			focusN: $zoomFocusN,
 			content: { canvasSize in
 				ZStack {
-					CanvasContent(
-						editableDevice: editableDevice,
-						canvasSize: canvasSize,
-						selectedControlId: $selectedControlId,
-						draggingControlId: $draggingControlId,
-						gridStep: gridStep,
-						showBadges: showBadges
-					)
-					
-					// Live preview of control patches (rotate/translate/flip/sprites) in the editor
-					let faceplate = editableDevice.device.imageData.flatMap { NSImage(data: $0) }
-					
-					ForEach(editableDevice.device.controls.indices, id: \.self) { i in
-						let control = editableDevice.device.controls[i]
+					if renderStyle == .photoreal {
+						CanvasContent(
+							editableDevice: editableDevice,
+							canvasSize: canvasSize,
+							selectedControlId: $selectedControlId,
+							draggingControlId: $draggingControlId,
+							gridStep: gridStep,
+							showBadges: showBadges
+						)
 						
-						ForEach(Array(control.regions.enumerated()), id: \.0) { idx, region in
-							ControlImageRenderer(
-								control: $editableDevice.device.controls[i],
-								faceplate: faceplate,
-								canvasSize: canvasSize,
-								resolveControl: { id in
-									editableDevice.device.controls.first(where: { $0.id == id })
-								},
-								onlyRegionIndex: idx
-							)
-							.compositingGroup()
-							.mask { RegionClipShape(shape: region.shape) }
-							.allowsHitTesting(false)
-							.id(editableDevice.device.controls[i].renderKey)
+						// Live preview of control patches (rotate/translate/flip/sprites) in the editor
+						let faceplate = editableDevice.device.imageData.flatMap { NSImage(data: $0) }
+						
+						ForEach(editableDevice.device.controls.indices, id: \.self) { i in
+							let control = editableDevice.device.controls[i]
+							
+							ForEach(Array(control.regions.enumerated()), id: \.0) { idx, region in
+								ControlImageRenderer(
+									control: $editableDevice.device.controls[i],
+									faceplate: faceplate,
+									canvasSize: canvasSize,
+									resolveControl: { id in
+										editableDevice.device.controls.first(where: { $0.id == id })
+									},
+									onlyRegionIndex: idx
+								)
+								.compositingGroup()
+								.mask { RegionClipShape(shape: region.shape) }
+								.allowsHitTesting(false)
+								.id(editableDevice.device.controls[i].renderKey)
+							}
 						}
+					} else {
+						// Representative face (same look as Session)
+						RepresentativeFaceplate(device: editableDevice.device, size: canvasSize)
+							.frame(width: canvasSize.width, height: canvasSize.height)
+							.allowsHitTesting(false)
+
+						// Live glyphs + labels + selection highlight
+						RepresentativeGlyphs(
+							device: editableDevice.device,
+							instance: .constant(.empty(for: editableDevice.device)),
+							faceSize: canvasSize,
+							selectedId: selectedControlId
+						)
+//						RepresentativeEditorPreview(device: editableDevice.device, canvasSize: canvasSize)
+//						.allowsHitTesting(false)
 					}
-					
+
 					if !isEditingRegion {
 						let hits: [ControlHitOverlay.Hit] = editableDevice.device.controls.flatMap { c in
 							c.regions.map { r in ControlHitOverlay.Hit(controlId: c.id, rect: r.rect) }
@@ -108,6 +127,8 @@ struct FaceplateCanvas: View {
 						}
 					}
 				}
+				.id(renderStyle)
+				.transaction { $0.animation = nil }
 			},
 			// Type-erase the overlay to AnyView so both branches match
 			overlayContent: { parentSize, canvasSize, zoom, pan -> AnyView in
@@ -254,6 +275,106 @@ private struct ControlHitOverlay: View {
 					.contentShape(Rectangle())
 					.onTapGesture { selectedControlId = h.controlId }
 			}
+		}
+	}
+}
+
+// MARK: - Representative View
+// Minimal editor shim that renders the full representative faceplate + glyphs
+private struct RepresentativeEditorPreview: View {
+	let device: Device
+	let canvasSize: CGSize
+	
+	var body: some View {
+		ZStack {
+			// The same plate background you use elsewhere
+			RepresentativeFaceplate(device: device, size: canvasSize)
+			
+			// Controls as vector glyphs
+			ForEach(device.controls) { c in
+				// Use first region if present, otherwise a sensible 8% default around (x,y)
+				let r = c.regions.first?.rect
+				?? CGRect(x: c.x - 0.04, y: c.y - 0.04, width: 0.08, height: 0.08)
+				
+				let frame = CGRect(
+					x: r.minX * canvasSize.width,
+					y: r.minY * canvasSize.height,
+					width:  r.width  * canvasSize.width,
+					height: r.height * canvasSize.height
+				)
+				
+				RepresentativeGlyphForEditor(control: c)
+					.frame(width: frame.width, height: frame.height)
+					.position(x: frame.midX, y: frame.midY)
+			}
+		}
+		.frame(width: canvasSize.width, height: canvasSize.height)
+	}
+}
+
+private struct EditorRepOverlay: View {
+	@Binding var device: Device
+	let canvasSize: CGSize
+	
+	var body: some View {
+		ZStack {
+			ForEach(device.controls) { c in
+				let r = c.regions.first?.rect ?? CGRect(x: c.x - 0.04, y: c.y - 0.04, width: 0.08, height: 0.08)
+				let frame = CGRect(
+					x: r.minX * canvasSize.width,
+					y: r.minY * canvasSize.height,
+					width:  r.width * canvasSize.width,
+					height: r.height * canvasSize.height
+				)
+				
+				RepresentativeGlyphForEditor(control: c)
+					.frame(width: frame.width, height: frame.height)
+					.position(x: frame.midX, y: frame.midY)
+			}
+		}
+	}
+}
+
+// Super-light wrapper that uses Control’s own value/stepIndex/selectedIndex.
+private struct RepresentativeGlyphForEditor: View {
+	let control: Control
+	var body: some View {
+		switch control.type {
+			case .knob:
+				KnobGlyphCanonical(
+					t: control.normalizedValue ?? 0.5,
+					startDeg: control.repStartDeg ?? -225, // top-arc default
+					sweepDeg: control.repSweepDeg ?? 270
+				)
+			case .steppedKnob:
+				let idx = control.stepIndex ?? 0
+				let count = max(2, control.options?.count ?? (control.stepAngles?.count ?? 0))
+				if count == 2 {
+					BinarySquareGlyph(isOn: idx == 1)
+				} else {
+					SteppedGlyph(index: idx, count: count)
+				}
+			case .multiSwitch:
+				let idx = control.selectedIndex ?? 0
+				let count = max(2, control.options?.count ?? 2)
+				if count == 2 {
+					BinarySquareGlyph(isOn: idx == 1)
+				} else {
+					SwitchGlyph(index: idx, count: count)
+				}
+			case .button:
+				BinarySquareGlyph(isOn: control.isPressed ?? false)
+			case .light:
+				LightGlyph(isOn: control.isPressed ?? false)
+			case .concentricKnob:
+				ConcentricGlyphCanonical(
+					outer: control.outerValueNormalized ?? 0.5,
+					inner: control.innerValueNormalized ?? 0.5,
+					startDeg: control.repStartDeg ?? -225,
+					sweepDeg: control.repSweepDeg ?? 270
+				)
+			case .litButton:
+				BinarySquareGlyph(isOn: control.isPressed ?? false) // placeholder
 		}
 	}
 }

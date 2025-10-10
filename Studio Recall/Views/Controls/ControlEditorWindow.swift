@@ -33,6 +33,7 @@ struct ControlEditorWindow: View {
 	@State private var zoomFocusN: CGPoint? = nil
 //	@State private var focusNameRequest: UUID? = nil
 	@State private var focusNameInPalette: UUID? = nil
+	@State private var previewStyle: RenderStyle = .photoreal
 	
 	// Detect tab shared state
 	@State private var pendingDrafts: [ControlDraft] = [] // existing; keep it here
@@ -42,6 +43,11 @@ struct ControlEditorWindow: View {
 	@State private var detectLassoMode: Bool = false
 	@State private var focusedDraftId: UUID? = nil
 
+	// Persistence
+	@State private var originalDevice: Device? = nil
+	@State private var didCancel: Bool = false
+	var onSave: ((Device) -> Void)? = nil
+	
 	private let detectPaneGutter: CGFloat = 14          // gap between canvas and pane
 	private let detectSidebarMin: CGFloat  = 320        // min width for tall layout
 	private let detectSidebarMax: CGFloat  = 520        // max width for tall layout
@@ -80,65 +86,62 @@ struct ControlEditorWindow: View {
 					}
 				} else {
 					// Tall 500-series: place sidebar to the RIGHT of the canvas
-						HStack(alignment: .top, spacing: detectPaneGutter) {
-							faceplateArea
-								.frame(minWidth: 360)
-								.frame(maxWidth: .infinity, maxHeight: .infinity)
-							
-							Divider()
-							
-							sidebar
-								.frame(maxWidth: .infinity, alignment: .topLeading)
-								.padding(.trailing, detectPaneGutter)
-						}
-						.frame(maxWidth: .infinity, maxHeight: .infinity)
-//					}
+					HStack(alignment: .top, spacing: detectPaneGutter) {
+						faceplateArea
+							.frame(minWidth: 360)
+							.frame(maxWidth: .infinity, maxHeight: .infinity)
+						
+						Divider()
+						
+						sidebar
+							.frame(maxWidth: .infinity, alignment: .topLeading)
+							.padding(.trailing, detectPaneGutter)
+					}
+					.frame(maxWidth: .infinity, maxHeight: .infinity)
+					//					}
 				}
 			}
 			.navigationTitle("Edit Controls")
+			.toolbarRole(.editor)
 			.toolbar {
+				// RIGHT: Detect, Add, Done — keep these as separate trailing actions
 				ToolbarItem(placement: .primaryAction) {
-					Button {
-						print("AutoDetect: name \(editableDevice.device.name)")
-						sidebarTab = .detect
-					} label: {
+					Button { sidebarTab = .detect } label: {
 						Label("Auto-Detect Controls", systemImage: "wand.and.stars")
 					}
-					.help("Scan faceplate and propose controls")
 				}
-				ToolbarItem(placement: .primaryAction) {
-					Button(action: { isPanning.toggle() }) {
-						Image(systemName: isPanning ? "hand.draw.fill" : "hand.draw")
-					}
-					.help("Pan view (\(isPanning ? "On" : "Hold ⌘ to pan"))")
-				}
-				
-				ToolbarItem(placement: .primaryAction) {
-					Button(action: { zoom = 1.0; pan = .zero; zoomFocusN = nil }) {
-						Image(systemName: "arrow.up.left.and.down.right.magnifyingglass")
-					}
-					.help("Reset zoom & pan")
-				}
-				
-				// Quick Add menu for keyboard-only users
 				ToolbarItem(placement: .primaryAction) {
 					Menu {
 						ForEach(ControlType.allCases, id: \.self) { t in
-							Button(t.rawValue.capitalized) {
-								addControl(of: t)
-							}
-							.onChange(of: selectedControlId) { _, _ in updateZoomFocusFromSelection() }
+							Button(t.rawValue.capitalized) { addControl(of: t) }
+								.onChange(of: selectedControlId) { _, _ in updateZoomFocusFromSelection() }
 						}
-					} label: {
-						Label("Add Control", systemImage: "plus")
-					}
+					} label: { Label("Add Control", systemImage: "plus") }
 				}
 				ToolbarItem(placement: .cancellationAction) {
-					Button("Done") { dismiss() }
+					Button("Cancel") {
+						if let snap = originalDevice {
+							editableDevice.device = snap
+						}
+						didCancel = true
+						dismiss()
+					}
+				}
+				ToolbarItem(placement: .confirmationAction) {
+					Button("Save") {
+						onSave?(editableDevice.device)
+						dismiss()
+					}
 				}
 			}
+
 		}
 		.frame(minWidth: 900, minHeight: 560)
+		.onAppear {
+			if originalDevice == nil {
+				originalDevice = editableDevice.device
+			}
+		}
 	}
 	
 	private var faceplateArea: some View {
@@ -153,6 +156,7 @@ struct ControlEditorWindow: View {
 					zoom: $zoom,
 					pan: $pan,
 					zoomFocusN: $zoomFocusN,
+					renderStyle: previewStyle,
 					externalOverlay: { parentSize, canvasSize, zoom, pan in
 						// If we don’t have an image, skip.
 						guard let data = editableDevice.device.imageData,
@@ -182,55 +186,30 @@ struct ControlEditorWindow: View {
 						focusNameInPalette = id
 					}
 				)
+				.id(previewStyle == .representative ? "rep-\(editableDevice.revision)" : "photo")
+				
+				VStack {
+					Spacer()
+					LeadingToolbarStrip(
+						zoom: $zoom,
+						isPanning: $isPanning,
+						previewStyle: $previewStyle,
+						reset: { zoom = 1.0; pan = .zero; zoomFocusN = nil },
+						zoomOut: {
+							updateZoomFocusFromSelection()
+							zoom = max(0.5, zoom / 1.25)
+						},
+						zoomIn:  {
+							updateZoomFocusFromSelection()
+							zoom = min(8,   zoom * 1.25)
+						}
+					)
+				}
+				.allowsHitTesting(true)
 			}
 			.clipped()
 			.background(Color.black.opacity(0.9))
 			.environment(\.isPanMode, isPanning)
-			.toolbar {
-				ToolbarItemGroup {
-					Button(action: { isPanning.toggle() }) {
-						Image(systemName: isPanning ? "hand.draw.fill" : "hand.draw")
-					}
-					.help("Pan view (\(isPanning ? "On" : "Hold ⌘ to pan"))")
-					Button(action: { zoom = 1.0; pan = .zero; zoomFocusN = nil }) {
-						Image(systemName: "arrow.up.left.and.down.right.magnifyingglass")
-					}
-					.help("Reset zoom & pan")
-					Spacer()
-					
-					// Zoom slider
-					HStack(spacing: 6) {
-						Button(
-							action: {
-								updateZoomFocusFromSelection()
-								zoom = max(0.5, zoom / 1.25)
-							}
-						) {
-							Image(systemName: "minus.magnifyingglass")
-						}
-						Slider(value: $zoom, in: 0.5...8, step: 0.01).frame(width: 120)
-						Button(
-							action: {
-								updateZoomFocusFromSelection()
-								zoom = min(8, zoom * 1.25)
-							}
-						) {
-							Image(systemName: "plus.magnifyingglass")
-						}
-					}
-					
-//					Spacer()
-//					
-//					Picker("Layout", selection: $layoutPref) {
-//						Text("Auto").tag(LayoutPref.auto)
-//						Text("Horizontal").tag(LayoutPref.horizontal)
-//						Text("Vertical").tag(LayoutPref.vertical)
-//					}
-//					.pickerStyle(.segmented)
-//					.frame(width: 260)
-//					.help("Choose layout for the review UI")
-				}
-			}
 		}
 	}
 	
@@ -318,7 +297,7 @@ struct ControlEditorWindow: View {
 			}
 		}
 	}
-
+	
 	private func addControl(of type: ControlType) {
 		var c = Control(
 			name: type.displayName,
@@ -357,6 +336,52 @@ struct ControlEditorWindow: View {
 		} else {
 			zoomFocusN = nil
 		}
+	}
+}
+
+private struct LeadingToolbarStrip: View {
+	@Binding var zoom: CGFloat
+	@Binding var isPanning: Bool
+	@Binding var previewStyle: RenderStyle
+	var reset: () -> Void
+	var zoomOut: () -> Void
+	var zoomIn: () -> Void
+	
+	var body: some View {
+		HStack(spacing: 10) {
+			// Reset zoom/pan
+			Button(action: reset) {
+				Image(systemName: "arrow.up.left.and.down.right.magnifyingglass")
+			}
+			.help("Reset zoom & pan")
+			
+			// Pan toggle
+			Button { isPanning.toggle() } label: {
+				Image(systemName: isPanning ? "hand.draw.fill" : "hand.draw")
+			}
+			.help("Pan view (\(isPanning ? "On" : "Hold ⌘ to pan"))")
+			
+			// Zoom controls (kept compact)
+			HStack(spacing: 6) {
+				Button(action: zoomOut) { Image(systemName: "minus.magnifyingglass") }
+				Slider(value: $zoom, in: 0.5...8, step: 0.01)
+					.frame(width: 140)
+				Button(action: zoomIn)  { Image(systemName: "plus.magnifyingglass") }
+			}
+			
+			Divider().frame(height: 18)
+			
+			// Preview style (Photo / Rep)
+			Picker("Preview", selection: $previewStyle) {
+				Text("Photo").tag(RenderStyle.photoreal)
+				Text("Rep").tag(RenderStyle.representative)
+			}
+			.pickerStyle(.segmented)
+			.frame(width: 160)
+			.help("Preview controls using representative glyphs")
+		}
+		.padding(.horizontal, 10).padding(.vertical, 6)
+		.background(.ultraThinMaterial, in: Capsule())
 	}
 }
 

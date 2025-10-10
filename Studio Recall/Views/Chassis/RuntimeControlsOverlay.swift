@@ -25,11 +25,98 @@ struct RuntimeControlsOverlay: View {
 	@State private var editorText: String = ""
 	@State private var scratchValue: ControlValue = .knob(0)
 	@State private var hoveredControl: Control?
+	@State private var hoveredPreviewText: String? = nil
 	@State private var bubbleVisibleFor: Control.ID? = nil
 	@State private var hoverToken: UUID? = nil
+	@State private var patchesNonce: Int = 0
 	
 	private let knobSensitivity: CGFloat = 1.5 / 240.0
 	
+	// Small helpers to reduce type-checking load
+	
+	private func valueBinding(for def: Control) -> Binding<ControlValue> {
+		Binding<ControlValue>(
+			get: { instance.controlStates[def.id] ?? ControlValue.initialValue(for: def) },
+			set: { newVal in
+				instance.controlStates[def.id] = newVal
+				sessionManager.setControlValue(instanceID: instance.id, controlID: def.id, to: newVal)
+				patchesNonce &+= 1
+			}
+		)
+	}
+	
+	private func hoverLines(for def: Control) -> [String] {
+		if renderStyle == .photoreal {
+			return def.displayEntries(for: instance).map { $0.text }
+		}
+		if hoveredControl?.id == def.id, let s = hoveredPreviewText, !s.isEmpty {
+			return [s]
+		} else {
+			return def.displayEntries(for: instance).map { $0.text }
+		}
+	}
+	
+	private func bubbleOffsetY(for frame: CGRect) -> CGFloat {
+		// screen-pixel metrics @ 1x
+		let bubblePxH: CGFloat = 26
+		let pxGap: CGFloat     = 8
+		let extraLiftPx: CGFloat = 6
+		let lift = (bubblePxH + pxGap + extraLiftPx) / max(zoom, 0.01)
+		let wouldClipTop = frame.minY - lift < 0
+		return wouldClipTop ? +lift : -lift
+	}
+	
+	@ViewBuilder
+	private func controlCell(def: Control, fm: FaceRenderMetrics) -> some View {
+		let frame = def.bounds(in: fm.size)
+		let value = valueBinding(for: def)
+		
+		// Local stack that owns hit rect + bubble (same local 0,0)
+		ZStack(alignment: .topLeading) {
+			controlHit(for: def, frame: frame, value: value) { info in
+				if info.inside {
+					let token = UUID()
+					hoverToken = token
+					hoveredControl = def
+					hoveredPreviewText = info.previewText
+					DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+						if hoverToken == token { bubbleVisibleFor = def.id }
+					}
+				} else if hoveredControl?.id == def.id {
+					hoveredControl = nil
+					hoverToken = nil
+					hoveredPreviewText = nil
+					bubbleVisibleFor = nil
+				}
+			}
+			.highPriorityGesture(TapGesture(count: 2).onEnded { editingID = def.id })
+			
+			if bubbleVisibleFor == def.id {
+				HStack {
+					Spacer(minLength: 0)
+					HoverBubbleView(lines: hoverLines(for: def))
+						.scaleEffect(1 / max(zoom, 0.01), anchor: .top)
+						.allowsHitTesting(false)
+						.zIndex(10_000)
+					Spacer(minLength: 0)
+				}
+				.frame(width: frame.width)
+				.offset(y: bubbleOffsetY(for: frame))
+			}
+		}
+		.frame(width: frame.width, height: frame.height, alignment: .topLeading)
+		.position(x: frame.midX, y: frame.midY)
+		
+		// Inline editor as a sibling so it doesn’t complicate the ZStack builder
+		if editingID == def.id {
+			InlineEditor(def: def, value: value, text: $editorText, onClose: { editingID = nil })
+				.position(x: frame.midX, y: frame.midY)
+				.frame(minWidth: 220)
+				.fixedSize()
+				.zIndex(20_000)
+		}
+	}
+
 	var body: some View {
 		GeometryReader { geo in
 			let faceW = prelayout?.faceWidthPts ?? geo.size.width
@@ -48,85 +135,98 @@ struct RuntimeControlsOverlay: View {
 					RuntimePatches(device: device, instance: $instance)
 						.frame(width: fm.size.width, height: fm.size.height)
 						.allowsHitTesting(false)
+						.id(patchesNonce)
 				} else {
-					RepresentativeGlyphs(device: device, instance: $instance, faceSize: fm.size)
+					RepresentativeGlyphs(device: device, instance: $instance, faceSize: fm.size, selectedId: nil)
 						.allowsHitTesting(false)
 				}
-				ForEach(device.controls) { def in
-					let frame = def.bounds(in: fm.size)
-					
-					let value = Binding<ControlValue>(
-						get: { return instance.controlStates[def.id] ?? ControlValue.initialValue(for: def) },
-						set: { newVal in
-//							var inst = instance
-//							inst.controlStates[def.id] = newVal
-//							instance = inst
-							instance.controlStates[def.id] = newVal
-							sessionManager.setControlValue(instanceID: instance.id, controlID: def.id, to: newVal)
-						}
-					)
-					// Put the hit rect and bubble in the same local stack (share the same 0,0)
-					ZStack(alignment: .topLeading) {
-						// 1) hit rect (owns hover + gestures)
-						controlHit(for: def, frame: frame, value: value, onHover: { inside in
-							if inside {
-								let token = UUID()
-								hoverToken = token
-								hoveredControl = def
-//								let f = def.bounds(in: geo.size)
-//								print("🫧 schedule  \(def.name)  token=\(token)  frame=(\(Int(f.minX)),\(Int(f.minY)))  zoom=\(zoom)")
-								DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-									if hoverToken == token { bubbleVisibleFor = def.id }
-//									else { print("🫧 canceled  \(def.name)  (token mismatch)") }
-								}
-							} else if hoveredControl?.id == def.id {
-//								print("🫧 HIDE      \(def.name)")
-								hoveredControl = nil
-								hoverToken = nil
-								bubbleVisibleFor = nil
-							}
-						})
-						.highPriorityGesture(TapGesture(count: 2).onEnded { editingID = def.id })
-						
-						if bubbleVisibleFor == def.id {
-							// screen-pixel metrics @ 1x
-							let bubblePxH: CGFloat = 26   // ↑ a bit taller
-							let pxGap: CGFloat = 8        // ↑ a bit more gap
-							let extraLiftPx: CGFloat = 6  // ↑ lift just a touch more
-							let lift = (bubblePxH + pxGap + extraLiftPx) / max(zoom, 0.01)
-							
-							// flip below if we’d clip off the top
-							let wouldClipTop = frame.minY - lift < 0
-							let yOffset = wouldClipTop ? +lift : -lift
-							
-							// Center horizontally by using a full-width wrapper inside this local stack.
-							// This stack’s local (0,0) is the control’s top-left.
-							HStack {
-								Spacer(minLength: 0)
-								HoverBubbleView(def: def, instance: instance)
-									.scaleEffect(1 / max(zoom, 0.01), anchor: .top) // keep size constant; anchor on vertical axis
-									.allowsHitTesting(false)
-									.zIndex(10_000)
-								Spacer(minLength: 0)
-							}
-							.frame(width: frame.width)    // span the control’s width so Spacer() can center
-							.offset(y: yOffset)           // move only vertically in local coords
-						}
-					}
-					// Give the local stack the control’s size, then place it once
-					.frame(width: frame.width, height: frame.height, alignment: .topLeading)
-					.position(x: frame.midX, y: frame.midY)
-					
-						if editingID == def.id {
-							InlineEditor(def: def,
-										 value: value,
-										 text: $editorText,
-										 onClose: { editingID = nil })
-							.position(x: frame.midX, y: frame.midY)
-							.frame(minWidth: 220)
-							.fixedSize()
-							.zIndex(20_000)
-						}
+				
+//				ForEach(device.controls, id: \.id) { def in
+//					let frame = def.bounds(in: fm.size)
+//					
+//					let value = Binding<ControlValue>(
+//						get: { return instance.controlStates[def.id] ?? ControlValue.initialValue(for: def) },
+//						set: { newVal in
+////							var inst = instance
+////							inst.controlStates[def.id] = newVal
+////							instance = inst
+//							instance.controlStates[def.id] = newVal
+//							sessionManager.setControlValue(instanceID: instance.id, controlID: def.id, to: newVal)
+//						}
+//					)
+//					// Put the hit rect and bubble in the same local stack (share the same 0,0)
+//					ZStack(alignment: .topLeading) {
+//						// 1) hit rect (owns hover + gestures)
+//						controlHit(for: def, frame: frame, value: value, onHover: { info in
+//							if info.inside {
+//								let token = UUID()
+//								hoverToken = token
+//								hoveredControl = def
+////								let f = def.bounds(in: geo.size)
+////								print("🫧 schedule  \(def.name)  token=\(token)  frame=(\(Int(f.minX)),\(Int(f.minY)))  zoom=\(zoom)")
+//								hoveredPreviewText = info.previewText
+//								DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+//									if hoverToken == token { bubbleVisibleFor = def.id }
+////									else { print("🫧 canceled  \(def.name)  (token mismatch)") }
+//								}
+//							} else if hoveredControl?.id == def.id {
+////								print("🫧 HIDE      \(def.name)")
+//								hoveredControl = nil
+//								hoverToken = nil
+//								hoveredPreviewText = nil
+//								bubbleVisibleFor = nil
+//							}
+//						})
+//						.highPriorityGesture(TapGesture(count: 2).onEnded { editingID = def.id })
+//						
+//						if bubbleVisibleFor == def.id {
+//							// screen-pixel metrics @ 1x
+//							let bubblePxH: CGFloat = 26   // ↑ a bit taller
+//							let pxGap: CGFloat = 8        // ↑ a bit more gap
+//							let extraLiftPx: CGFloat = 6  // ↑ lift just a touch more
+//							let lift = (bubblePxH + pxGap + extraLiftPx) / max(zoom, 0.01)
+//							
+//							// flip below if we’d clip off the top
+//							let wouldClipTop = frame.minY - lift < 0
+//							let yOffset = wouldClipTop ? +lift : -lift
+//							
+//							// Center horizontally by using a full-width wrapper inside this local stack.
+//							// This stack’s local (0,0) is the control’s top-left.
+//							HStack {
+//								Spacer(minLength: 0)
+//								let lines: [String]
+//								if let preview = hoveredPreviewText, !preview.isEmpty {
+//									lines = [preview]
+//								} else {
+//									lines = def.displayEntries(for: instance).map { $0.text }
+//								}
+//								HoverBubbleView(lines: lines)
+//									.scaleEffect(1 / max(zoom, 0.01), anchor: .top) // keep size constant; anchor on vertical axis
+//									.allowsHitTesting(false)
+//									.zIndex(10_000)
+//								Spacer(minLength: 0)
+//							}
+//							.frame(width: frame.width)    // span the control’s width so Spacer() can center
+//							.offset(y: yOffset)           // move only vertically in local coords
+//						}
+//					}
+//					// Give the local stack the control’s size, then place it once
+//					.frame(width: frame.width, height: frame.height, alignment: .topLeading)
+//					.position(x: frame.midX, y: frame.midY)
+//					
+//						if editingID == def.id {
+//							InlineEditor(def: def,
+//										 value: value,
+//										 text: $editorText,
+//										 onClose: { editingID = nil })
+//							.position(x: frame.midX, y: frame.midY)
+//							.frame(minWidth: 220)
+//							.fixedSize()
+//							.zIndex(20_000)
+//						}
+//				}
+				ForEach(device.controls, id: \.id) { def in
+					controlCell(def: def, fm: fm)
 				}
 			}
 			.frame(width: fm.size.width, height: fm.size.height, alignment: .topLeading)
@@ -137,7 +237,7 @@ struct RuntimeControlsOverlay: View {
 	}
 	
 	@ViewBuilder
-	private func controlHit(for def: Control, frame: CGRect, value: Binding<ControlValue>, onHover: @escaping (Bool) -> Void) -> some View {
+	private func controlHit(for def: Control, frame: CGRect, value: Binding<ControlValue>, onHover: @escaping (HoverInfo) -> Void) -> some View {
 		let doubleTap = TapGesture(count: 2).onEnded {
 			editorText = displayString(for: value.wrappedValue, control: def)
 			editingID = def.id
@@ -153,7 +253,10 @@ struct RuntimeControlsOverlay: View {
 					frame: frame,
 					value: value,
 					onHover: onHover,
-					count: max(1, def.stepAngles?.count ?? def.stepValues?.count ?? 0)
+					count: max(1, def.stepAngles?.count ?? def.stepValues?.count ?? 0),
+					isPhotoreal: renderStyle == .photoreal,
+					angles: def.stepAngles,
+					stepNames: def.options
 				)
 					.highPriorityGesture(doubleTap)
 				
@@ -162,7 +265,10 @@ struct RuntimeControlsOverlay: View {
 					frame: frame,
 					value: value,   // ✅ use original binding
 					onHover: onHover,
-					count: max(2, def.options?.count ?? def.optionAngles?.count ?? 2)
+					count: max(2, def.options?.count ?? def.optionAngles?.count ?? 2),
+					isPhotoreal: renderStyle == .photoreal,
+					angles: def.optionAngles,
+					optionNames: def.options
 				)
 				.highPriorityGesture(doubleTap)
 				
@@ -399,7 +505,7 @@ private struct KnobHit: View {
 	let frame: CGRect
 	@Binding var value: ControlValue
 	let sensitivity: CGFloat
-	let onHover: (Bool) -> Void
+	let onHover: (HoverInfo) -> Void
 	@State private var start: Double?
 	
 	var body: some View {
@@ -407,7 +513,7 @@ private struct KnobHit: View {
 			.frame(width: frame.width, height: frame.height)
 			.contentShape(Rectangle())
 			.background(Color.clear)
-			.onHover(perform: onHover)
+			.onHover { inside in onHover(HoverInfo(inside: inside, previewText: nil)) }
 			.highPriorityGesture(
 				DragGesture(minimumDistance: 0)
 					.onChanged { g in
@@ -424,98 +530,205 @@ private struct KnobHit: View {
 private struct SteppedKnobHit: View {
 	let frame: CGRect
 	@Binding var value: ControlValue
-	let onHover: (Bool) -> Void
+	let onHover: (HoverInfo) -> Void
 	let count: Int
+	let isPhotoreal: Bool
+	let angles: [Double]?
+	let stepNames: [String]?
 	
 	@State private var start: Int?
 	@State private var clickDir: Int = 1
 	@State private var optionClickDir: Int  = -1
 	
-	// Helpers
+	// geometry that matches RepresentativeGlyphs.SteppedGlyph
+	private let dotD: CGFloat = 6
+	private let spacing: CGFloat = 3
+	private let topPad: CGFloat = 6
+	
 	private var hi: Int { max(0, count - 1) }
 	private var current: Int { value.asStep ?? 0 }
 	
 	private func clamped(_ i: Int) -> Int { min(max(0, i), hi) }
-	
 	private func stepNormal() {
 		if hi == 0 { return }
-		// Flip direction at the ends
 		if current >= hi { clickDir = -1 }
 		if current <= 0  { clickDir =  1 }
 		value = .steppedKnob(clamped(current + clickDir))
 	}
-	
 	private func stepOption() {
 		if hi == 0 { return }
-		// Flip option direction at the ends (inverse starting direction)
 		if current <= 0  { optionClickDir =  1 }
 		if current >= hi { optionClickDir = -1 }
 		value = .steppedKnob(clamped(current + optionClickDir))
 	}
 	
+	// Representative dots layout → nearest index
+	private func repDotIndex(at p: CGPoint, in size: CGSize) -> Int {
+		let totalW = CGFloat(count) * dotD + CGFloat(max(0, count - 1)) * spacing
+		let startX = (size.width - totalW) * 0.5 + dotD * 0.5
+		let cy = topPad + dotD * 0.5
+		var bestI = 0
+		var bestD = CGFloat.greatestFiniteMagnitude
+		for i in 0..<count {
+			let cx = startX + CGFloat(i) * (dotD + spacing)
+			let d = hypot(p.x - cx, p.y - cy)
+			if d < bestD { bestD = d; bestI = i }
+		}
+		return bestI
+	}
+	
 	var body: some View {
-		Rectangle().fill(Color.clear)
-			.frame(width: frame.width, height: frame.height)
-			.contentShape(Rectangle())
-			.background(Color.clear)
-			.onHover(perform: onHover)
+		GeometryReader { geo in
+			Rectangle().fill(Color.clear)
+				.contentShape(Rectangle())
+				.background(Color.clear)
 			
-			// Drag to step
-			.highPriorityGesture(
-				DragGesture(minimumDistance: 0)
-					.onChanged { g in
-						if start == nil { start = current }
-						let d = Int(round(-g.translation.height / 12.0))
-						value = .steppedKnob(clamped((start ?? 0) + d))
+			// HOVER: photoreal shows current only; rep shows hovered dot’s user label
+				.onContinuousHover { phase in
+					switch phase {
+						case .active(let loc):
+							if isPhotoreal {
+								onHover(HoverInfo(inside: true, previewText: nil))
+							} else {
+								let idx = repDotIndex(at: loc, in: geo.size)
+								let name = (stepNames ?? [])[safe: idx] ?? "Step \(idx + 1)"
+								onHover(HoverInfo(inside: true, previewText: name))
+							}
+						case .ended:
+							onHover(HoverInfo(inside: false, previewText: nil))
 					}
-					.onEnded { g in
-						defer { start = nil }
-						// Treat very small movement as a click
-						let moved = abs(g.translation.height) + abs(g.translation.width)
-						if moved < 3 {
+				}
+			
+			// GESTURE:
+			//  • Photoreal: vertical drag steps; center click cycles.
+			//  • Representative: ignore drag (no onChanged), only set on click to nearest dot.
+				.highPriorityGesture(
+					DragGesture(minimumDistance: 0)
+						.onChanged { g in
+							guard isPhotoreal else { return } // <- ignore drag in Rep
+							if start == nil { start = current }
+							let d = Int(round(-g.translation.height / 12.0))
+							value = .steppedKnob(clamped((start ?? 0) + d))
+						}
+						.onEnded { g in
+							defer { start = nil }
+							let moved = abs(g.translation.height) + abs(g.translation.width)
+							
 #if os(macOS)
 							let isOption = NSApp.currentEvent?.modifierFlags.contains(.option) ?? false
 #else
 							let isOption = false
 #endif
-							if isOption { stepOption() } else { stepNormal() }
+							
+							if moved < 3 {
+								if isPhotoreal {
+									if isOption { stepOption() } else { stepNormal() }
+								} else {
+									// Rep: single click → nearest dot only
+									let idx = repDotIndex(at: g.location, in: geo.size)
+									value = .steppedKnob(idx)
+								}
+							}
+							// If it was an actual drag: do nothing in Rep; Photoreal already handled in onChanged.
 						}
-					}
-			)
+				)
+		}
+		.frame(width: frame.width, height: frame.height)
 	}
 }
 
 private struct MultiSwitchHit: View {
 	let frame: CGRect
 	@Binding var value: ControlValue
-	let onHover: (Bool) -> Void
+	let onHover: (HoverInfo) -> Void
 	let count: Int
+	let isPhotoreal: Bool
+	let angles: [Double]?           // unused now in Photo
+	let optionNames: [String]?
+	
+	// geometry that matches RepresentativeGlyphs.SwitchGlyph
+	private let dotW: CGFloat = 8
+	private let spacing: CGFloat = 4
+	private let topPad: CGFloat = 6
+	
+	private func centerIncDec(_ cur: Int) -> Int { (cur + 1) % max(1, count) }
+	
+	private func repDotIndex(at p: CGPoint, in size: CGSize) -> Int {
+		let totalW = CGFloat(count) * dotW + CGFloat(max(0, count - 1)) * spacing
+		let startX = (size.width - totalW) * 0.5 + dotW * 0.5
+		let cy = topPad + dotW * 0.5
+		var bestI = 0
+		var bestD = CGFloat.greatestFiniteMagnitude
+		for i in 0..<count {
+			let cx = startX + CGFloat(i) * (dotW + spacing)
+			let d = hypot(p.x - cx, p.y - cy)
+			if d < bestD { bestD = d; bestI = i }
+		}
+		return bestI
+	}
 	
 	var body: some View {
-		Rectangle().fill(Color.clear)
-			.frame(width: frame.width, height: frame.height)
-			.contentShape(Rectangle())
-			.background(Color.clear)
-			.onHover(perform: onHover)
-			.onTapGesture {
-				let cur = (value.asMulti ?? 0)
-				let next = (cur + 1) % max(1, count)
-				value = .multiSwitch(next)
-			}
+		GeometryReader { geo in
+			Rectangle().fill(Color.clear)
+				.contentShape(Rectangle())
+				.background(Color.clear)
+			
+			// HOVER: Photo shows current only; Rep shows hovered dot’s authored label
+				.onContinuousHover { phase in
+					switch phase {
+						case .active(let loc):
+							if isPhotoreal {
+								onHover(HoverInfo(inside: true, previewText: nil))
+							} else {
+								let idx = repDotIndex(at: loc, in: geo.size)
+								let name = (optionNames ?? [])[safe: idx] ?? "Pos \(idx + 1)"
+								onHover(HoverInfo(inside: true, previewText: name))
+							}
+						case .ended:
+							onHover(HoverInfo(inside: false, previewText: nil))
+					}
+				}
+			
+			// CLICK: Photo keeps center cycle only; Rep sets nearest dot only.
+				.highPriorityGesture(
+					DragGesture(minimumDistance: 0)
+						.onEnded { g in
+							let cx = geo.size.width  * 0.5
+							let cy = geo.size.height * 0.5
+							let dx = Double(g.location.x - cx)
+							let dy = Double(g.location.y - cy)
+							let dist = hypot(dx, dy)
+							let centerThresh = Double(min(geo.size.width, geo.size.height)) * 0.22
+							let cur = value.asMulti ?? 0
+							
+							if isPhotoreal {
+								// Photo: center click cycles; otherwise ignore
+								if dist <= centerThresh {
+									value = .multiSwitch(centerIncDec(cur))
+								}
+							} else {
+								// Rep: pick nearest dot (ignore center-cycle concept)
+								let idx = repDotIndex(at: g.location, in: geo.size)
+								value = .multiSwitch(idx)
+							}
+						}
+				)
+		}
+		.frame(width: frame.width, height: frame.height)
 	}
 }
 
 private struct ButtonHit: View {
 	let frame: CGRect
 	@Binding var value: ControlValue
-	let onHover: (Bool) -> Void
+	let onHover: (HoverInfo) -> Void
 	
 	var body: some View {
 		Rectangle().fill(Color.clear)
 			.frame(width: frame.width, height: frame.height)
 			.contentShape(Rectangle())
 			.background(Color.clear)
-			.onHover(perform: onHover)
+			.onHover { inside in onHover(HoverInfo(inside: inside, previewText: nil)) }
 			.onTapGesture {
 				value = .button(!(value.asBool ?? false))
 			}
@@ -525,14 +738,14 @@ private struct ButtonHit: View {
 private struct LitButtonHit: View {
 	let frame: CGRect
 	@Binding var value: ControlValue
-	let onHover: (Bool) -> Void
+	let onHover: (HoverInfo) -> Void
 	
 	var body: some View {
 		Rectangle().fill(Color.clear)
 			.frame(width: frame.width, height: frame.height)
 			.contentShape(Rectangle())
 			.background(Color.clear)
-			.onHover(perform: onHover)
+			.onHover { inside in onHover(HoverInfo(inside: inside, previewText: nil)) }
 			.onTapGesture {
 				let p = !(value.asPressed ?? false)
 				value = .litButton(isPressed: p)
@@ -544,7 +757,7 @@ private struct ConcentricKnobHit: View {
 	let frame: CGRect
 	@Binding var value: ControlValue
 	let sensitivity: CGFloat
-	let onHover: (Bool) -> Void
+	let onHover: (HoverInfo) -> Void
 	@State private var startOuter: Double?
 	@State private var startInner: Double?
 	
@@ -553,7 +766,7 @@ private struct ConcentricKnobHit: View {
 			.frame(width: frame.width, height: frame.height)
 			.contentShape(Rectangle())
 			.background(Color.clear)
-			.onHover(perform: onHover)
+			.onHover { inside in onHover(HoverInfo(inside: inside, previewText: nil)) }
 			.highPriorityGesture(
 				DragGesture(minimumDistance: 0)
 					.onChanged { g in
@@ -578,7 +791,7 @@ struct RuntimePatches: View {
 		GeometryReader { geo in
 			let faceplate: NSImage? = device.imageData.flatMap { NSImage(data: $0) }
 			ZStack {
-				ForEach(device.controls) { def in
+				ForEach(device.controls, id: \.id) { def in
 					let proxy = projectedControl(def: def, state: instance.controlStates[def.id])
 					
 					ForEach(Array(proxy.regions.enumerated()), id: \.0) { idx, region in
@@ -660,4 +873,30 @@ private extension ControlValue {
 struct HoverBubbleActiveKey: PreferenceKey {
 	static var defaultValue: Bool = false
 	static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
+}
+
+private struct HoverInfo {
+	var inside: Bool
+	var previewText: String?
+}
+
+@inline(__always)
+private func nearestIndex(forAngle deg: Double, in angles: [Double]) -> Int {
+	func wrap(_ a: Double) -> Double {
+		var x = a
+		while x <= -180 { x += 360 }
+		while x >   180 { x -= 360 }
+		return x
+	}
+	var bestI = 0
+	var bestD = Double.greatestFiniteMagnitude
+	for (i, a) in angles.enumerated() {
+		let d = abs(wrap(deg - a))
+		if d < bestD { bestD = d; bestI = i }
+	}
+	return bestI
+}
+
+private extension Array {
+	subscript(safe i: Int) -> Element? { (i >= 0 && i < count) ? self[i] : nil }
 }

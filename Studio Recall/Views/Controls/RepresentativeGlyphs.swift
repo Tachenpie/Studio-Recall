@@ -7,6 +7,11 @@
 
 import SwiftUI
 
+//private let REP_KNOB_MIN_DEG: Double   = -240.0
+//private let REP_KNOB_SWEEP_DEG: Double =  300.0
+private let REP_KNOB_MIN_DEG: Double   = -225.0
+private let REP_KNOB_SWEEP_DEG: Double =  270.0
+
 struct RepresentativeGlyphs: View {
 	@Environment(\.displayScale) private var displayScale
 	
@@ -14,105 +19,272 @@ struct RepresentativeGlyphs: View {
 	@Binding var instance: DeviceInstance
 	let faceSize: CGSize
 	
+	let selectedId: UUID?
+	
+	// Precompute control frames in face space
+	private var controlFrames: [(control: Control, frame: CGRect)] {
+		device.controls.map { ($0, $0.bounds(in: faceSize)) }
+	}
+	
 	var body: some View {
+		let labelPt = CGFloat(clamp(Double(faceSize.height) * 0.024, 9.0, 11.0))
+		let lineH   = labelPt * 1.15
+		let accent  = representativeAccentColor(for: device.name)
+		
+		let placed  = placeLabels(labelPt: labelPt, lineH: lineH)
+		
 		ZStack(alignment: .topLeading) {
 			
-			// 1) Controls as lightweight glyphs (no labels inside)
-			ForEach(device.controls) { def in
-				let frame = def.bounds(in: faceSize)
-				glyph(for: def)
-					.frame(width: frame.width, height: frame.height, alignment: .center)
-					.position(x: frame.midX, y: frame.midY)
-					.allowsHitTesting(false)
+			// Controls as lightweight glyphs (no labels inside)
+			ForEach(controlFrames, id: \.control.id) { pair in
+				let def   = pair.control
+				let frame = pair.frame
+				
+				ZStack {
+					glyph(for: def)
+					if def.id == selectedId {
+						RoundedRectangle(cornerRadius: 8, style: .continuous)
+							.stroke(accent, lineWidth: 1.5)
+							.shadow(radius: 1, y: 1)
+							.padding(2)
+					}
+				}
+				.frame(width: frame.width, height: frame.height)
+				.position(x: frame.midX, y: frame.midY)
+				.allowsHitTesting(false)
 			}
 			
-			// 2) Labels BELOW each control, placed in face coordinates
-			ForEach(device.controls) { def in
-				let frame = def.bounds(in: faceSize)
-				let label = def.name.isEmpty ? def.type.displayName : def.name
-				let labelPt = CGFloat(clamp(Double(faceSize.height) * 0.024, min: 7.0, max: 10.0))
-				
-				// snap to device pixels for maximum crispness
-				let px = (frame.midX * displayScale).rounded() / displayScale
-				let py = ((frame.maxY + 3 + labelPt * 0.5) * displayScale).rounded() / displayScale
-
-				// offset the label 4pt below the control's rect
-				Text(label)
-					.font(.system(size: labelPt, weight: .regular, design: .rounded))
-					.foregroundStyle(.white.opacity(0.92))
-					.lineLimit(1)
-					.minimumScaleFactor(0.75)
-					.allowsTightening(true)
-					.frame(width: max(26, frame.width + 8)) // a little extra to reduce truncation
-					.position(x: px, y: py)
-					.allowsHitTesting(false)
+			// Labels place with collision-avoidance
+			ForEach(controlFrames, id: \.control.id) { pair in
+				if let lp = placed[pair.control.id] {
+					// pixel-snap
+					let px = (lp.rect.midX * displayScale).rounded() / displayScale
+					let py = (lp.rect.midY * displayScale).rounded() / displayScale
+					Text(lp.text)
+						.font(.system(size: labelPt, weight: .regular, design: .rounded))
+						.foregroundStyle(lp.isAccent ? accent : .white.opacity(0.92))
+						.lineLimit(1)
+						.minimumScaleFactor(0.75)
+						.allowsTightening(true)
+						.frame(width: lp.rect.width, height: lp.rect.height) //, alignment: .center)
+						.position(x: px, y: py)
+						.allowsHitTesting(false)
+				}
 			}
 		}
 		.frame(width: faceSize.width, height: faceSize.height, alignment: .topLeading)
+	}
+	
+	// MARK: - Placement engine
+	private struct LabelPlacement { let rect: CGRect; let text: String; let isAccent: Bool }
+	
+	private func placeLabels(labelPt: CGFloat, lineH: CGFloat) -> [UUID: LabelPlacement] {
+		var result: [UUID: LabelPlacement] = [:]
+		
+		// Occupied zones start with all control glyph frames
+		var occupied: [CGRect] = controlFrames.map { $0.frame.insetBy(dx: -2, dy: -2) }
+		
+		for (def, frame) in controlFrames {
+			let defaultText  = def.name.isEmpty ? def.type.displayName : def.name
+			var text = defaultText
+			var accent = false
+			
+			switch def.type {
+				case .multiSwitch:
+					let count = max(2, def.options?.count ?? def.optionAngles?.count ?? 0)
+					if count > 2 {
+						let idx = instance.controlStates[def.id]?.asMulti ?? multiIndex(def)
+						if let names = def.options, idx < names.count {
+							text = "\(def.name): \(names[idx])"
+						} else {
+							text = "\(def.name): #\(idx)"
+						}
+						accent = true
+					}
+				case .steppedKnob:
+					let count = max(2, def.stepValues?.count ?? def.stepAngles?.count ?? 0)
+					if count > 2 {
+						let idx = instance.controlStates[def.id]?.asStepped ?? steppedIndex(def)
+						if let names = def.options, idx < names.count {
+							text = "\(def.name): \(names[idx])"
+						} else {
+							text = "\(def.name): Step \(idx + 1)"
+						}
+						accent = true
+					}
+				default:
+					break
+			}
+			
+			let width = max(26, frame.width + 8)
+			// Candidate rects (order: bottom, right, left, top)
+			let bottom = CGRect(x: frame.midX - width/2, y: frame.maxY + 3, width: width, height: lineH)
+			let right  = CGRect(x: frame.maxX + 4,       y: frame.midY - lineH/2, width: width, height: lineH)
+			let left   = CGRect(x: frame.minX - 4 - width, y: frame.midY - lineH/2, width: width, height: lineH)
+			let top    = CGRect(x: frame.midX - width/2, y: frame.minY - 3 - lineH, width: width, height: lineH)
+			
+			let candidates = [bottom, right, left, top]
+			let chosen = candidates.first(where: { !intersectsAny($0, occupied) }) ?? bottom
+			
+			result[def.id] = LabelPlacement(rect: chosen, text: text, isAccent: accent)
+			occupied.append(chosen)
+		}
+		return result
 	}
 	
 	@ViewBuilder
 	private func glyph(for def: Control) -> some View {
 		switch def.type {
 			case .knob:
-				// t ∈ [0,1], canonical sweep centered on Y-axis (mid = straight up)
-				KnobGlyphCanonical(t: (instance.controlStates[def.id]?.asKnob) ?? 0)
-			case .steppedKnob:
-				SteppedGlyph(index: (instance.controlStates[def.id]?.asStepped) ?? 0,
-							 count: max(1, def.stepAngles?.count ?? def.stepValues?.count ?? 8))
-			case .multiSwitch:
-				SwitchGlyph(index: (instance.controlStates[def.id]?.asMulti) ?? 0,
-							count: max(2, def.options?.count ?? def.optionAngles?.count ?? 3))
-			case .button:
-				ButtonGlyph(isOn: (instance.controlStates[def.id]?.asButton) ?? false)
-			case .light:
-				LightGlyph(isOn: (instance.controlStates[def.id]?.asLight) ?? false)
+				let instRaw = instance.controlStates[def.id]?.asKnob
+				let raw     = max(0, min(1, instRaw ?? normalizedKnobValue(def)))
+				let t   = canonicalT(for: def, value: raw)      // <- use canonicalT here
+				let (start, sweep) = startSweep(for: def)
+				KnobGlyphCanonical(
+					t: t,
+					startDeg: start,
+					sweepDeg: sweep
+				)
+				
 			case .concentricKnob:
-				ConcentricGlyphCanonical(outer: (instance.controlStates[def.id]?.asOuter) ?? 0,
-										 inner: (instance.controlStates[def.id]?.asInner) ?? 0)
+				let oInst = instance.controlStates[def.id]?.asOuter
+				let iInst = instance.controlStates[def.id]?.asInner
+				let oRaw  = max(0, min(1, oInst ?? normalizedOuterValue(def)))
+				let iRaw  = max(0, min(1, iInst ?? normalizedInnerValue(def)))
+				let o     = canonicalT(for: def, ring: .outer, value: oRaw)
+				let i     = canonicalT(for: def, ring: .inner, value: iRaw)
+				let (start, sweep) = startSweep(for: def)
+				ConcentricGlyphCanonical(outer: o, inner: i, startDeg: start, sweepDeg: sweep)
+
+			case .steppedKnob:
+				let idx = instance.controlStates[def.id]?.asStepped ?? steppedIndex(def)
+				let count = max(2, def.stepValues?.count ?? def.stepAngles?.count ?? def.options?.count ?? 2)
+				if count == 2 {
+					BinarySquareGlyph(isOn: idx == 1)
+				} else {
+					SteppedGlyph(index: idx, count: count)
+				}
+			
+			case .multiSwitch:
+				let idx = instance.controlStates[def.id]?.asMulti ?? multiIndex(def)
+				let count = max(2, def.options?.count ?? def.optionAngles?.count ?? 2)
+				if count == 2 {
+					BinarySquareGlyph(isOn: idx == 1)
+				} else {
+					SwitchGlyph(index: idx, count: count)
+				}
+				
+			case .button:
+				let isOn = instance.controlStates[def.id]?.asButton ?? (def.isPressed ?? false)
+				BinarySquareGlyph(isOn: isOn)
+				
 			case .litButton:
-				LitButtonGlyph(isOn: (instance.controlStates[def.id]?.asLitPressed) ?? false)
+				let isOn = instance.controlStates[def.id]?.asLitPressed ?? (def.isPressed ?? false)
+				BinarySquareGlyph(isOn: isOn)
+				
+			case .light:
+				let isOn = instance.controlStates[def.id]?.asLight ?? (def.isPressed ?? false)
+				LightGlyph(isOn: isOn)
 		}
 	}
 }
 
-// MARK: - Glyphs (unchanged visuals, no label inside)
+// MARK: - Value Helpers
+@inline(__always)
+private func startSweep(for def: Control) -> (Double, Double) {
+	let start = def.repStartDeg ?? REP_KNOB_MIN_DEG   // e.g. -225 by default
+	let sweep = def.repSweepDeg ?? REP_KNOB_SWEEP_DEG // e.g. 270 by default
+	return (start, sweep)
+}
+
+private func knobAngle(startDeg: Double, sweepDeg: Double, t: Double) -> Double {
+	startDeg + sweepDeg * t
+}
+
+private enum Ring { case outer, inner }
+
+private func normalizedKnobValue(_ c: Control) -> Double {
+	let lo = c.knobMin?.resolve(default: 0) ?? 0
+	let hi = c.knobMax?.resolve(default: 1) ?? 1
+	guard hi > lo else { return 0 }
+	let v  = c.value ?? lo
+	return min(max((v - lo) / (hi - lo), 0), 1)
+}
+
+private func normalizedOuterValue(_ c: Control) -> Double {
+	let lo = c.outerMin?.resolve(default: 0) ?? 0
+	let hi = c.outerMax?.resolve(default: 1) ?? 1
+	guard hi > lo else { return 0 }
+	let v  = c.outerValue ?? lo
+	return min(max((v - lo) / (hi - lo), 0), 1)
+}
+
+private func normalizedInnerValue(_ c: Control) -> Double {
+	let lo = c.innerMin?.resolve(default: 0) ?? 0
+	let hi = c.innerMax?.resolve(default: 1) ?? 1
+	guard hi > lo else { return 0 }
+	let v  = c.innerValue ?? lo
+	return min(max((v - lo) / (hi - lo), 0), 1)
+}
+
+// Index helpers (safe)
+private func steppedIndex(_ c: Control) -> Int {
+	let idx = c.stepIndex ?? 0
+	let cnt = max(1, c.stepAngles?.count ?? c.stepValues?.count ?? c.options?.count ?? 1)
+	return min(max(idx, 0), cnt - 1)
+}
+
+private func multiIndex(_ c: Control) -> Int {
+	let idx = c.selectedIndex ?? 0
+	let cnt = max(2, c.options?.count ?? c.optionAngles?.count ?? 2)
+	return min(max(idx, 0), cnt - 1)
+}
 
 // MARK: - Canonical knob visuals (mid points straight up)
 
-private struct KnobGlyphCanonical: View {
+struct KnobGlyphCanonical: View {
 	let t: Double  // 0…1
+	let startDeg: Double
+	let sweepDeg: Double
+	
 	var body: some View {
 		ZStack {
 			Circle().strokeBorder(.white.opacity(0.25), lineWidth: 1.5)
 			tickMarks
-			Needle(angleDegrees: canonicalAngle(t))
-				.stroke(.white, lineWidth: 2)
+			Needle(angleDegrees: knobAngle(startDeg: startDeg, sweepDeg: sweepDeg, t: t))
+				.stroke(.white, lineWidth: 1)
 		}
 		.padding(4)
 	}
 	
-	/// Canonical mapping: sweep 270°, centered on Y-axis (mid = 90°)
-	private func canonicalAngle(_ t: Double) -> Double {
-		// 6:30 (-165°) ... 12:00 (-90°) ... 5:30 (-15°)
-		return -240.0 + 300.0 * t
+	private var tickMarks: some View {
+		TickRingShape(
+			tickCount: 25,
+			minDeg: startDeg,
+			sweepDeg: sweepDeg
+		)
+		.stroke(.white.opacity(0.35), lineWidth: 0.5)
 	}
 	
-	private var tickMarks: some View {
-		Canvas { ctx, size in
-			let r: CGFloat = min(size.width, size.height) * 0.5 - 3.0
-			let cx: CGFloat = size.width  * 0.5
-			let cy: CGFloat = size.height * 0.5
-			for i in 0..<21 {
-				let tt = Double(i) / 20.0
-				let deg = canonicalAngle(tt)
+	private struct TickRingShape: Shape {
+		let tickCount: Int
+		let minDeg: Double
+		let sweepDeg: Double
+		
+		func path(in rect: CGRect) -> Path {
+			let r  = min(rect.width, rect.height) * 0.5 - 3.0
+			let cx = rect.midX, cy = rect.midY
+			var p  = Path()
+			for i in 0..<tickCount {
+				let t   = Double(i) / Double(max(1, tickCount - 1))
+				let deg = minDeg + sweepDeg * t
 				let rad = deg * .pi / 180.0
-				let c = CGFloat(cos(rad)), s = CGFloat(sin(rad))
-				let p0 = CGPoint(x: cx + c * r,       y: cy + s * r)
-				let p1 = CGPoint(x: cx + c * (r - 4), y: cy + s * (r - 4))
-				var path = Path(); path.move(to: p0); path.addLine(to: p1)
-				ctx.stroke(path, with: .color(.white.opacity(0.35)))
+				let c   = CGFloat(cos(rad)), s = CGFloat(sin(rad))
+				let p0  = CGPoint(x: cx + c * r,       y: cy + s * r)
+				let p1  = CGPoint(x: cx + c * (r - 4), y: cy + s * (r - 4))
+				p.move(to: p0); p.addLine(to: p1)
 			}
+			return p
 		}
 	}
 	
@@ -130,21 +302,23 @@ private struct KnobGlyphCanonical: View {
 	}
 }
 
-private struct ConcentricGlyphCanonical: View {
+struct ConcentricGlyphCanonical: View {
 	let outer: Double, inner: Double
-	private func canonicalAngle(_ t: Double) -> Double {
-		// same top-arc sweep as single knobs
-		return -240.0 + 300.0 * t
-	}
+	let startDeg: Double
+	let sweepDeg: Double
 	
 	var body: some View {
 		ZStack {
 			Circle().stroke(.white.opacity(0.25), lineWidth: 6)
 			Circle().stroke(.white.opacity(0.7), lineWidth: 2).scaleEffect(0.55)
-			GaugeNeedle(angleDeg: canonicalAngle(outer)).stroke(.white, lineWidth: 2)
-			GaugeNeedle(angleDeg: canonicalAngle(inner)).stroke(.white.opacity(0.8), lineWidth: 2).scaleEffect(0.55)
+			GaugeNeedle(angleDeg: knobAngle(startDeg: startDeg, sweepDeg: sweepDeg, t: outer))
+				.stroke(.white, lineWidth: 2)
+			GaugeNeedle(angleDeg: knobAngle(startDeg: startDeg, sweepDeg: sweepDeg, t: inner))
+				.stroke(.white.opacity(0.8), lineWidth: 2)
+				.scaleEffect(0.55)
 		}.padding(6)
 	}
+	
 	private struct GaugeNeedle: Shape {
 		let angleDeg: Double
 		func path(in rect: CGRect) -> Path {
@@ -159,7 +333,7 @@ private struct ConcentricGlyphCanonical: View {
 	}
 }
 
-private struct SteppedGlyph: View {
+struct SteppedGlyph: View {
 	let index: Int, count: Int
 	var body: some View {
 		HStack(spacing: 3) {
@@ -171,7 +345,7 @@ private struct SteppedGlyph: View {
 	}
 }
 
-private struct SwitchGlyph: View {
+struct SwitchGlyph: View {
 	let index: Int, count: Int
 	var body: some View {
 		HStack(spacing: 4) {
@@ -184,7 +358,7 @@ private struct SwitchGlyph: View {
 	}
 }
 
-private struct ButtonGlyph: View {
+struct ButtonGlyph: View {
 	let isOn: Bool
 	var body: some View {
 		Circle().fill(isOn ? .white.opacity(0.9) : .white.opacity(0.2))
@@ -193,7 +367,34 @@ private struct ButtonGlyph: View {
 	}
 }
 
-private struct LightGlyph: View {
+struct BinarySquareGlyph: View {
+	let isOn: Bool
+	@Environment(\.displayScale) private var displayScale
+	
+	var body: some View {
+		GeometryReader { geo in
+			// square sized to the control box, pixel-snapped for crisp edges
+			let side0 = min(geo.size.width, geo.size.height) * 0.70
+			let side  = (side0 * displayScale).rounded() / displayScale
+			let color = isOn ? Color.white : Color.black
+			
+			ZStack {
+				Rectangle()
+					.fill(color)
+					.frame(width: side, height: side)
+					.overlay(
+						// keep the OFF state visible on a dark panel
+						Rectangle()
+							.stroke(Color.white.opacity(isOn ? 0 : 0.6), lineWidth: 1)
+							.overlay(Rectangle().stroke(Color.black.opacity(isOn ? 0.25 : 0), lineWidth: 0.5))
+					)
+			}
+			.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+		}
+	}
+}
+
+struct LightGlyph: View {
 	let isOn: Bool
 	var body: some View {
 		Circle().fill(isOn ? .green.opacity(0.9) : .white.opacity(0.15))
@@ -201,7 +402,7 @@ private struct LightGlyph: View {
 	}
 }
 
-private struct LitButtonGlyph: View {
+struct LitButtonGlyph: View {
 	let isOn: Bool
 	var body: some View {
 		ZStack {
@@ -227,5 +428,55 @@ private extension ControlValue {
 	var asInner: Double?        { if case .concentricKnob(_, let i) = self { return i } else { return nil } }
 }
 
-// tiny util
-@inline(__always) private func clamp<T: Comparable>(_ x: T, min lo: T, max hi: T) -> T { max(lo, min(hi, x)) }
+// MARK: - Helpers
+@inline(__always) private func clamp<T: Comparable>(_ x: T, _ lo: T, _ hi: T) -> T { max(lo, min(hi, x)) }
+
+// Collision test (with tiny padding)
+private func intersectsAny(_ r: CGRect, _ others: [CGRect]) -> Bool {
+	let pad: CGFloat = 1
+	let a = r.insetBy(dx: -pad, dy: -pad)
+	return others.contains(where: { $0.intersects(a) })
+}
+
+// Smallest signed angular difference in degrees in the range (-180, 180]
+@inline(__always)
+private func signedDeltaDegrees(from a: Double, to b: Double) -> Double {
+	var d = b - a
+	while d <= -180 { d += 360 }
+	while d >   180 { d -= 360 }
+	return d
+}
+
+/// Return t (0…1) corrected when the authored rotate mapping runs clockwise.
+/// We look up the rotate mapping on the requested ring (if any), otherwise on the first region
+/// that actually carries a rotate with degMin/degMax.
+@inline(__always)
+private func canonicalT(for def: Control, ring: Ring? = nil, value t: Double) -> Double {
+	// Representative mode is canonical: ignore image mappings entirely.
+	return max(0, min(1, t))
+}
+
+// reuse the same deterministic accent you use on the faceplate
+@inline(__always)
+private func representativeAccentColor(for name: String) -> Color {
+	var h: UInt64 = 0
+	for u in name.unicodeScalars { h = (h &* 1099511628211) ^ UInt64(u.value) }
+	let hue = Double(h % 360) / 360.0
+	return Color(hue: hue, saturation: 0.60, brightness: 0.9)
+}
+
+// Best-effort display string for stepped/multi (fallbacks if no names exist)
+private func selectionText(_ def: Control, instance: DeviceInstance) -> String? {
+	switch def.type {
+		case .steppedKnob:
+			let idx = instance.controlStates[def.id]?.asStepped ?? 0
+			if let names = def.options, idx < names.count { return names[idx] }
+			return "Step \(idx + 1)"
+		case .multiSwitch:
+			let idx = instance.controlStates[def.id]?.asMulti ?? 0
+			if let opts = def.options, idx < opts.count { return opts[idx] }
+			return "Pos \(idx + 1)"
+		default:
+			return nil
+	}
+}

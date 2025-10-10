@@ -39,6 +39,8 @@ struct RackChassisSlotView: View {
 	@State private var isPresentingEditor = false
 	@State private var hoverBubbleActive = false
 	
+	@State private var showHitRects: Bool = true
+	
 	var body: some View {
 		Group {
 			if let instance, let device = library.device(for: instance.deviceID) {
@@ -124,7 +126,7 @@ struct RackChassisSlotView: View {
 				.frame(width: metrics.size.width, height: metrics.size.height)
 				.allowsHitTesting(false)
 
-				if renderStyle == .representative || lod == .full {
+//				if renderStyle == .representative || lod == .full {
 					RuntimeControlsOverlay(
 						device: device,
 						instance: instanceBinding,
@@ -134,7 +136,10 @@ struct RackChassisSlotView: View {
 					.frame(width: metrics.size.width, height: metrics.size.height)
 					.environment(\.isRegionEditing, false)
 					.zIndex(1)
-				}
+					
+//				}
+				
+				
 				
 				if let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) {
 					let session = $sessionManager.sessions[i]
@@ -154,7 +159,34 @@ struct RackChassisSlotView: View {
 				faceGroup
 //					.offset(x: L.leftWingPts + L.leftRailPts, y: metrics.vOffset)
 					.offset(x: wingL_eff + L.leftRailPts, y: metrics.vOffset)
-				
+//				#if DEBUG
+//					.overlay(alignment: .topLeading) {
+//						if showHitRects {
+//							GeometryReader { g in
+//								let faceSize = g.size
+//								ZStack(alignment: .topLeading) {
+//									ForEach(device.controls) { def in
+//										let r = def.bounds(in: faceSize)
+//										Path { p in
+//											p.addRect(r)
+//										}
+//										.stroke(.red.opacity(0.65), lineWidth: 1)
+//										.overlay(
+//											Text(def.name)
+//												.font(.system(size: 9, weight: .medium, design: .rounded))
+//												.padding(2)
+//												.background(.black.opacity(0.5))
+//												.foregroundStyle(.white)
+//												.clipShape(RoundedRectangle(cornerRadius: 3))
+//												.position(x: r.minX + 4 + 24, y: r.minY - 8) // tiny tag near the rect
+//										)
+//									}
+//								}
+//							}
+//							.allowsHitTesting(false)
+//						}
+//					}
+//				#endif
 				// LEFT wing (partials only)
 				if isPartial, wingL_eff > 0 {
 					WingPlate()

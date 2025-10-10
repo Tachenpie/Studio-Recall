@@ -23,6 +23,10 @@ struct LabelView: View {
 	@State private var draftText: String = ""
 	@FocusState private var textFieldFocused: Bool
 	
+	private var hitPad: CGFloat {
+		max(6, 12 / max(zoom, 0.001))
+	}
+	
 	var body: some View {
 		let s = label.style
 		let z = max(CGFloat(zoom), 0.0001)
@@ -85,7 +89,8 @@ struct LabelView: View {
 					.shadow(radius: (zoom <= 1.0 ? s.shadow : 0))
 			}
 		}
-		.contentShape(Rectangle())
+		.contentShape(Rectangle().inset(by: -hitPad))
+		.background(Color.black.opacity(0.001))
 		
 		// DOUBLE-CLICK → inline edit (not the inspector)
 		.highPriorityGesture(

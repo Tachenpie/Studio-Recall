@@ -40,6 +40,17 @@ struct DeviceInstance: Identifiable, Codable, Equatable {
 	}
 }
 
+extension DeviceInstance {
+	static func preview(for device: Device) -> DeviceInstance {
+		// Use the initializer that copies defaults from the device definition.
+		return DeviceInstance(
+			id: UUID(),
+			deviceID: device.id,
+			device: device
+		)
+	}
+}
+
 // Represent the value for any control type
 enum ControlValue: Codable, Equatable, CustomStringConvertible {
 	case knob(Double)
@@ -106,5 +117,14 @@ extension DeviceInstance {
 			)
 			: nil
 		}
+	}
+}
+
+// MARK: - Editor helper
+extension DeviceInstance {
+	/// Empty instance for a given device: no controlStates are populated.
+	/// RepresentativeGlyphs will then fall back to the model's Control values.
+	static func empty(for device: Device) -> DeviceInstance {
+		DeviceInstance(deviceID: device.id)
 	}
 }

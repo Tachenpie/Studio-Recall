@@ -205,42 +205,6 @@ extension VisualMapping {
 	}
 }
 
-//extension Control {
-//	/// Normalize a semantic `value` (e.g. dB) to 0…1 using knobMin/knobMax and mapping taper.
-//	func normalizedValueForMapping(_ v: Double? = nil, mapping: VisualMapping?) -> Double {
-//		//		let value = v ?? self.value ?? 0
-//		//		let loB = knobMin
-//		//		let hiB = knobMax
-//		let taper = mapping?.taper ?? .linear
-//		
-//		switch taper {
-//			case .decibel:
-//				// value in dB → linear ratio, then normalize 0…1
-//				let rVal: Double = pow(10.0, (v ?? self.value ?? 0) / 20.0)
-//				
-//				// Safely unwrap bounds (use practical defaults if nil)
-//				let minDb: Double = (knobMin?.resolve(default: -120)) ?? -120
-//				let maxDb: Double = (knobMax?.resolve(default:    0)) ??   0
-//				
-//				// If min == −∞, resolve() returns a very large negative, and pow(...) underflows to 0 → perfect.
-//				let rMin: Double = pow(10.0, minDb / 20.0)   // 0 when minDb is −∞
-//				let rMax: Double = pow(10.0, maxDb / 20.0)   // 1 when maxDb is 0 dB
-//				
-//				let denom = max(1e-12, rMax - rMin)
-//				let t = (rVal - rMin) / denom
-//				return min(max(t, 0), 1)
-//				
-//			case .linear:
-//				guard let lo = knobMin?.resolve(default: 0),
-//					  let hi = knobMax?.resolve(default: 1),
-//					  hi != lo
-//				else { return 0 }
-//				let t = ((v ?? self.value ?? 0) - lo) / (hi - lo)
-//				return min(max(t, 0), 1)
-//		}
-//	}
-//}
-
 enum ImageRegionShape: String, Codable { case rect, circle }
 
 struct ImageRegion: Codable, Equatable {
@@ -338,6 +302,9 @@ struct Control: Identifiable, Codable {
 	// KNOB ranges (+∞, −∞ safe)
 	var knobMin: Bound? = nil
 	var knobMax: Bound? = nil
+	// Representative-only sweep override (degrees, 0° = pointing right, +CCW)
+	public var repStartDeg: Double?   // default nil → use -225°
+	public var repSweepDeg: Double?   // default nil → use 270°
 	
 	// Stepped knob: per-step angles & values
 	var stepAngles: [Double]? = nil      // degrees (UI mapping)
@@ -400,6 +367,25 @@ struct Control: Identifiable, Codable {
 	var spriteLayout: SpriteLayout = .vertical
 	var frameMapping: [Int : Int]? = nil
 	
+	// Convenience normals for editor glyphs (optional but handy)
+	public var normalizedValue: Double? {
+		guard let v = value, let lo = knobMin?.resolve(default: 0), let hi = knobMax?.resolve(default: 1), hi > lo
+		else { return nil }
+		return (v - lo) / (hi - lo)
+	}
+	
+	public var outerValueNormalized: Double? {
+		guard let v = value, let lo = outerMin?.resolve(default: 0), let hi = outerMax?.resolve(default: 1), hi > lo
+		else { return nil }
+		return (v - lo) / (hi - lo)
+	}
+	
+	public var innerValueNormalized: Double? {
+		guard let v = value, let lo = innerMin?.resolve(default: 0), let hi = innerMax?.resolve(default: 1), hi > lo
+		else { return nil }
+		return (v - lo) / (hi - lo)
+	}
+	
     // Draggable position
 	var position: CGPoint = CGPoint(x: 0.5, y: 0.5)
     var x: CGFloat = 0.5   // normalized (0–1)
@@ -435,6 +421,8 @@ struct Control: Identifiable, Codable {
 		
 		// knob ranges/taper
 		case knobMin, knobMax
+		
+		case repStartDeg, repSweepDeg
 		
 		// concentric values + ranges/tapers/mappings/labels
 		case outerValue, innerValue
@@ -488,6 +476,9 @@ struct Control: Identifiable, Codable {
 		// knob ranges
 		knobMin = try c.decodeIfPresent(Bound.self, forKey: .knobMin)
 		knobMax = try c.decodeIfPresent(Bound.self, forKey: .knobMax)
+		
+		repStartDeg = try c.decodeIfPresent(Double.self, forKey: .repStartDeg)
+		repSweepDeg = try c.decodeIfPresent(Double.self, forKey: .repSweepDeg)
 		
 		// concentric
 		outerValue = try c.decodeIfPresent(Double.self, forKey: .outerValue)
@@ -560,6 +551,9 @@ struct Control: Identifiable, Codable {
 		// knob ranges
 		try c.encodeIfPresent(knobMin, forKey: .knobMin)
 		try c.encodeIfPresent(knobMax, forKey: .knobMax)
+		
+		try c.encodeIfPresent(repStartDeg, forKey: .repStartDeg)
+		try c.encodeIfPresent(repSweepDeg, forKey: .repSweepDeg)
 		
 		// concentric
 		try c.encodeIfPresent(outerValue, forKey: .outerValue)

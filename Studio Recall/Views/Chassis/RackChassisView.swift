@@ -70,49 +70,6 @@ struct RackChassisView: View {
 			.frame(width: faceW)
 			.zIndex(2)
 			
-//			// --- 2) CHASSIS FACE (fixed size; no GeometryReader) ---
-//			ZStack(alignment: .topLeading) {
-//				
-//				let showDropGrid = (dragContext.currentPayload != nil)
-//				// A) GRID (empty-cell drop targets)
-//				VStack(spacing: rowSpacing) {
-//					ForEach(0..<rack.rows, id: \.self) { r in
-//						HStack(spacing: 0) {
-//							ForEach(0..<RackGrid.columnsPerRow, id: \.self) { c in
-//								if rack.slots[r][c] == nil {
-//									Rectangle()
-//										.fill(showDropGrid ? Color.white.opacity(0.06) : .clear)
-//										.overlay(showDropGrid
-//											? AnyView(Rectangle().stroke(Color.secondary.opacity(0.6),
-//															   style: StrokeStyle(lineWidth: 1, dash: [4])))
-//												 : AnyView(EmptyView())
-//										)
-//										.contentShape(Rectangle())
-//										.onDrop(of: [UTType.deviceDragPayload],
-//												delegate: ChassisDropDelegate(
-//													fixedCell: (r, c),
-//													indexFor: nil,
-//													rowX0: -.infinity,
-//													rowWidthPts: .infinity,
-//													slots: $rack.slots,
-//													hoveredIndex: $hoveredIndex,
-//													hoveredValid: $hoveredValid,
-//													hoveredRange: $hoveredRange,
-//													hoveredRows:  $hoveredRows,
-//													library: library,
-//													kind: .rack,
-//													onCommit: { sessionManager.saveSessions() }
-//												))
-//								} else {
-//									Color.clear.allowsHitTesting(false)
-//								}
-//							}
-//						}
-//						.frame(height: rowH)
-//					}
-//				}
-//				.frame(width: innerW)
-//				.padding(facePadding)
 			// --- 2) CHASSIS FACE (fixed size; no GeometryReader) ---
 			ZStack(alignment: .topLeading) {
 				

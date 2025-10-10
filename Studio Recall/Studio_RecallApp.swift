@@ -113,6 +113,20 @@ struct Studio_RecallApp: App {
         .defaultPosition(.center)
         .defaultSize(width: 600, height: 400)
 
+		WindowGroup(id: "control-editor", for: UUID.self) { $deviceId in
+			if let id = deviceId,
+			   let device = library.devices.first(where: { $0.id == id }) {
+				ControlEditorWindow(editableDevice: EditableDevice(device: device))
+					.frame(minWidth: 900, minHeight: 560)
+			} else {
+			Text("No device selected")
+					.frame(minWidth: 600, minHeight: 300)
+			}
+		}
+		.windowStyle(.titleBar)
+		.windowToolbarStyle(.unifiedCompact)
+		
+		
         Settings {
             PreferencesView()
                 .environmentObject(settings)

@@ -74,6 +74,9 @@ final class EditableDevice: ObservableObject, Identifiable {
     @Published var device: Device
     let id = UUID()
     
+	@Published var revision: Int = 0
+	func bumpRevision() { revision &+= 1 }
+	
     init(device: Device) {
         self.device = device
     }
