@@ -1,0 +1,104 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Devices/DeviceEditorView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Device Name",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 64
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 85
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lldU",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 98
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld slot%@",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 108
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Controls…",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 179
+        }
+      },
+      {
+        "comment": "",
+        "key": "Faceplate Preview",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 191
+        }
+      },
+      {
+        "comment": "",
+        "key": "No image selected",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 203
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 235
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 242
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add or search categories",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 342
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 351
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 358
+        }
+      }
+    ]
+  },
+  "version": 1
+}

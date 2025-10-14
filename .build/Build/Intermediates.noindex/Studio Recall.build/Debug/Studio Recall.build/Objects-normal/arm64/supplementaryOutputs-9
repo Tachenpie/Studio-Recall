@@ -1,0 +1,72 @@
+{
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Helpers/LibraryEditingDeviceKey.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LibraryEditingDeviceKey.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LibraryEditingDeviceKey.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LibraryEditingDeviceKey.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LibraryEditingDeviceKey.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LibraryEditingDeviceKey.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Helpers/MoveHandle.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/MoveHandle.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/MoveHandle.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/MoveHandle.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/MoveHandle.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/MoveHandle.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Helpers/PreferencesView.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/PreferencesView.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/PreferencesView.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/PreferencesView.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/PreferencesView.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/PreferencesView.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Helpers/ScrollWheelPanOverlay.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/ScrollWheelPanOverlay.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/ScrollWheelPanOverlay.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/ScrollWheelPanOverlay.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/ScrollWheelPanOverlay.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/ScrollWheelPanOverlay.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Labels/LabelCanvas.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelCanvas.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelCanvas.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelCanvas.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelCanvas.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelCanvas.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Labels/LabelInspector.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelInspector.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelInspector.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelInspector.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelInspector.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelInspector.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Labels/LabelView.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelView.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelView.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelView.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelView.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelView.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Sessions/CanvasZoomKey.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/CanvasZoomKey.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/CanvasZoomKey.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/CanvasZoomKey.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/CanvasZoomKey.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/CanvasZoomKey.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Sessions/NewSessionView.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/NewSessionView.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/NewSessionView.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/NewSessionView.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/NewSessionView.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/NewSessionView.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Sessions/RackRect.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RackRect.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RackRect.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RackRect.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RackRect.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RackRect.swiftdeps"
+  }
+}

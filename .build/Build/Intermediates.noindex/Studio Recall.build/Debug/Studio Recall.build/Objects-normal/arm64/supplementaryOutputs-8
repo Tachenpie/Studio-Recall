@@ -1,0 +1,72 @@
+{
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Devices/LibraryManagerView.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LibraryManagerView.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LibraryManagerView.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LibraryManagerView.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LibraryManagerView.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LibraryManagerView.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Devices/NewDeviceChooser.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/NewDeviceChooser.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/NewDeviceChooser.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/NewDeviceChooser.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/NewDeviceChooser.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/NewDeviceChooser.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Devices/RepresentativeFaceplate.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RepresentativeFaceplate.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RepresentativeFaceplate.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RepresentativeFaceplate.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RepresentativeFaceplate.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RepresentativeFaceplate.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Helpers/CanvasLOD.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/CanvasLOD.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/CanvasLOD.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/CanvasLOD.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/CanvasLOD.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/CanvasLOD.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Helpers/ConditionalDrawingGroup.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/ConditionalDrawingGroup.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/ConditionalDrawingGroup.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/ConditionalDrawingGroup.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/ConditionalDrawingGroup.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/ConditionalDrawingGroup.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Helpers/DiffReviewSheet.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DiffReviewSheet.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DiffReviewSheet.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DiffReviewSheet.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DiffReviewSheet.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DiffReviewSheet.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Helpers/DonutShape.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DonutShape.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DonutShape.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DonutShape.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DonutShape.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DonutShape.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Helpers/HoverEffectView.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/HoverEffectView.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/HoverEffectView.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/HoverEffectView.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/HoverEffectView.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/HoverEffectView.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Helpers/HoverTest.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/HoverTest.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/HoverTest.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/HoverTest.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/HoverTest.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/HoverTest.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Helpers/ImageView.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/ImageView.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/ImageView.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/ImageView.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/ImageView.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/ImageView.swiftdeps"
+  }
+}

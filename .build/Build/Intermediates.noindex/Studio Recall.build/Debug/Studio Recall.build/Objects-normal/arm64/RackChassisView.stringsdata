@@ -1,0 +1,32 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Chassis/RackChassisView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Edit Rack",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 488
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rack Units: %lld",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 489
+        }
+      },
+      {
+        "comment": "",
+        "key": "Close",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 495
+        }
+      }
+    ]
+  },
+  "version": 1
+}

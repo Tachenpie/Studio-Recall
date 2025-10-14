@@ -38,6 +38,12 @@ struct RuntimeControlsOverlay: View {
 		Binding<ControlValue>(
 			get: { instance.controlStates[def.id] ?? ControlValue.initialValue(for: def) },
 			set: { newVal in
+				let oldVal = instance.controlStates[def.id]
+				if def.type == .multiSwitch {
+					print("🔧 MultiSwitch '\(def.name)' (ID: \(def.id.uuidString.prefix(8)))")
+					print("   Old: \(oldVal?.asMulti ?? -1)")
+					print("   New: \(newVal.asMulti ?? -1)")
+				}
 				instance.controlStates[def.id] = newVal
 				sessionManager.setControlValue(instanceID: instance.id, controlID: def.id, to: newVal)
 				patchesNonce &+= 1
@@ -135,7 +141,6 @@ struct RuntimeControlsOverlay: View {
 					RuntimePatches(device: device, instance: $instance)
 						.frame(width: fm.size.width, height: fm.size.height)
 						.allowsHitTesting(false)
-						.id(patchesNonce)
 				} else {
 					RepresentativeGlyphs(device: device, instance: $instance, faceSize: fm.size, selectedId: nil)
 						.allowsHitTesting(false)
@@ -667,52 +672,73 @@ private struct MultiSwitchHit: View {
 		return bestI
 	}
 	
+	@State private var hoverLocation: CGPoint?
+
 	var body: some View {
 		GeometryReader { geo in
-			Rectangle().fill(Color.clear)
-				.contentShape(Rectangle())
-				.background(Color.clear)
-			
-			// HOVER: Photo shows current only; Rep shows hovered dot’s authored label
-				.onContinuousHover { phase in
-					switch phase {
-						case .active(let loc):
-							if isPhotoreal {
-								onHover(HoverInfo(inside: true, previewText: nil))
-							} else {
-								let idx = repDotIndex(at: loc, in: geo.size)
-								let name = (optionNames ?? [])[safe: idx] ?? "Pos \(idx + 1)"
-								onHover(HoverInfo(inside: true, previewText: name))
-							}
+			if isPhotoreal {
+				// Photoreal mode: use DragGesture for center-click cycling
+				Rectangle().fill(Color.clear)
+					.contentShape(Rectangle())
+					.background(Color.clear)
+					.onContinuousHover { phase in
+						switch phase {
+						case .active:
+							onHover(HoverInfo(inside: true, previewText: nil))
 						case .ended:
 							onHover(HoverInfo(inside: false, previewText: nil))
+						}
 					}
-				}
-			
-			// CLICK: Photo keeps center cycle only; Rep sets nearest dot only.
-				.highPriorityGesture(
-					DragGesture(minimumDistance: 0)
-						.onEnded { g in
-							let cx = geo.size.width  * 0.5
-							let cy = geo.size.height * 0.5
-							let dx = Double(g.location.x - cx)
-							let dy = Double(g.location.y - cy)
-							let dist = hypot(dx, dy)
-							let centerThresh = Double(min(geo.size.width, geo.size.height)) * 0.22
-							let cur = value.asMulti ?? 0
-							
-							if isPhotoreal {
-								// Photo: center click cycles; otherwise ignore
+					.highPriorityGesture(
+						DragGesture(minimumDistance: 0)
+							.onEnded { g in
+								let cx = geo.size.width  * 0.5
+								let cy = geo.size.height * 0.5
+								let dx = Double(g.location.x - cx)
+								let dy = Double(g.location.y - cy)
+								let dist = hypot(dx, dy)
+								let centerThresh = Double(min(geo.size.width, geo.size.height)) * 0.22
+								let cur = value.asMulti ?? 0
+
 								if dist <= centerThresh {
 									value = .multiSwitch(centerIncDec(cur))
 								}
-							} else {
-								// Rep: pick nearest dot (ignore center-cycle concept)
-								let idx = repDotIndex(at: g.location, in: geo.size)
-								value = .multiSwitch(idx)
 							}
+					)
+			} else {
+				// Representative mode: use simple tap gesture
+				Rectangle().fill(Color.clear)
+					.contentShape(Rectangle())
+					.background(Color.clear)
+					.onContinuousHover { phase in
+						switch phase {
+						case .active(let loc):
+							hoverLocation = loc
+							let idx = repDotIndex(at: loc, in: geo.size)
+							let name = (optionNames ?? [])[safe: idx] ?? "Pos \(idx + 1)"
+							onHover(HoverInfo(inside: true, previewText: name))
+						case .ended:
+							hoverLocation = nil
+							onHover(HoverInfo(inside: false, previewText: nil))
 						}
-				)
+					}
+					.onTapGesture {
+						let loc = hoverLocation ?? CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+						let idx = repDotIndex(at: loc, in: geo.size)
+						let cur = value.asMulti ?? 0
+
+						// For binary switches (count=2), toggle instead of setting to clicked index
+						if count == 2 {
+							let newIdx = cur == 0 ? 1 : 0
+							print("🎯 MultiSwitch TAP detected - TOGGLE mode: \(cur) → \(newIdx)")
+							value = .multiSwitch(newIdx)
+						} else {
+							// For multi-position switches, set to clicked dot
+							print("🎯 MultiSwitch TAP detected at idx=\(idx)")
+							value = .multiSwitch(idx)
+						}
+					}
+			}
 		}
 		.frame(width: frame.width, height: frame.height)
 	}
@@ -786,14 +812,53 @@ private struct ConcentricKnobHit: View {
 struct RuntimePatches: View {
 	let device: Device
 	@Binding var instance: DeviceInstance
-	
+
+	@Environment(\.canvasLOD) private var lod
+
 	var body: some View {
 		GeometryReader { geo in
-			let faceplate: NSImage? = device.imageData.flatMap { NSImage(data: $0) }
+			// Apply LOD downsampling to the faceplate for control patches
+			let faceplate: NSImage? = {
+				guard let data = device.imageData, let nsimg = NSImage(data: data) else { return nil }
+				let key = device.id.uuidString + "#" + String(data.count)
+				let original = max(nsimg.size.width, nsimg.size.height)
+
+				switch lod {
+					case .full:
+						return nsimg
+
+					case .level1:
+						// 1/2 resolution
+						let target = original * 0.5
+						return nsimg.lodImage(maxPixel: target, cacheKey: key) ?? nsimg
+
+					case .level2:
+						// 1/4 resolution
+						let target = original * 0.25
+						return nsimg.lodImage(maxPixel: target, cacheKey: key) ?? nsimg
+
+					case .level3:
+						// 1/8 resolution
+						let target = original * 0.125
+						return nsimg.lodImage(maxPixel: target, cacheKey: key) ?? nsimg
+
+					// Legacy compatibility
+					case .medium:
+						// Redirect to level2 (1/4 resolution)
+						let target = original * 0.25
+						return nsimg.lodImage(maxPixel: target, cacheKey: key) ?? nsimg
+
+					case .low:
+						// Redirect to level3 (1/8 resolution)
+						let target = original * 0.125
+						return nsimg.lodImage(maxPixel: target, cacheKey: key) ?? nsimg
+				}
+			}()
+
 			ZStack {
 				ForEach(device.controls, id: \.id) { def in
 					let proxy = projectedControl(def: def, state: instance.controlStates[def.id])
-					
+
 					ForEach(Array(proxy.regions.enumerated()), id: \.0) { idx, region in
 						ControlImageRenderer(
 							control: .constant(proxy),

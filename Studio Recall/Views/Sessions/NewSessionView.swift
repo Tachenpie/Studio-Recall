@@ -24,7 +24,7 @@ struct NewSessionView: View {
             .frame(width: 300)
             
             HStack {
-                Button("Cancel") { dismiss() }
+				Button("Cancel", role: .cancel) { dismiss() }
                 Spacer()
                 Button("Create") {
                     sessionManager.newSession(
@@ -32,6 +32,8 @@ struct NewSessionView: View {
                     )
                     dismiss()
                 }
+				.buttonStyle(.borderedProminent)
+				.keyboardShortcut(.defaultAction)
             }
         }
         .padding()

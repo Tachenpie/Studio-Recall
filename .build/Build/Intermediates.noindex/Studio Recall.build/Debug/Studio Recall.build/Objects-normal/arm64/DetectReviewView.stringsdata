@@ -1,0 +1,184 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Controls/DetectReviewView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Review Detections",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 79
+        }
+      },
+      {
+        "comment": "",
+        "key": "Analyzing...",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 90
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sensitivity",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 103
+        }
+      },
+      {
+        "comment": "",
+        "key": "Higher → more detections (lower threshold).",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 105
+        }
+      },
+      {
+        "comment": "",
+        "key": "Lasso",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 124
+        }
+      },
+      {
+        "comment": "",
+        "key": "Drag on the faceplate to select by rectangle",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 126
+        }
+      },
+      {
+        "comment": "",
+        "key": "Re-Detect",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 118
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sensitivity",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 132
+        }
+      },
+      {
+        "comment": "",
+        "key": "Higher → more detections (lower threshold).",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 134
+        }
+      },
+      {
+        "comment": "",
+        "key": "Lasso",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 154
+        }
+      },
+      {
+        "comment": "",
+        "key": "Drag on the faceplate to select by rectangle",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 156
+        }
+      },
+      {
+        "comment": "",
+        "key": "Re-Detect",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 148
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Selected (%lld)",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 167
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 184
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 200
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 210
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete this detected control",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 235
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 263
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld selected",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 294
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 299
+        }
+      },
+      {
+        "comment": "",
+        "key": "Accept",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 300
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 291
+        }
+      }
+    ]
+  },
+  "version": 1
+}

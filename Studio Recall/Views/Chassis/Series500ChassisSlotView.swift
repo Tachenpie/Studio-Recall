@@ -20,6 +20,7 @@ struct Series500ChassisSlotView: View {
 	@Environment(\.isInteracting) private var isInteracting
 	@Environment(\.displayScale) private var displayScale
 	@Environment(\.renderStyle) private var renderStyle
+	@Environment(\.canvasZoom) private var canvasZoom
 	
     @Binding var hoveredIndex: Int?
     @Binding var hoveredRange: Range<Int>?
@@ -112,9 +113,7 @@ struct Series500ChassisSlotView: View {
 					.onDrag {
 						deviceDragProvider(instance: instance, device: device) // top rail drag
 					} preview: {
-						DeviceView(device: device)
-							.frame(width: 140, height: 60)
-							.shadow(radius: 6)
+						devicePreviewView(device: device, metrics: snappedFM, slotSize: slotSize)
 					}
 					.contextMenu {
 						Button("Edit Device...") {
@@ -126,7 +125,7 @@ struct Series500ChassisSlotView: View {
 						}
 					}
 			}
-		
+
 			.overlay(alignment: .bottom) {
 				RailH(height: 3)
 //					.compositingGroup()
@@ -134,9 +133,7 @@ struct Series500ChassisSlotView: View {
 					.onDrag {
 						deviceDragProvider(instance: instance, device: device) // bottom rail drag
 					} preview: {
-						DeviceView(device: device)
-							.frame(width: 140, height: 60)
-							.shadow(radius: 6)
+						devicePreviewView(device: device, metrics: snappedFM, slotSize: slotSize)
 					}
 					.contextMenu {
 						Button("Edit Device...") {
@@ -214,7 +211,7 @@ struct Series500ChassisSlotView: View {
 	private func deviceDragProvider(instance: DeviceInstance, device: Device) -> NSItemProvider {
 		let payload = DragPayload(instanceId: instance.id, deviceId: device.id)
 		DragContext.shared.beginDrag(payload: payload)
-		
+
 		let provider = NSItemProvider()
 		provider.registerDataRepresentation(
 			forTypeIdentifier: UTType.deviceDragPayload.identifier,
@@ -224,6 +221,44 @@ struct Series500ChassisSlotView: View {
 			return nil
 		}
 		return provider
+	}
+
+	@ViewBuilder
+	private func devicePreviewView(device: Device, metrics: FaceRenderMetrics, slotSize: CGSize) -> some View {
+		let scaledMetrics = FaceRenderMetrics(
+			size: CGSize(width: metrics.size.width * canvasZoom, height: metrics.size.height * canvasZoom),
+			vOffset: metrics.vOffset * canvasZoom
+		)
+		let scaledSlotSize = CGSize(width: slotSize.width * canvasZoom, height: slotSize.height * canvasZoom)
+
+		ZStack(alignment: .topLeading) {
+			if renderStyle == .representative {
+				// Use vector representation
+				DeviceView(device: device, metrics: scaledMetrics)
+					.frame(width: scaledMetrics.size.width, height: scaledMetrics.size.height)
+			} else {
+#if os(macOS)
+				if let data = device.imageData, let nsimg = NSImage(data: data) {
+					Image(nsImage: nsimg)
+						.resizable()
+						.interpolation(.high)
+						.antialiased(true)
+						.aspectRatio(nsimg.size, contentMode: .fit)
+						.frame(width: scaledMetrics.size.width, height: scaledMetrics.size.height)
+				} else {
+					DeviceView(device: device, metrics: scaledMetrics)
+						.frame(width: scaledMetrics.size.width, height: scaledMetrics.size.height)
+				}
+#else
+				DeviceView(device: device, metrics: scaledMetrics)
+					.frame(width: scaledMetrics.size.width, height: scaledMetrics.size.height)
+#endif
+			}
+		}
+		.offset(y: scaledMetrics.vOffset)
+		.frame(width: scaledSlotSize.width, height: scaledSlotSize.height, alignment: .topLeading)
+		.clipped()
+		.shadow(radius: 8, y: 2)
 	}
 	
 	private struct RailH: View {

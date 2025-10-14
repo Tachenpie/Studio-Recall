@@ -1,0 +1,72 @@
+{
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Handlers/DragContext.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DragContext.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DragContext.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DragContext.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DragContext.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DragContext.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Handlers/DropCatcher.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DropCatcher.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DropCatcher.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DropCatcher.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DropCatcher.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DropCatcher.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Handlers/DropSniffer.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DropSniffer.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DropSniffer.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DropSniffer.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DropSniffer.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DropSniffer.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Handlers/KeyCapture.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/KeyCapture.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/KeyCapture.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/KeyCapture.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/KeyCapture.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/KeyCapture.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Handlers/RackPlacement.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RackPlacement.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RackPlacement.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RackPlacement.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RackPlacement.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RackPlacement.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Handlers/RegionClipShape.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RegionClipShape.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RegionClipShape.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RegionClipShape.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RegionClipShape.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RegionClipShape.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Handlers/RenderStyle.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RenderStyle.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RenderStyle.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RenderStyle.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RenderStyle.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/RenderStyle.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Handlers/Series500DropDelegate.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Series500DropDelegate.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Series500DropDelegate.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Series500DropDelegate.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Series500DropDelegate.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Series500DropDelegate.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Managers/LibraryManager.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LibraryManager.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LibraryManager.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LibraryManager.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LibraryManager.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LibraryManager.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Managers/SessionManager.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/SessionManager.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/SessionManager.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/SessionManager.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/SessionManager.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/SessionManager.swiftdeps"
+  }
+}

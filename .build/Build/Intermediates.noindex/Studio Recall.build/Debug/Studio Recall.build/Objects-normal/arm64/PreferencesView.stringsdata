@@ -1,0 +1,32 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Helpers/PreferencesView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Rack Behavior",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 15
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enable Size Validation",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 16
+        }
+      },
+      {
+        "comment": "",
+        "key": "Auto-expand Rack",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 17
+        }
+      }
+    ]
+  },
+  "version": 1
+}

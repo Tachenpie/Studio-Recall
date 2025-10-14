@@ -1,0 +1,72 @@
+{
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Managers/SpriteLibrary.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/SpriteLibrary.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/SpriteLibrary.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/SpriteLibrary.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/SpriteLibrary.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/SpriteLibrary.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Models/AppSettings.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/AppSettings.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/AppSettings.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/AppSettings.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/AppSettings.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/AppSettings.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Models/Chassis.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Chassis.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Chassis.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Chassis.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Chassis.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Chassis.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Models/Controls.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Controls.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Controls.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Controls.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Controls.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Controls.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Models/Device.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Device.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Device.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Device.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Device.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/Device.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Models/DeviceInstance.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DeviceInstance.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DeviceInstance.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DeviceInstance.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DeviceInstance.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DeviceInstance.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Models/DeviceLibrary.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DeviceLibrary.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DeviceLibrary.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DeviceLibrary.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DeviceLibrary.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DeviceLibrary.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Models/DeviceMetrics.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DeviceMetrics.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DeviceMetrics.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DeviceMetrics.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DeviceMetrics.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DeviceMetrics.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Models/DragPayload.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DragPayload.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DragPayload.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DragPayload.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DragPayload.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/DragPayload.swiftdeps"
+  },
+  "/Volumes/Projects/Source/Studio Recall/Studio Recall/Models/Presets/LabelPreset.swift" : {
+    "const-values" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelPreset.swiftconstvalues",
+    "dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelPreset.d",
+    "diagnostics" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelPreset.dia",
+    "object" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelPreset.o",
+    "swift-dependencies" : "/Volumes/Projects/Source/Studio Recall/.build/Build/Intermediates.noindex/Studio Recall.build/Debug/Studio Recall.build/Objects-normal/arm64/LabelPreset.swiftdeps"
+  }
+}

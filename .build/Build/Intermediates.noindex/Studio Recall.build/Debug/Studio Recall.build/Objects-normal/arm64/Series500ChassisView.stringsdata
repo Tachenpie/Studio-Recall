@@ -1,0 +1,40 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Chassis/Series500ChassisView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Edit 500-Series Chassis",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 192
+        }
+      },
+      {
+        "comment": "",
+        "key": "Slots: %lld",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 193
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 196
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 197
+        }
+      }
+    ]
+  },
+  "version": 1
+}

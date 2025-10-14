@@ -94,30 +94,17 @@ struct ControlEditorWindow: View {
 						Divider()
 						
 						sidebar
+							.frame(minWidth: 420)
 							.frame(maxWidth: .infinity, alignment: .topLeading)
 							.padding(.trailing, detectPaneGutter)
 					}
 					.frame(maxWidth: .infinity, maxHeight: .infinity)
-					//					}
 				}
 			}
 			.navigationTitle("Edit Controls")
 			.toolbarRole(.editor)
 			.toolbar {
 				// RIGHT: Detect, Add, Done — keep these as separate trailing actions
-				ToolbarItem(placement: .primaryAction) {
-					Button { sidebarTab = .detect } label: {
-						Label("Auto-Detect Controls", systemImage: "wand.and.stars")
-					}
-				}
-				ToolbarItem(placement: .primaryAction) {
-					Menu {
-						ForEach(ControlType.allCases, id: \.self) { t in
-							Button(t.rawValue.capitalized) { addControl(of: t) }
-								.onChange(of: selectedControlId) { _, _ in updateZoomFocusFromSelection() }
-						}
-					} label: { Label("Add Control", systemImage: "plus") }
-				}
 				ToolbarItem(placement: .cancellationAction) {
 					Button("Cancel") {
 						if let snap = originalDevice {
@@ -128,7 +115,7 @@ struct ControlEditorWindow: View {
 					}
 				}
 				ToolbarItem(placement: .confirmationAction) {
-					Button("Save") {
+					Button("Done") {
 						onSave?(editableDevice.device)
 						dismiss()
 					}
@@ -136,7 +123,7 @@ struct ControlEditorWindow: View {
 			}
 
 		}
-		.frame(minWidth: 900, minHeight: 560)
+		.frame(minWidth: 1000, minHeight: 560)
 		.onAppear {
 			if originalDevice == nil {
 				originalDevice = editableDevice.device
@@ -156,6 +143,7 @@ struct ControlEditorWindow: View {
 					zoom: $zoom,
 					pan: $pan,
 					zoomFocusN: $zoomFocusN,
+					activeSidebarTab: $sidebarTab,
 					renderStyle: previewStyle,
 					externalOverlay: { parentSize, canvasSize, zoom, pan in
 						// If we don’t have an image, skip.
@@ -269,7 +257,8 @@ struct ControlEditorWindow: View {
 							}
 						}
 					case .palette:
-						ScrollView {
+//						ScrollView {
+						Group {
 							ControlPalette(
 							editableDevice: editableDevice,
 							selectedControlId: $selectedControlId,
@@ -295,6 +284,28 @@ struct ControlEditorWindow: View {
 						.frame(maxWidth: .infinity, maxHeight: .infinity)
 				}
 			}
+			
+			HStack(spacing: 6) {
+				Menu {
+					ForEach(ControlType.allCases, id: \.self) { t in
+						Button(t.displayName) { addControl(of: t) }
+							.onChange(of: selectedControlId) { _, _ in updateZoomFocusFromSelection() }
+					}
+				}
+				label: { Label("Add Control", systemImage: "plus") }
+					.frame(width: 124)
+				
+				Button { sidebarTab = .detect } label: {
+					Label("Auto-Detect Controls", systemImage: "wand.and.stars")
+				}
+
+				Spacer()
+				
+				Button("Save") {
+					onSave?(editableDevice.device)
+				}
+			}
+			.padding(8)
 		}
 	}
 	
@@ -753,3 +764,69 @@ private extension Array where Element == ControlDraft {
 		self = self.seededDefaultLabels()
 	}
 }
+
+#if DEBUG
+import AppKit // for NSImage -> Data conversion
+
+struct ControlEditorWindow_Previews: PreviewProvider {
+	static var previews: some View {
+		let library = DeviceLibrary()
+		let settings = AppSettings()
+		
+		// --- Rack Device (19" wide, 1U tall) ---
+		var rackDevice = Device(
+			name: "dbx 160A",
+			type: .rack,
+			rackUnits: 1,
+			categories: ["Compressor"]
+		)
+		
+		// 19" × 1.75" per U → scale to ~100 px per inch for preview
+		let rackSize = CGSize(width: 19 * 100, height: 1.75 * 100 * CGFloat(rackDevice.rackUnits ?? 1))
+		let rackImg = NSImage(size: rackSize)
+		rackImg.lockFocus()
+		NSColor.systemBlue.setFill()
+		NSBezierPath(rect: CGRect(origin: .zero, size: rackSize)).fill()
+		rackImg.unlockFocus()
+		rackDevice.imageData = rackImg.pngData()
+		
+		//		library.add(rackDevice)
+		
+		// --- 500-Series Module (1.5" wide × 5.25" tall) ---
+		var moduleDevice = Device(
+			name: "API 512c",
+			type: .series500,
+			slotWidth: 1,
+			categories: ["Preamp"]
+		)
+		
+		let moduleSize = CGSize(width: 1.5 * 100 * CGFloat(moduleDevice.slotWidth ?? 1),
+								height: 5.25 * 100)
+		let moduleImg = NSImage(size: moduleSize)
+		moduleImg.lockFocus()
+		NSColor.systemGreen.setFill()
+		NSBezierPath(rect: CGRect(origin: .zero, size: moduleSize)).fill()
+		moduleImg.unlockFocus()
+		moduleDevice.imageData = moduleImg.pngData()
+		
+		return Group {
+			ControlEditorWindow(
+				editableDevice: EditableDevice(device: rackDevice),
+				onSave: { _ in }
+			)
+			.environmentObject(library)
+			.environmentObject(settings)
+			.previewDisplayName("Rack Device")
+			
+			ControlEditorWindow(
+				editableDevice: EditableDevice(device: moduleDevice),
+				onSave: { _ in }
+			)
+			.environmentObject(library)
+			.environmentObject(settings)
+			.previewDisplayName("500-Series Module")
+		}
+	}
+	
+}
+#endif

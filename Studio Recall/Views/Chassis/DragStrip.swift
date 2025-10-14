@@ -15,9 +15,9 @@ struct DragStrip: View {
 	@State private var began = false
 	
 	var title: String? = nil
-	var onBegan: () -> Void = {}
-	var onDrag: (CGSize) -> Void
-	var onEnded: () -> Void = {}
+	var onBegan: (() -> Void)? = nil
+	var onDrag: (CGSize, CGPoint) -> Void  // Added CGPoint for current screen location
+	var onEnded: (() -> Void)? = nil
 	
 	var onEditRequested: (() -> Void)? = nil
 	var onClearRequested: (() -> Void)? = nil
@@ -32,9 +32,9 @@ struct DragStrip: View {
 			TopOnlyRoundedRect(radius: 8)
 				.fill(.thinMaterial)
 				.overlay(TopOnlyRoundedRect(radius: 8).stroke(.white.opacity(0.12)))
-				.frame(height: 24)
+				.frame(height: 32)
 				.shadow(color: .black.opacity(0.25), radius: 2, y: 1)
-			
+
 			// tiny front ledge
 			Rectangle()
 				.fill(.black.opacity(0.25))
@@ -45,29 +45,29 @@ struct DragStrip: View {
 			HStack(spacing: 8) {
 				Image(systemName: "ellipsis").foregroundStyle(.secondary)
 				Text((title ?? "").isEmpty ? "Chassis" : title!)
-					.font(.system(size: max(11, 11 * canvasZoom), weight: .regular))
+					.font(.system(size: 12, weight: .medium))
 					.foregroundStyle(.secondary)
 					.lineLimit(1)
 					.allowsTightening(true)
-					.minimumScaleFactor(0.85)
-					.scaleEffect(1 / max(canvasZoom, 0.0001), anchor: .center)
+					.minimumScaleFactor(0.7)
 					.allowsHitTesting(false)
 			}
-				.padding(.horizontal, 8)
+				.padding(.horizontal, 10)
 		)
 		.contentShape(Rectangle())
 		.gesture(
 			DragGesture(minimumDistance: 0, coordinateSpace: .global)   // <<< GLOBAL
 				.onChanged { v in
-					if !began { began = true; start = v.location; onBegan() }
+					if !began { began = true; start = v.location; onBegan?() }
 					guard let s = start else { return }
 					onDrag(CGSize(width: v.location.x - s.x,
-								  height: v.location.y - s.y))          // stable screen translation
+								  height: v.location.y - s.y),
+						   v.location)  // Pass current screen location
 				}
 				.onEnded { _ in
 					began = false
 					start = nil
-					onEnded()
+					onEnded?()
 				}
 		)
 		.padding(.top, 6)

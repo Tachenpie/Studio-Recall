@@ -1,0 +1,32 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Devices/CategoryEditor.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Add or search categories",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 37
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 50
+        }
+      }
+    ]
+  },
+  "version": 1
+}

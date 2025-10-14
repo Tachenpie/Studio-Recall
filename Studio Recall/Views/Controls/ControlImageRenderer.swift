@@ -80,19 +80,63 @@ struct ControlImageRenderer: View {
 							
 							GeometryReader { geo in
 								ZStack {
-									patchImage
-										.resizable()
-										.interpolation(.high)
-										.antialiased(true)
-										.scaledToFill()
-										.modifier(
-											VisualEffect(mapping: region.mapping,
-														 control: control,
-														 resolve: resolveControl,
-														 region: region,
-														 regionSize: geo.size,
-														 regionIndex: idx)
-										)
+									if region.useAlphaMask {
+										// Layer 1: Stationary background faceplate (always visible)
+										Image(nsImage: faceplate)
+											.resizable()
+											.interpolation(.high)
+											.antialiased(true)
+											.scaledToFill()
+											.frame(width: canvasSize.width, height: canvasSize.height)
+											.offset(
+												x: -region.rect.midX * canvasSize.width + geo.size.width / 2,
+												y: -region.rect.midY * canvasSize.height + geo.size.height / 2
+											)
+
+										// Layer 2: Rotating patch visible only where mask is white (pointer areas)
+										if let maskData = region.alphaMaskImage,
+										   let maskImage = NSImage(data: maskData) {
+											let _ = print("🔄 Mask rotation mapping: \(region.mapping?.kind.rawValue ?? "nil"), control: \(control.type), stepIndex: \(control.stepIndex ?? -1), stepAngles: \(control.stepAngles?.description ?? "nil")")
+											patchImage
+												.resizable()
+												.interpolation(.high)
+												.antialiased(true)
+												.scaledToFill()
+												.mask {
+													// Mask: white areas = show patch, black = hide patch
+													// Our mask has white = pointer, so this shows patch only at pointer
+													Image(nsImage: maskImage)
+														.resizable()
+														.interpolation(.high)
+														.antialiased(true)
+														.scaledToFill()
+												}
+												.modifier(
+													VisualEffect(mapping: region.mapping,
+																 control: control,
+																 resolve: resolveControl,
+																 region: region,
+																 regionSize: geo.size,
+																 regionIndex: idx)
+												)
+										}
+									} else {
+										// Normal rendering when not using alpha mask
+										patchImage
+											.resizable()
+											.interpolation(.high)
+											.antialiased(true)
+											.scaledToFill()
+											.modifier(
+												VisualEffect(mapping: region.mapping,
+															 control: control,
+															 resolve: resolveControl,
+															 region: region,
+															 regionSize: geo.size,
+															 regionIndex: idx)
+											)
+									}
+
 									// ✅ Overlay text if dragging or flagged by double-click
 									if isDragging || control.showLabel {
 										Text(displayLabel(for: control))
@@ -509,10 +553,21 @@ struct VisualEffect: ViewModifier {
 		// Treat lit buttons similarly to lights
 		if control.type == .litButton {
 			let lampOn = (control.lampOverrideOn ?? (control.lampFollowsPress ?? true ? control.isPressed ?? false : false))
-			let onC  = (control.lampOnColor  ?? CodableColor(.green)).color
-			let offC = (control.lampOffColor ?? CodableColor(.gray)).color
+
+			// Use new brightness model if available
+			let lampColor: Color
+			if control.useMultiColor != true, let baseColor = control.ledColor {
+				let brightness = lampOn ? (control.onBrightness ?? 1.0) : (control.offBrightness ?? 0.15)
+				lampColor = baseColor.color.opacity(brightness)
+			} else {
+				// Fall back to legacy two-color system
+				let onC  = (control.lampOnColor  ?? CodableColor(.green)).color
+				let offC = (control.lampOffColor ?? CodableColor(.gray)).color
+				lampColor = lampOn ? onC : offC
+			}
+
 			return AnyView(
-				base.overlay(Rectangle().fill(lampOn ? onC : offC).blendMode(.screen))
+				base.overlay(Rectangle().fill(lampColor).blendMode(.screen))
 			)
 		}
 
@@ -670,6 +725,14 @@ struct VisualEffect: ViewModifier {
 			}
 		}
 		if c.linkInverted ?? false { isOn.toggle() }
+
+		// Use new brightness model if available
+		if c.useMultiColor != true, let baseColor = c.ledColor {
+			let brightness = isOn ? (c.onBrightness ?? 1.0) : (c.offBrightness ?? 0.15)
+			return baseColor.color.opacity(brightness)
+		}
+
+		// Fall back to legacy two-color system
 		let onC  = (c.onColor  ?? CodableColor(.green)).color
 		let offC = (c.offColor ?? CodableColor(.gray)).color
 		return isOn ? onC : offC

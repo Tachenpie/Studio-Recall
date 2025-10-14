@@ -59,7 +59,16 @@ struct SessionView: View {
 #endif
 					
 					GeometryReader { geo in
-						if let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) {
+						if settings.useMetalRenderer {
+							// Metal-accelerated rendering
+							if let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) {
+								MetalCanvasView(
+									session: $sessionManager.sessions[i],
+									settings: settings,
+									library: library
+								)
+							}
+						} else if let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) {
 							// 1) Precompute rects & positions ONCE
 							let session = $sessionManager.sessions[i]
 							let unitRow = DeviceMetrics.rackSize(units: 1, scale: settings.pointsPerInch)
@@ -99,8 +108,20 @@ struct SessionView: View {
 							// While interacting, draw a single bitmap; when idle, draw live content.
 							// This removes per-frame re-render churn during pan/zoom.
 							let isInteractingNow = parentInteracting || settings.parentInteracting || isPanningNow || isZoomingNow || (dragContext.currentPayload != nil)
-							
-							let lod: CanvasLOD = (zoom < 0.6) ? .low : ((zoom < 1.1) ? .medium : .full)
+
+							// Mipmapping: choose LOD based on zoom level
+							// Each level is half resolution of previous, minimizing cache variants
+							let lod: CanvasLOD = {
+								if zoom < 0.4 {
+									return .level3      // 1/8 resolution: < 40% zoom
+								} else if zoom < 0.75 {
+									return .level2      // 1/4 resolution: 40-75% zoom
+								} else if zoom < 1.25 {
+									return .level1      // 1/2 resolution: 75-125% zoom
+								} else {
+									return .full        // Full resolution: > 125% zoom
+								}
+							}()
 							
 							SessionCanvasLayer(
 								session: session,
@@ -151,27 +172,29 @@ struct SessionView: View {
 					} label: {
 						Label("Add Rack", systemImage: "square.grid.3x2")
 					}
-					.help("Add Rack")
-					
+					.help("Add Rack (⌘⇧R)")
+
 					Button {
 						sessionManager.addSeries500Chassis()
 					} label: {
 						Label("Add 500-series Chassis", systemImage: "rectangle.3.offgrid")
 					}
-					.help("Add 500-series Chassis")
-					
+					.help("Add 500-series Chassis (⌘⇧C)")
+
 					Button {
-						let new = SessionLabel(
-							anchor: .session,
-							offset: CGPoint(x: 40, y: 40),
-							text: "",
-							style: .preset(.plasticLabelMaker)
-						)
-						sessionManager.addLabel(new)
+						sessionManager.addPedalboard()
+					} label: {
+						Label("Add Pedalboard", systemImage: "square.grid.3x1.below.line.grid.1x2")
+					}
+					.help("Add Pedalboard (⌘⇧P)")
+
+					Button {
+						createLabelInViewportCenter()
 					} label: {
 						Label("Create Label", systemImage: "tag")
 					}
-					.help("Create Label")
+					.help("Create Label (⌘L)")
+					.keyboardShortcut("l", modifiers: [.command])
 				}
 				
 				ToolbarItemGroup(placement: .automatic) {
@@ -180,10 +203,18 @@ struct SessionView: View {
 						Label("Rep.",  systemImage: "rectangle.3.group.bubble.left").tag(RenderStyle.representative)
 					}
 					.pickerStyle(.segmented)
-					.help("Switch between photo faceplates and fast representative view")
+					.help("Switch between photo faceplates and fast representative view (⌘1 / ⌘2)")
 				}
 				
 				ToolbarItemGroup(placement: .automatic) {
+					Button {
+						settings.useMetalRenderer.toggle()
+					} label: {
+						Label(settings.useMetalRenderer ? "Metal" : "SwiftUI",
+							  systemImage: settings.useMetalRenderer ? "bolt.fill" : "swift")
+					}
+					.help(settings.useMetalRenderer ? "Using Metal Renderer (High Performance)" : "Using SwiftUI Renderer")
+
 					Button {
 						showMinimap.toggle()
 					} label: {
@@ -196,11 +227,19 @@ struct SessionView: View {
 						Image(systemName: "minus.magnifyingglass")
 
 						// --- Slider binding (inside ToolbarItem .status) ---
-						Slider(value: zoomBinding, in: 0.5...4.0)
+						Slider(value: zoomBinding, in: 0.2...2.0)
 							.frame(width: 140)
 
 						Image(systemName: "plus.magnifyingglass")
-						
+
+						Button {
+							zoomToFitAll()
+						} label: {
+							Label("Zoom to Fit All", systemImage: "arrow.up.left.and.arrow.down.right")
+						}
+						.help("Zoom to Fit All (⌘0)")
+						.keyboardShortcut("0", modifiers: [.command])
+
 						Button {
 							if let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) {
 								withAnimation {
@@ -211,8 +250,9 @@ struct SessionView: View {
 							}
 						} label: {
 							Label("Reset Zoom & Pan", systemImage: "arrow.counterclockwise")
-								.help("Reset Zoom & Pan")
 						}
+						.help("Reset Zoom & Pan (⌘⇧0)")
+						.keyboardShortcut("0", modifiers: [.command, .shift])
 					}
 				}
 				
@@ -290,7 +330,7 @@ struct SessionView: View {
 			set: { newZoom in
 				guard let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }) else { return }
 				let oldZoom = sessionManager.sessions[i].canvasZoom
-				let clamped = min(max(newZoom, 0.5), 4.0)
+				let clamped = min(max(newZoom, 0.2), 2.0)
 				
 				// keep center visually stable while zooming
 				if let window = NSApp.keyWindow {
@@ -318,7 +358,7 @@ struct SessionView: View {
 				isZoomingNow = true
 				let delta = value / lastMagnification
 				session.wrappedValue.canvasZoom = clamp(
-					session.wrappedValue.canvasZoom * delta, 0.5, 4.0
+					session.wrappedValue.canvasZoom * delta, 0.2, 2.0
 				)
 				lastMagnification = value
 			}
@@ -346,9 +386,120 @@ struct SessionView: View {
 			}
 	}
 	
-	    private func clamp(_ v: Double, _ lo: Double, _ hi: Double) -> Double {
-		        min(max(v, lo), hi)
-		    }
+	private func clamp(_ v: Double, _ lo: Double, _ hi: Double) -> Double {
+		min(max(v, lo), hi)
+	}
+
+	// MARK: - Zoom to fit all racks and chassis
+	private func zoomToFitAll() {
+		guard let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }),
+			  let window = NSApp.keyWindow,
+			  let canvasSize = window.contentView?.bounds.size else { return }
+
+		let session = sessionManager.sessions[i]
+		let unitRow = DeviceMetrics.rackSize(units: 1, scale: settings.pointsPerInch)
+		let unitMod = DeviceMetrics.moduleSize(units: 1, scale: settings.pointsPerInch)
+		let topBarH: CGFloat = 24
+
+		// Calculate bounding box of all racks and chassis
+		var minX: CGFloat = .infinity
+		var minY: CGFloat = .infinity
+		var maxX: CGFloat = -.infinity
+		var maxY: CGFloat = -.infinity
+
+		for rack in session.racks {
+			let rows = rack.slots.count
+			let h = CGFloat(rows) * unitRow.height + CGFloat(max(0, rows - 1)) * 4 + 32 + topBarH
+			let w = unitRow.width + 32
+			let rect = CGRect(x: rack.position.x - w/2, y: rack.position.y - h/2, width: w, height: h)
+			minX = min(minX, rect.minX)
+			minY = min(minY, rect.minY)
+			maxX = max(maxX, rect.maxX)
+			maxY = max(maxY, rect.maxY)
+		}
+
+		for chassis in session.series500Chassis {
+			let slots = chassis.slots.count
+			let w = CGFloat(slots) * unitMod.width + CGFloat(max(0, slots - 1)) * 4
+			let h = unitMod.height + 8 + topBarH
+			let rect = CGRect(x: chassis.position.x - w/2, y: chassis.position.y - h/2, width: w, height: h)
+			minX = min(minX, rect.minX)
+			minY = min(minY, rect.minY)
+			maxX = max(maxX, rect.maxX)
+			maxY = max(maxY, rect.maxY)
+		}
+
+		// If nothing exists, just center at origin
+		guard minX.isFinite && minY.isFinite && maxX.isFinite && maxY.isFinite else {
+			withAnimation {
+				sessionManager.sessions[i].canvasZoom = 1.2
+				sessionManager.sessions[i].canvasPan = .zero
+			}
+			sessionManager.saveSessions()
+			return
+		}
+
+		// Add padding
+		let padding: CGFloat = 50
+		let contentWidth = (maxX - minX) + padding * 2
+		let contentHeight = (maxY - minY) + padding * 2
+		let centerX = (minX + maxX) / 2
+		let centerY = (minY + maxY) / 2
+
+		// Calculate zoom to fit with some margin
+		let zoomX = canvasSize.width / contentWidth
+		let zoomY = canvasSize.height / contentHeight
+		let newZoom = min(min(zoomX, zoomY), 2.0)  // Cap at 2x max zoom
+
+		// Calculate pan to center the content
+		let newPan = CGPoint(
+			x: canvasSize.width / 2 - centerX * newZoom,
+			y: canvasSize.height / 2 - centerY * newZoom
+		)
+
+		withAnimation {
+			sessionManager.sessions[i].canvasZoom = newZoom
+			sessionManager.sessions[i].canvasPan = newPan
+		}
+		sessionManager.saveSessions()
+	}
+
+	// MARK: - Label creation in viewport center
+	private func createLabelInViewportCenter() {
+		guard let i = sessionManager.sessions.firstIndex(where: { $0.id == sessionManager.currentSession?.id }),
+			  let window = NSApp.keyWindow,
+			  let canvasSize = window.contentView?.bounds.size else {
+			// Fallback if we can't get viewport info
+			let new = SessionLabel(
+				anchor: .session,
+				offset: CGPoint(x: 100, y: 100),
+				text: "New Label",
+				style: .preset(.plasticLabelMaker),
+				isNewlyCreated: true
+			)
+			sessionManager.addLabel(new)
+			return
+		}
+
+		let zoom = sessionManager.sessions[i].canvasZoom
+		let pan = sessionManager.sessions[i].canvasPan
+
+		// Calculate world-space center of the viewport
+		let screenCenter = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+		let worldCenter = CGPoint(
+			x: (screenCenter.x - pan.x) / zoom,
+			y: (screenCenter.y - pan.y) / zoom
+		)
+
+		let new = SessionLabel(
+			anchor: .session,
+			offset: worldCenter,
+			text: "New Label",
+			style: .preset(.plasticLabelMaker),
+			isNewlyCreated: true
+		)
+		sessionManager.addLabel(new)
+	}
 }
 
 // MARK: - Mini-map

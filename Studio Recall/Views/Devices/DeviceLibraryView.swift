@@ -141,8 +141,14 @@ struct DeviceLibraryView: View {
 					Text("\(device.rackUnits ?? 1)U, \(device.rackWidth.label) Rack")
 					.font(.caption2)
 					.foregroundColor(.secondary)
-				} else {
+				} else if device.type == .series500 {
 					Text("\(device.slotWidth ?? 1) slots")
+						.font(.caption2)
+						.foregroundColor(.secondary)
+				} else {
+					let w = device.pedalWidthInches ?? 3.0
+					let h = device.pedalHeightInches ?? 5.0
+					Text(String(format: "%.1f\" × %.1f\" Pedal", w, h))
 						.font(.caption2)
 						.foregroundColor(.secondary)
 				}
@@ -248,6 +254,11 @@ struct DeviceLibraryView: View {
 				// 500-series: 1.5" per slot × height 5.25"
 				let wIn = 1.5 * CGFloat(device.slotWidth ?? 1)
 				let hIn = 5.25
+				return max(0.1, wIn / hIn)
+			case .pedal:
+				// Pedal: use actual dimensions
+				let wIn = CGFloat(device.pedalWidthInches ?? 3.0)
+				let hIn = CGFloat(device.pedalHeightInches ?? 5.0)
 				return max(0.1, wIn / hIn)
 		}
 	}

@@ -14,6 +14,7 @@ final class SessionManager: ObservableObject {
 	@Published var defaultTemplateId: UUID? {
 		didSet { UserDefaults.standard.set(defaultTemplateId?.uuidString, forKey: "DefaultTemplateID") }
 	}
+	@Published var currentSessionFileURL: URL? = nil  // Track file location for Save
 
 	@Published var showTemplateManager: Bool = false
 	@Published var renderStyle: RenderStyle {
@@ -208,12 +209,13 @@ private extension SessionManager {
 }
 
 extension SessionManager {
-    // ✅ add rack with remembered default
-    func addRack(rows: Int? = nil) {
+    // ✅ add rack with remembered default and optional name
+    func addRack(rows: Int? = nil, name: String? = nil) {
         guard let session = currentSession else { return }
         let count = rows ?? lastRackSlotCount
         lastRackSlotCount = count
-        let newRack = Rack(rows: count)
+        var newRack = Rack(rows: count)
+        newRack.name = name
         if let idx = sessions.firstIndex(where: { $0.id == session.id }) {
             sessions[idx].racks.append(newRack)
             currentSession = sessions[idx]
@@ -221,8 +223,8 @@ extension SessionManager {
         }
     }
     
-    // ✅ add chassis with remembered default
-    func addSeries500Chassis(name: String = "New Chassis", slotCount: Int? = nil) {
+    // ✅ add chassis with remembered default and optional name
+    func addSeries500Chassis(name: String? = nil, slotCount: Int? = nil) {
         guard let session = currentSession else { return }
         let count = slotCount ?? lastChassisSlotCount
         lastChassisSlotCount = count
@@ -233,6 +235,17 @@ extension SessionManager {
             saveSessions()
         }
     }
+
+	// ✅ add pedalboard with default dimensions
+	func addPedalboard(name: String? = nil, widthInches: Double = 24, heightInches: Double = 12) {
+		guard let session = currentSession else { return }
+		let newPedalboard = Pedalboard(name: name, widthInches: widthInches, heightInches: heightInches)
+		if let idx = sessions.firstIndex(where: { $0.id == session.id }) {
+			sessions[idx].pedalboards.append(newPedalboard)
+			currentSession = sessions[idx]
+			saveSessions()
+		}
+	}
 }
 
 extension SessionManager {
@@ -506,40 +519,68 @@ import AppKit
 import UniformTypeIdentifiers
 
 extension SessionManager {
-	/// Saves the whole app sessions.json as-is (you already have this).
-	func saveAll() {
-		saveSessions()
-	}
-	
-	/// Export only the current session via Save Panel as JSON.
-	func saveCurrentSessionAs() {
-		guard let session = currentSession else { return }
-		let panel = NSSavePanel()
-		panel.allowedContentTypes = [UTType.json]
-		panel.nameFieldStringValue = "\(session.name).session.json"
-		if panel.runModal() == .OK, let url = panel.url {
-			do {
-				let data = try JSONEncoder().encode(session)
-				try data.write(to: url, options: [.atomic])
-			} catch {
-				print("❌ Export failed: \(error)")
+	/// Open a session from a file
+	func openSession(from url: URL) {
+		do {
+			guard url.startAccessingSecurityScopedResource() else {
+				print("❌ Could not access security-scoped resource at: \(url.path)")
+				return
 			}
+			defer { url.stopAccessingSecurityScopedResource() }
+
+			print("📂 Opening session from: \(url.path)")
+			let data = try Data(contentsOf: url)
+			print("📊 Read \(data.count) bytes")
+
+			let decoder = JSONDecoder()
+			let session = try decoder.decode(Session.self, from: data)
+			print("✅ Successfully decoded session: \(session.name)")
+
+			// Update or add to sessions list
+			if let idx = sessions.firstIndex(where: { $0.id == session.id }) {
+				sessions[idx] = session
+			} else {
+				sessions.append(session)
+			}
+
+			currentSession = session
+			currentSessionFileURL = url
+			saveSessions()  // Save to internal list
+
+			print("✅ Session opened and set as current")
+		} catch let error as DecodingError {
+			print("❌ JSON Decoding Error: \(error)")
+			switch error {
+			case .keyNotFound(let key, let context):
+				print("  Missing key '\(key.stringValue)' - \(context.debugDescription)")
+			case .typeMismatch(let type, let context):
+				print("  Type mismatch for type \(type) - \(context.debugDescription)")
+			case .valueNotFound(let type, let context):
+				print("  Value not found for type \(type) - \(context.debugDescription)")
+			case .dataCorrupted(let context):
+				print("  Data corrupted - \(context.debugDescription)")
+			@unknown default:
+				print("  Unknown decoding error")
+			}
+		} catch {
+			print("❌ Failed to open session: \(error.localizedDescription)")
 		}
 	}
-	
-	/// Export current session as a "template" JSON (same structure, different default name).
-	func saveCurrentSessionAsTemplate() {
-		guard let session = currentSession else { return }
-		let panel = NSSavePanel()
-		panel.allowedContentTypes = [UTType.json]
-		panel.nameFieldStringValue = "\(session.name).template.json"
-		if panel.runModal() == .OK, let url = panel.url {
-			do {
-				let data = try JSONEncoder().encode(session)
-				try data.write(to: url, options: [.atomic])
-			} catch {
-				print("❌ Template export failed: \(error)")
-			}
+
+	/// Save current session to its file location (if it has one)
+	func saveCurrentSessionToFile() -> Bool {
+		guard let session = currentSession,
+			  let url = currentSessionFileURL else {
+			return false
+		}
+
+		do {
+			let data = try JSONEncoder().encode(session)
+			try data.write(to: url, options: [.atomic])
+			return true
+		} catch {
+			print("❌ Failed to save session: \(error)")
+			return false
 		}
 	}
 }
@@ -588,12 +629,305 @@ extension SessionManager {
 }
 
 extension SessionManager {
+	/// Mount a 500-series chassis into a rack at a specific row
+	/// Requires 3U of vertical space. Returns true if successful.
+	func mount500SeriesIntoRack(chassisID: UUID, targetRackID: UUID, startRow: Int) -> Bool {
+		guard let s = currentSessionIndex else { return false }
+		guard let chassisIdx = sessions[s].series500Chassis.firstIndex(where: { $0.id == chassisID }) else { return false }
+		guard let rackIdx = sessions[s].racks.firstIndex(where: { $0.id == targetRackID }) else { return false }
+
+		let rack = sessions[s].racks[rackIdx]
+
+		// Check if we have 3U of space starting at startRow
+		let requiredRows = 3
+
+		// First try the requested row
+		if startRow + requiredRows <= rack.rows {
+			var spaceAvailable = true
+			for r in startRow..<(startRow + requiredRows) {
+				for c in 0..<RackGrid.columnsPerRow {
+					if rack.slots[r][c] != nil {
+						spaceAvailable = false
+						break
+					}
+				}
+				if !spaceAvailable { break }
+			}
+
+			if spaceAvailable {
+				// Space is available at requested row - mount here
+				sessions[s].series500Chassis[chassisIdx].mountedInRack = targetRackID
+				sessions[s].series500Chassis[chassisIdx].mountedAtRow = startRow
+
+				// Update the chassis position to match where it will be visually displayed
+				// This prevents jump when starting a drag
+				updateChassisPositionForMount(chassisIdx: chassisIdx, rackIdx: rackIdx, startRow: startRow, sessionIdx: s)
+
+				// Block the rack slots with a special placeholder
+				let chassisID = sessions[s].series500Chassis[chassisIdx].id
+				blockRackSlotsForMountedChassis(chassisID: chassisID, rackIdx: rackIdx, startRow: startRow, sessionIdx: s)
+
+				currentSession = sessions[s]
+				saveSessions()
+				return true
+			}
+		}
+
+		// Requested row didn't work, search for any 3U space
+		for tryRow in 0...(rack.rows - requiredRows) {
+			var spaceAvailable = true
+			for r in tryRow..<(tryRow + requiredRows) {
+				for c in 0..<RackGrid.columnsPerRow {
+					if rack.slots[r][c] != nil {
+						spaceAvailable = false
+						break
+					}
+				}
+				if !spaceAvailable { break }
+			}
+
+			if spaceAvailable {
+				// Found space at this row
+				sessions[s].series500Chassis[chassisIdx].mountedInRack = targetRackID
+				sessions[s].series500Chassis[chassisIdx].mountedAtRow = tryRow
+
+				// Update the chassis position to match where it will be visually displayed
+				updateChassisPositionForMount(chassisIdx: chassisIdx, rackIdx: rackIdx, startRow: tryRow, sessionIdx: s)
+
+				// Block the rack slots with a special placeholder
+				let chassisID = sessions[s].series500Chassis[chassisIdx].id
+				blockRackSlotsForMountedChassis(chassisID: chassisID, rackIdx: rackIdx, startRow: tryRow, sessionIdx: s)
+
+				currentSession = sessions[s]
+				saveSessions()
+				return true
+			}
+		}
+
+		// No 3U space found
+		return false
+	}
+
+	/// Unmount a 500-series chassis from a rack
+	func unmount500Series(chassisID: UUID) {
+		guard let s = currentSessionIndex else { return }
+		guard let chassisIdx = sessions[s].series500Chassis.firstIndex(where: { $0.id == chassisID }) else { return }
+
+		// Clear the blocked slots from the rack
+		if let rackID = sessions[s].series500Chassis[chassisIdx].mountedInRack,
+		   let rackIdx = sessions[s].racks.firstIndex(where: { $0.id == rackID }) {
+			clearRackSlotsForMountedChassis(chassisID: chassisID, rackIdx: rackIdx, sessionIdx: s)
+		}
+
+		sessions[s].series500Chassis[chassisIdx].mountedInRack = nil
+		sessions[s].series500Chassis[chassisIdx].mountedAtRow = nil
+
+		currentSession = sessions[s]
+		saveSessions()
+	}
+
+	/// Update the mounting row for a chassis (used during wing drag)
+	/// Does NOT save - caller should save when drag ends
+	func updateMountingRow(chassisID: UUID, newRow: Int) {
+		guard let s = currentSessionIndex else {
+			print("⚠️ [SessionManager.updateMountingRow] No current session")
+			return
+		}
+		guard let chassisIdx = sessions[s].series500Chassis.firstIndex(where: { $0.id == chassisID }) else {
+			print("⚠️ [SessionManager.updateMountingRow] Chassis not found")
+			return
+		}
+		guard sessions[s].series500Chassis[chassisIdx].isMounted else {
+			print("⚠️ [SessionManager.updateMountingRow] Chassis not mounted")
+			return
+		}
+		guard let rackID = sessions[s].series500Chassis[chassisIdx].mountedInRack else {
+			print("⚠️ [SessionManager.updateMountingRow] No rack ID")
+			return
+		}
+		guard let rackIdx = sessions[s].racks.firstIndex(where: { $0.id == rackID }) else {
+			print("⚠️ [SessionManager.updateMountingRow] Rack not found")
+			return
+		}
+
+		// Only update if the row actually changed
+		let oldRow = sessions[s].series500Chassis[chassisIdx].mountedAtRow
+		let oldPos = sessions[s].series500Chassis[chassisIdx].position
+
+		if oldRow != newRow {
+			print("🔄 [SessionManager.updateMountingRow] Moving from row \(oldRow ?? -1) to \(newRow)")
+
+			// Check if new position has space (3U × 6 columns)
+			// Must check BEFORE clearing old position in case we're moving to overlapping rows
+			let requiredRows = 3
+			var spaceAvailable = true
+			for r in newRow..<min(newRow + requiredRows, sessions[s].racks[rackIdx].slots.count) {
+				for c in 0..<RackGrid.columnsPerRow {
+					if let inst = sessions[s].racks[rackIdx].slots[r][c] {
+						// Allow if it's our own placeholder (we're moving within rack)
+						if inst.id != chassisID {
+							spaceAvailable = false
+							print("⚠️ [SessionManager.updateMountingRow] Row \(newRow) occupied by device at [\(r),\(c)]")
+							break
+						}
+					}
+				}
+				if !spaceAvailable { break }
+			}
+
+			// Only move if space is available
+			if spaceAvailable {
+				// Clear old position
+				clearRackSlotsForMountedChassis(chassisID: chassisID, rackIdx: rackIdx, sessionIdx: s)
+
+				// Update row
+				sessions[s].series500Chassis[chassisIdx].mountedAtRow = newRow
+
+				// Update the chassis position to match the new row
+				updateChassisPositionForMount(chassisIdx: chassisIdx, rackIdx: rackIdx, startRow: newRow, sessionIdx: s)
+
+				let newPos = sessions[s].series500Chassis[chassisIdx].position
+				print("📍 [SessionManager.updateMountingRow] Position updated: \(Int(oldPos.y)) → \(Int(newPos.y))")
+
+				// Block new position
+				blockRackSlotsForMountedChassis(chassisID: chassisID, rackIdx: rackIdx, startRow: newRow, sessionIdx: s)
+
+				currentSession = sessions[s]
+			} else {
+				print("❌ [SessionManager.updateMountingRow] Cannot move to row \(newRow) - space occupied")
+			}
+		} else {
+			print("⏭️ [SessionManager.updateMountingRow] Row unchanged (\(newRow)), skipping update")
+		}
+	}
+
+	// MARK: - Helpers for blocking rack slots and position management
+
+	/// Update chassis.position to match its visual position when mounted
+	/// This prevents jumps when starting a drag
+	private func updateChassisPositionForMount(chassisIdx: Int, rackIdx: Int, startRow: Int, sessionIdx: Int) {
+		let rack = sessions[sessionIdx].racks[rackIdx]
+
+		// These constants match the calculation in SessionCanvasLayer
+		let rackFacePadding: CGFloat = 16
+		let dragStripHeight: CGFloat = 32
+		let ppi: CGFloat = 80 // Default PPI from AppSettings.pointsPerInch
+		let rowHeight = 1.75 * ppi // 1U = 1.75 inches
+		let rowSpacing: CGFloat = 1
+
+		// Calculate total rack height
+		let faceHeight = rackFacePadding * 2
+			+ CGFloat(rack.rows) * rowHeight
+			+ CGFloat(max(0, rack.rows - 1)) * rowSpacing
+		let totalRackHeight = dragStripHeight + faceHeight
+
+		// rack.position is the CENTER of the entire rack view
+		let rackTop = rack.position.y - totalRackHeight / 2
+
+		// Calculate Y position of the top of the mounted row
+		let rowTopY = rackTop + dragStripHeight + rackFacePadding + CGFloat(startRow) * (rowHeight + rowSpacing)
+
+		// Chassis spans 3U
+		let chassisHeight = 3 * rowHeight + 2 * rowSpacing
+
+		// Position is at CENTER of chassis
+		let chassisCenterY = rowTopY + chassisHeight / 2
+
+		// X position: center of rack
+		let chassisCenterX = rack.position.x
+
+		// Update the chassis position
+		sessions[sessionIdx].series500Chassis[chassisIdx].position = CGPoint(x: chassisCenterX, y: chassisCenterY)
+	}
+
+	/// Block rack slots occupied by a mounted 500-series chassis
+	private func blockRackSlotsForMountedChassis(chassisID: UUID, rackIdx: Int, startRow: Int, sessionIdx: Int) {
+		// Create a placeholder device instance with the chassis ID as both instance and device ID
+		// This allows us to identify and clear it later
+		let placeholder = DeviceInstance(id: chassisID, deviceID: chassisID, device: nil)
+
+		// Fill 3U × 6 columns - ONLY in empty slots
+		for r in startRow..<min(startRow + 3, sessions[sessionIdx].racks[rackIdx].slots.count) {
+			for c in 0..<RackGrid.columnsPerRow {
+				// Only place placeholder if slot is empty (don't overwrite existing devices!)
+				if sessions[sessionIdx].racks[rackIdx].slots[r][c] == nil {
+					sessions[sessionIdx].racks[rackIdx].slots[r][c] = placeholder
+				}
+			}
+		}
+	}
+
+	/// Clear rack slots occupied by a mounted 500-series chassis
+	private func clearRackSlotsForMountedChassis(chassisID: UUID, rackIdx: Int, sessionIdx: Int) {
+		// Remove all instances with this chassis ID
+		for r in sessions[sessionIdx].racks[rackIdx].slots.indices {
+			for c in 0..<RackGrid.columnsPerRow {
+				if sessions[sessionIdx].racks[rackIdx].slots[r][c]?.id == chassisID {
+					sessions[sessionIdx].racks[rackIdx].slots[r][c] = nil
+				}
+			}
+		}
+	}
+
 	/// Append a label to the current session, persist, and keep currentSession in sync.
 	func addLabel(_ label: SessionLabel) {
 		guard let s = currentSessionIndex else { return }
 		sessions[s].labels.append(label)
 		currentSession = sessions[s]
 		saveSessions()
+	}
+
+	/// Update all labels linked to a preset with the new style
+	func updateLabelsWithPreset(id: UUID, newStyle: LabelStyleSpec) {
+		guard let s = currentSessionIndex else { return }
+		for i in sessions[s].labels.indices {
+			if sessions[s].labels[i].linkedPresetId == id {
+				sessions[s].labels[i].style = newStyle
+			}
+		}
+		currentSession = sessions[s]
+		saveSessions()
+	}
+
+	/// Clear an instance from its source rack/chassis across the current session
+	/// Used when moving devices between racks/chassis to remove from source
+	func clearInstanceFromCurrentSession(id: UUID) {
+		guard let s = currentSessionIndex else { return }
+
+		// Search and clear from all racks
+		for r in sessions[s].racks.indices {
+			for row in sessions[s].racks[r].slots.indices {
+				for col in 0..<RackGrid.columnsPerRow {
+					if sessions[s].racks[r].slots[row][col]?.id == id {
+						// Found it - clear the entire span
+						clearSpan(of: id, inSession: s, rackIndex: r)
+						currentSession = sessions[s]
+						return
+					}
+				}
+			}
+		}
+
+		// Search and clear from all 500-series chassis
+		for c in sessions[s].series500Chassis.indices {
+			for i in sessions[s].series500Chassis[c].slots.indices {
+				if sessions[s].series500Chassis[c].slots[i]?.id == id {
+					// Found it - clear this position and any multi-slot span
+					let inst = sessions[s].series500Chassis[c].slots[i]!
+					if let dev = library.device(for: inst.deviceID) {
+						let width = max(1, dev.slotWidth ?? 1)
+						// Clear the entire span
+						for j in i..<min(i + width, sessions[s].series500Chassis[c].slots.count) {
+							if sessions[s].series500Chassis[c].slots[j]?.id == id {
+								sessions[s].series500Chassis[c].slots[j] = nil
+							}
+						}
+					}
+					currentSession = sessions[s]
+					return
+				}
+			}
+		}
 	}
 }
 
@@ -707,35 +1041,104 @@ struct SessionCommands: Commands {
     @Binding var showingAddRack: Bool
     @Binding var showingAddChassis: Bool
 	@Binding var showingReviewChanges: Bool
-	@Binding var showingSaveOptions: Bool
+	@Binding var importingSession: Bool
+	@Binding var exportingSession: Bool
+	@Binding var exportingSessionSaveAs: Bool
+	@Binding var showingSaveAsTemplate: Bool
 
 	var body: some Commands {
-		CommandMenu("Session") {
+		// Add to File menu after New
+		CommandGroup(after: .newItem) {
 			Button("New Session…") { showingNewSession = true }
 				.keyboardShortcut("n", modifiers: [.command])
-			
+
+			Menu("New Session from Template") {
+				ForEach(sessionManager.templates) { t in
+					Button(t.name) { sessionManager.newSession(from: t) }
+				}
+				Divider()
+				Button("Blank Session") { sessionManager.newSession(from: nil) }
+			}
+
 			Divider()
-			
+
+			Button("Open Session…") {
+				importingSession = true
+			}
+			.keyboardShortcut("o", modifiers: [.command])
+
+			Divider()
+
+			Button("Save") {
+				if !sessionManager.saveCurrentSessionToFile() {
+					// No file location, trigger Save As
+					exportingSession = true
+				}
+			}
+			.keyboardShortcut("s", modifiers: [.command])
+
+			Button("Save As…") {
+				exportingSessionSaveAs = true
+			}
+			.keyboardShortcut("s", modifiers: [.command, .shift])
+
+			Divider()
+		}
+
+		// Templates section in File menu
+		CommandGroup(before: .importExport) {
+			Button("Save Current as Template…") {
+				showingSaveAsTemplate = true
+			}
+			.keyboardShortcut("t", modifiers: [.command, .shift])
+
+			Menu("Default Template") {
+				Button(sessionManager.defaultTemplateId == nil ? "• None" : "None") {
+					sessionManager.defaultTemplateId = nil
+				}
+				ForEach(sessionManager.templates) { t in
+					Button((sessionManager.defaultTemplateId == t.id ? "• " : "") + t.name) {
+						sessionManager.defaultTemplateId = t.id
+					}
+				}
+			}
+
+#if os(macOS)
+			Button("Manage Templates…") { sessionManager.showTemplateManager = true }
+#endif
+
+			Divider()
+		}
+
+		// View menu for view-related commands
+		CommandMenu("View") {
+			Button("Photoreal Mode") {
+				sessionManager.renderStyle = .photoreal
+			}
+			.keyboardShortcut("1", modifiers: [.command])
+
+			Button("Representative Mode") {
+				sessionManager.renderStyle = .representative
+			}
+			.keyboardShortcut("2", modifiers: [.command])
+		}
+
+		// Session menu for session-specific operations
+		CommandMenu("Session") {
 			Button("Add Rack…") { showingAddRack = true }
 				.keyboardShortcut("r", modifiers: [.command, .shift])
-			
+
 			Button("Add 500 Series Chassis…") { showingAddChassis = true }
 				.keyboardShortcut("c", modifiers: [.command, .shift])
-			
+
 			Divider()
-			
+
 			// Not-intrusive diffs viewer
 			Button("Review Changes…") {
 				showingReviewChanges = true
 			}
 			.keyboardShortcut("d", modifiers: [.command, .shift])
-			
-			// One dialog with three choices (Save / Save As / Save As Template)
-			Button("Save Options…") {
-				showingSaveOptions = true
-			}
-			.keyboardShortcut("s", modifiers: [.command])
-			
+
 			if !sessionManager.sessions.isEmpty {
 				Divider()
 				Text("Recent Sessions")
@@ -745,9 +1148,9 @@ struct SessionCommands: Commands {
 							sessionManager.switchSession(to: session)
 						}
 						.disabled(sessionManager.currentSession?.id == session.id)
-						
+
 						Divider()
-						
+
 						Menu("Delete…") {
 							Button("Cancel", role: .cancel) { }
 							Button("Confirm Delete", role: .destructive) {

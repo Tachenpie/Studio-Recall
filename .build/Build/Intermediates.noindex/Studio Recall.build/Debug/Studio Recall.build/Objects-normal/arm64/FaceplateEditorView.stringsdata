@@ -1,0 +1,40 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Devices/FaceplateEditorView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Height: %lldU",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "Width: %lld slot%@",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 71
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 77
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 79
+        }
+      }
+    ]
+  },
+  "version": 1
+}

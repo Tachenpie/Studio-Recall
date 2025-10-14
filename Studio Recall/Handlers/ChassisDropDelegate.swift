@@ -13,16 +13,18 @@ struct ChassisDropDelegate: DropDelegate {
 	let indexFor: ((CGPoint) -> (Int, Int))?   // returns (row, col)
 	let rowX0: CGFloat
 	let rowWidthPts: CGFloat
-	
+
 	@Binding var slots: [[DeviceInstance?]]          // rows × cols
-	
+
 	@Binding var hoveredIndex: Int?
 	@Binding var hoveredValid: Bool
 	@Binding var hoveredRange: Range<Int>?
 	@Binding var hoveredRows:  Range<Int>?
-	
+
 	let library: DeviceLibrary
 	let kind: DeviceType
+	let session: Session?  // NEW: needed to find instances across all racks
+	let sessionManager: SessionManager?  // NEW: needed to clear source on cross-rack moves
 	let onCommit: (() -> Void)?
 	
 	// MARK: - Payload helpers
@@ -32,6 +34,27 @@ struct ChassisDropDelegate: DropDelegate {
 	
 	private func device(for payload: DragPayload) -> Device? {
 		library.device(for: payload.deviceId)
+	}
+
+	// NEW: Find an instance across all racks in the session
+	private func findInstance(id: UUID) -> DeviceInstance? {
+		guard let session = session else { return nil }
+
+		// Search all racks
+		for rack in session.racks {
+			if let found = rack.slots.flatMap({ $0 }).compactMap({ $0 }).first(where: { $0.id == id }) {
+				return found
+			}
+		}
+
+		// Search all 500-series chassis
+		for chassis in session.series500Chassis {
+			if let found = chassis.slots.compactMap({ $0 }).first(where: { $0.id == id }) {
+				return found
+			}
+		}
+
+		return nil
 	}
 	
 	// MARK: - Anchor & target math
@@ -112,6 +135,14 @@ struct ChassisDropDelegate: DropDelegate {
 
 	func dropEntered(info: DropInfo) {
 		guard let payload = currentPayload, let dev = device(for: payload) else { return }
+
+		// Reject 500-series devices being dropped into racks
+		// (They must be mounted via the chassis)
+		if kind == .rack && dev.type == .series500 {
+			setHover(anchorCol: nil, rows: nil, cols: nil, valid: false)
+			return
+		}
+
 		// use the clamped point so the initial hover never escapes horizontally
 		let p = clampedPoint(from: info)
 		let t = targetRanges(for: dev, at: p)
@@ -126,14 +157,20 @@ struct ChassisDropDelegate: DropDelegate {
 			hoveredIndex = nil; hoveredRange = nil; hoveredRows = nil; hoveredValid = false
 			return DropProposal(operation: .forbidden)
 		}
-		
+
+		// Reject 500-series devices being dropped into racks
+		if kind == .rack && dev.type == .series500 {
+			setHover(anchorCol: nil, rows: nil, cols: nil, valid: false)
+			return DropProposal(operation: .forbidden)
+		}
+
 		let p = clampedPoint(from: info)
 		let t = targetRanges(for: dev, at: p)                 // ⬅️ snaps inside
 		setHover(anchorCol: t.anchorCol,
 				 rows: t.rows,
 				 cols: t.cols,
 				 valid: canPlace(t.rows, t.cols, ignoring: payload.instanceId))
-		
+
 		return DropProposal(operation: hoveredValid ? .move : .forbidden)
 	}
 
@@ -145,18 +182,37 @@ struct ChassisDropDelegate: DropDelegate {
 //		defer { hoveredIndex = nil; hoveredRange = nil; hoveredRows = nil; hoveredValid = false }
 		setHover(anchorCol: nil, rows: nil, cols: nil, valid: false)
 		guard let payload = currentPayload, let dev = device(for: payload) else { return false }
-		
+
+		// Reject 500-series devices being dropped into racks
+		if kind == .rack && dev.type == .series500 {
+			return false
+		}
+
 		let p = clampedPoint(from: info)
 		let t = targetRanges(for: dev, at: p)                 // ⬅️ snaps inside
 		guard canPlace(t.rows, t.cols, ignoring: payload.instanceId) else { return false }
-		
+
 		if let movingId = payload.instanceId {
-			// Find the existing instance in the grid; if we can't, abort the move.
-			guard let inst = slots.flatMap({ $0 }).compactMap({ $0 }).first(where: { $0.id == movingId }) else {
-				return false
+			// Check if the instance exists in THIS rack's slots
+			if let inst = slots.flatMap({ $0 }).compactMap({ $0 }).first(where: { $0.id == movingId }) {
+				// Same-rack move: clear old position and place at new position
+				clearOldSpan(movingId)
+				place(inst, in: t.rows, t.cols)
+			} else {
+				// Cross-rack move: find the instance across all racks to preserve controlStates
+				if let sourceInstance = findInstance(id: movingId) {
+					// Create new instance with preserved controlStates
+					var newInst = DeviceInstance(deviceID: dev.id, device: dev)
+					newInst.controlStates = sourceInstance.controlStates  // Preserve control values!
+					place(newInst, in: t.rows, t.cols)
+					// Clear from source rack/chassis (this is a MOVE, not a COPY)
+					sessionManager?.clearInstanceFromCurrentSession(id: movingId)
+				} else {
+					// Fallback: create fresh instance if source not found
+					let inst = library.createInstance(of: dev)
+					place(inst, in: t.rows, t.cols)
+				}
 			}
-			clearOldSpan(movingId)
-			place(inst, in: t.rows, t.cols)
 		} else {
 			let inst = library.createInstance(of: dev)
 			place(inst, in: t.rows, t.cols)

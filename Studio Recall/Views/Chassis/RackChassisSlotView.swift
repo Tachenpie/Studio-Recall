@@ -15,7 +15,7 @@ struct RackChassisSlotView: View {
 	/// If provided, this view renders *entirely* from the prelayout (no GeometryReader).
 	let prelayout: SlotPrelayout?
 	
-	private let railWidth: CGFloat = 12
+	private let railWidth: CGFloat = 24
 	private let thinRailWidth: CGFloat = 4
 	private let hoverRevealWidth: CGFloat = 12
 	
@@ -27,6 +27,7 @@ struct RackChassisSlotView: View {
 	@Environment(\.isInteracting) private var isInteracting
 	@Environment(\.canvasLOD) private var lod
 	@Environment(\.renderStyle) private var renderStyle
+	@Environment(\.canvasZoom) private var canvasZoom
 	
 	@Binding var hoveredIndex: Int?
 	@Binding var hoveredValid: Bool
@@ -59,14 +60,16 @@ struct RackChassisSlotView: View {
 		if let L = prelayout {
 			// MARK: sizes
 			let rowWidthPts = settings.pointsPerInch * 19.0
+			let railEps: CGFloat = 0.25
+			
 			let slotH = L.heightPts
 			let faceW = L.faceWidthPts
 			let isPartial = (device.rackWidth != .full)
 			let showHoverRails = !isPartial  // full-width only
-			
-			let railEps: CGFloat = 0.25
-			let wingL_eff = (L.leftWingPts  > 0 && L.leftRailPts  <= railEps) ? L.leftWingPts  : 0
-			let wingR_eff = (L.rightWingPts > 0 && L.rightRailPts <= railEps) ? L.rightWingPts : 0
+
+			// Wings are already correctly calculated in prelayout - use them directly
+			let wingL_eff = L.leftWingPts
+			let wingR_eff = L.rightWingPts
 
 			// MARK: face metrics (single source of truth)
 			let metrics = DeviceMetrics.faceRenderMetrics(
@@ -84,31 +87,80 @@ struct RackChassisSlotView: View {
 					} else {
 						if let data = device.imageData, let nsimg = NSImage(data: data) {
 							let key = device.id.uuidString + "#" + String(data.count)
-							
+
 							switch lod {
 								case .full:
+									// Original resolution: > 125% zoom
 									Image(nsImage: nsimg)
 										.resizable()
 										.interpolation(.high)
 										.antialiased(true)
 										.aspectRatio(nsimg.size, contentMode: .fit)
-									
-								case .medium:
-									let target = max(metrics.size.width, metrics.size.height) * 0.75
+
+								case .level1:
+									// 1/2 resolution: 75-125% zoom
+									// For a 2000x500 image → 1000px max
+									let original = max(nsimg.size.width, nsimg.size.height)
+									let target = original * 0.5
 									if let down = nsimg.lodImage(maxPixel: target, cacheKey: key) {
 										Image(nsImage: down)
 											.resizable()
-											.interpolation(.low)
+											.interpolation(.medium)
 											.aspectRatio(down.size, contentMode: .fit)
 									} else {
 										Image(nsImage: nsimg)
 											.resizable()
-											.interpolation(.low)
+											.interpolation(.medium)
 											.aspectRatio(nsimg.size, contentMode: .fit)
 									}
-									
+
+								case .level2:
+									// 1/4 resolution: 40-75% zoom
+									// For a 2000x500 image → 500px max
+									let original = max(nsimg.size.width, nsimg.size.height)
+									let target = original * 0.25
+									if let down = nsimg.lodImage(maxPixel: target, cacheKey: key) {
+										Image(nsImage: down)
+											.resizable()
+											.interpolation(.medium)
+											.aspectRatio(down.size, contentMode: .fit)
+									} else {
+										Rectangle().fill(Color.secondary.opacity(0.12))
+									}
+
+								case .level3:
+									// 1/8 resolution: < 40% zoom
+									// For a 2000x500 image → 250px max
+									let original = max(nsimg.size.width, nsimg.size.height)
+									let target = original * 0.125
+									if let tiny = nsimg.lodImage(maxPixel: target, cacheKey: key) {
+										Image(nsImage: tiny)
+											.resizable()
+											.interpolation(.low)
+											.aspectRatio(tiny.size, contentMode: .fit)
+									} else {
+										Rectangle().fill(Color.secondary.opacity(0.12))
+									}
+
+								// Legacy compatibility
+								case .medium:
+									// Redirect to level2 (1/4 resolution)
+									let original = max(nsimg.size.width, nsimg.size.height)
+									let target = original * 0.25
+									if let down = nsimg.lodImage(maxPixel: target, cacheKey: key) {
+										Image(nsImage: down)
+											.resizable()
+											.interpolation(.medium)
+											.aspectRatio(down.size, contentMode: .fit)
+									} else {
+										Rectangle().fill(Color.secondary.opacity(0.12))
+									}
+
 								case .low:
-									if let tiny = nsimg.lodImage(maxPixel: 240, cacheKey: key) {
+									// Redirect to level3 (1/8 resolution)
+									let original = max(nsimg.size.width, nsimg.size.height)
+									let target = original * 0.125
+									if let tiny = nsimg.lodImage(maxPixel: target, cacheKey: key) {
 										Image(nsImage: tiny)
 											.resizable()
 											.interpolation(.low)
@@ -268,24 +320,9 @@ struct RackChassisSlotView: View {
 				.overlay(alignment: .leading) {
 					if showHoverRails {
 						let handleW = max(railWidth, 10)
-						
-						// persistent hover/drag/right-click target
-						Rectangle().fill(Color.black.opacity(0.001))
-							.frame(width: handleW, height: slotH)
-							.contentShape(Rectangle())
-							.onHover { hoverLeft = $0 }
-							.onDrag {
-								deviceDragProvider(instance: instance, device: device)
-							} preview: {
-								devicePreviewView(device: device, layout: L, metrics: metrics)
-							}
-							.deviceMenu(
-								onEdit: { startEditing(device) },
-								onRemove: { removeInstance(instance, device: device) }
-							)
-							.zIndex(59)
-						
-						if hoverLeft {
+
+						ZStack {
+							// Always-present rail overlay (control visibility via opacity)
 							RailOverlay(
 								width: railWidth,
 								onDragProvider: { deviceDragProvider(instance: instance, device: device) },
@@ -294,32 +331,31 @@ struct RackChassisSlotView: View {
 								preview: { devicePreviewView(device: device, layout: L, metrics: metrics)}
 							)
 							.frame(width: handleW, height: slotH)
-							.contentShape(Rectangle())
+							.opacity(hoverLeft ? 1 : 0)
+							.allowsHitTesting(hoverLeft)
 							.zIndex(60)
 						}
+						.frame(width: handleW, height: slotH)
+						.contentShape(Rectangle())
+						.onHover { hoverLeft = $0 }
+						.onDrag {
+							deviceDragProvider(instance: instance, device: device)
+						} preview: {
+							devicePreviewView(device: device, layout: L, metrics: metrics)
+						}
+						.deviceMenu(
+							onEdit: { startEditing(device) },
+							onRemove: { removeInstance(instance, device: device) }
+						)
 					}
 				}
 			// RIGHT edge (full-width only)
 				.overlay(alignment: .trailing) {
 					if showHoverRails {
 						let handleW = max(railWidth, 10)
-						
-						Rectangle().fill(Color.black.opacity(0.001))
-							.frame(width: handleW, height: slotH)
-							.contentShape(Rectangle())
-							.onHover { hoverRight = $0 }
-							.onDrag {
-								deviceDragProvider(instance: instance, device: device)
-							} preview: {
-								devicePreviewView(device: device, layout: L, metrics: metrics)
-							}
-							.deviceMenu(
-								onEdit: { startEditing(device) },
-								onRemove: { removeInstance(instance, device: device) }
-							)
-							.zIndex(59)
-						
-						if hoverRight {
+
+						ZStack {
+							// Always-present rail overlay (control visibility via opacity)
 							RailOverlay(
 								width: railWidth,
 								onDragProvider: { deviceDragProvider(instance: instance, device: device) },
@@ -328,9 +364,22 @@ struct RackChassisSlotView: View {
 								preview: { devicePreviewView(device: device, layout: L, metrics: metrics)}
 							)
 							.frame(width: handleW, height: slotH)
-							.contentShape(Rectangle())
+							.opacity(hoverRight ? 1 : 0)
+							.allowsHitTesting(hoverRight)
 							.zIndex(60)
 						}
+						.frame(width: handleW, height: slotH)
+						.contentShape(Rectangle())
+						.onHover { hoverRight = $0 }
+						.onDrag {
+							deviceDragProvider(instance: instance, device: device)
+						} preview: {
+							devicePreviewView(device: device, layout: L, metrics: metrics)
+						}
+						.deviceMenu(
+							onEdit: { startEditing(device) },
+							onRemove: { removeInstance(instance, device: device) }
+						)
 					}
 				}
 			
@@ -358,6 +407,8 @@ struct RackChassisSlotView: View {
 							hoveredRows:  $hoveredRows,
 							library: library,
 							kind: .rack,
+							session: sessionManager.currentSession,
+							sessionManager: sessionManager,
 							onCommit: { sessionManager.saveSessions() }
 						)
 					)
@@ -425,7 +476,7 @@ struct RackChassisSlotView: View {
 		layout: SlotPrelayout,
 		metrics: FaceRenderMetrics
 	) -> some View {
-		DeviceDragPreview(device: device, layout: layout, metrics: metrics)
+		DeviceDragPreview(device: device, layout: layout, metrics: metrics, zoom: canvasZoom, renderStyle: renderStyle)
 	}
 	
 	private func removeInstance(_ instance: DeviceInstance, device: Device) {
@@ -618,7 +669,7 @@ private struct WingPlate: View {
 			RoundedRectangle(cornerRadius: 2)
 				.fill(LinearGradient(
 					colors: [
-						Color(nsColor: .windowBackgroundColor).opacity(0.85),
+						Color.gray.opacity(0.85),
 						Color.black.opacity(0.10)
 					],
 					startPoint: .topLeading, endPoint: .bottomTrailing
@@ -643,49 +694,77 @@ private struct DeviceDragPreview: View {
 	let device: Device
 	let layout: SlotPrelayout
 	let metrics: FaceRenderMetrics
-	
+	let zoom: CGFloat
+	let renderStyle: RenderStyle
+
 	let railEps: CGFloat = 0.25
-	
+
 	var body: some View {
 		let wingL_eff = (layout.leftWingPts  > 0 && layout.leftRailPts  <= railEps) ? layout.leftWingPts  : 0
 		let wingR_eff = (layout.rightWingPts > 0 && layout.rightRailPts <= railEps) ? layout.rightWingPts : 0
-		
+
+		let scaledLayout = SlotPrelayout(
+			faceWidthPts: layout.faceWidthPts * zoom,
+			totalWidthPts: layout.totalWidthPts * zoom,
+			leftWingPts: layout.leftWingPts * zoom,
+			rightWingPts: layout.rightWingPts * zoom,
+			leftRailPts: layout.leftRailPts * zoom,
+			rightRailPts: layout.rightRailPts * zoom,
+			heightPts: layout.heightPts * zoom,
+			externalLeft: layout.externalLeft,
+			externalRight: layout.externalRight
+		)
+
+		let scaledMetrics = FaceRenderMetrics(
+			size: CGSize(width: metrics.size.width * zoom, height: metrics.size.height * zoom),
+			vOffset: metrics.vOffset * zoom
+		)
+
+		let wingL_scaled = wingL_eff * zoom
+		let wingR_scaled = wingR_eff * zoom
+
 		ZStack(alignment: .topLeading) {
 			// Left wing (if any)
-			if wingL_eff > 0 {
+			if wingL_scaled > 0 {
 				WingPlate()
-					.frame(width: layout.leftWingPts, height: layout.heightPts)
+					.frame(width: scaledLayout.leftWingPts, height: scaledLayout.heightPts)
 			}
-			
+
 			// Face image (same scaling + centering as runtime)
 			Group {
-#if os(macOS)
-				if let data = device.imageData, let nsimg = NSImage(data: data) {
-					Image(nsImage: nsimg)
-						.resizable()
-						.interpolation(.high)
-						.antialiased(true)
-						.aspectRatio(nsimg.size, contentMode: .fit)
-						.frame(width: metrics.size.width, height: metrics.size.height)
+				if renderStyle == .representative {
+					// Use vector representation
+					DeviceView(device: device, metrics: scaledMetrics)
+						.frame(width: scaledMetrics.size.width, height: scaledMetrics.size.height)
 				} else {
-					DeviceView(device: device)
-						.frame(width: metrics.size.width, height: metrics.size.height)
-				}
+#if os(macOS)
+					if let data = device.imageData, let nsimg = NSImage(data: data) {
+						Image(nsImage: nsimg)
+							.resizable()
+							.interpolation(.high)
+							.antialiased(true)
+							.aspectRatio(nsimg.size, contentMode: .fit)
+							.frame(width: scaledMetrics.size.width, height: scaledMetrics.size.height)
+					} else {
+						DeviceView(device: device, metrics: scaledMetrics)
+							.frame(width: scaledMetrics.size.width, height: scaledMetrics.size.height)
+					}
 #else
-				DeviceView(device: device)
-					.frame(width: metrics.size.width, height: metrics.size.height)
+					DeviceView(device: device, metrics: scaledMetrics)
+						.frame(width: scaledMetrics.size.width, height: scaledMetrics.size.height)
 #endif
+				}
 			}
-			.offset(x: wingL_eff + layout.leftRailPts, y: metrics.vOffset)
-			
+			.offset(x: wingL_scaled + scaledLayout.leftRailPts, y: scaledMetrics.vOffset)
+
 			// Right wing (if any)
-			if wingR_eff > 0 {
+			if wingR_scaled > 0 {
 				WingPlate()
-					.frame(width: wingR_eff, height: layout.heightPts)
+					.frame(width: wingR_scaled, height: scaledLayout.heightPts)
 					.frame(maxWidth: .infinity, alignment: .trailing)
 			}
 		}
-		.frame(width: layout.totalWidthPts, height: layout.heightPts, alignment: .topLeading)
+		.frame(width: scaledLayout.totalWidthPts, height: scaledLayout.heightPts, alignment: .topLeading)
 		.clipped()
 		.shadow(radius: 8, y: 2)
 	}

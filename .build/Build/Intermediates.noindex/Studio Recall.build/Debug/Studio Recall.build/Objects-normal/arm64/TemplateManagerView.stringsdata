@@ -1,0 +1,80 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Templates/TemplateManagerView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Use “Save Current as Template…” to create one.",
+        "location": {
+          "startingColumn": 58,
+          "startingLine": 29
+        }
+      },
+      {
+        "comment": "",
+        "key": "No Templates",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 27
+        }
+      },
+      {
+        "comment": "",
+        "key": "Templates",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 20
+        }
+      },
+      {
+        "comment": "",
+        "key": "Close",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 22
+        }
+      },
+      {
+        "comment": "",
+        "key": "Set as default",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 43
+        }
+      },
+      {
+        "comment": "",
+        "key": "Template name",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 46
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 60
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 81
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 82
+        }
+      }
+    ]
+  },
+  "version": 1
+}

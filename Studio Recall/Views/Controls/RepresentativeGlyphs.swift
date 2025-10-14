@@ -14,32 +14,35 @@ private let REP_KNOB_SWEEP_DEG: Double =  270.0
 
 struct RepresentativeGlyphs: View {
 	@Environment(\.displayScale) private var displayScale
-	
+
 	let device: Device
 	@Binding var instance: DeviceInstance
 	let faceSize: CGSize
-	
+
 	let selectedId: UUID?
-	
+
+	@State private var renderNonce = 0
+
 	// Precompute control frames in face space
 	private var controlFrames: [(control: Control, frame: CGRect)] {
-		device.controls.map { ($0, $0.bounds(in: faceSize)) }
+		let frames = device.controls.map { ($0, $0.bounds(in: faceSize)) }
+		return frames
 	}
-	
+
 	var body: some View {
 		let labelPt = CGFloat(clamp(Double(faceSize.height) * 0.024, 9.0, 11.0))
 		let lineH   = labelPt * 1.15
 		let accent  = representativeAccentColor(for: device.name)
-		
+
 		let placed  = placeLabels(labelPt: labelPt, lineH: lineH)
-		
+
 		ZStack(alignment: .topLeading) {
-			
+
 			// Controls as lightweight glyphs (no labels inside)
 			ForEach(controlFrames, id: \.control.id) { pair in
 				let def   = pair.control
 				let frame = pair.frame
-				
+
 				ZStack {
 					glyph(for: def)
 					if def.id == selectedId {
@@ -73,6 +76,10 @@ struct RepresentativeGlyphs: View {
 			}
 		}
 		.frame(width: faceSize.width, height: faceSize.height, alignment: .topLeading)
+		.id(renderNonce)
+		.onChange(of: instance.controlStates) { _, _ in
+			renderNonce += 1
+		}
 	}
 	
 	// MARK: - Placement engine
@@ -145,7 +152,7 @@ struct RepresentativeGlyphs: View {
 					startDeg: start,
 					sweepDeg: sweep
 				)
-				
+
 			case .concentricKnob:
 				let oInst = instance.controlStates[def.id]?.asOuter
 				let iInst = instance.controlStates[def.id]?.asInner
@@ -164,7 +171,7 @@ struct RepresentativeGlyphs: View {
 				} else {
 					SteppedGlyph(index: idx, count: count)
 				}
-			
+
 			case .multiSwitch:
 				let idx = instance.controlStates[def.id]?.asMulti ?? multiIndex(def)
 				let count = max(2, def.options?.count ?? def.optionAngles?.count ?? 2)
@@ -173,19 +180,70 @@ struct RepresentativeGlyphs: View {
 				} else {
 					SwitchGlyph(index: idx, count: count)
 				}
-				
+
 			case .button:
 				let isOn = instance.controlStates[def.id]?.asButton ?? (def.isPressed ?? false)
 				BinarySquareGlyph(isOn: isOn)
-				
+
 			case .litButton:
 				let isOn = instance.controlStates[def.id]?.asLitPressed ?? (def.isPressed ?? false)
-				BinarySquareGlyph(isOn: isOn)
-				
+//				let color = (isOn ? def.onColor : def.offColor)?.color ?? .green
+				let onCol = def.onColor?.color ?? def.ledColor?.color ?? .green
+				let offCol = def.offColor?.color ?? .white.opacity(0.15)
+				LitButtonGlyph(isOn: isOn, color: isOn ? onCol : offCol)
+
 			case .light:
-				let isOn = instance.controlStates[def.id]?.asLight ?? (def.isPressed ?? false)
-				LightGlyph(isOn: isOn)
+				let isOn = resolveLightState(for: def)
+				// Prefer lampOnColor, fallback to ledColor, then onColor, then default
+				let onCol = def.lampOnColor?.color ?? def.ledColor?.color ?? def.onColor?.color ?? .green
+				let offCol = def.lampOffColor?.color ?? def.offColor?.color ?? .white.opacity(0.15)
+				LightGlyph(isOn: isOn, onColor: onCol, offColor: offCol)
 		}
+	}
+
+	// Resolve light state, checking linkTarget if present
+	private func resolveLightState(for control: Control) -> Bool {
+		// Check if light is linked to another control (prioritize this over own state)
+		if let targetId = control.linkTarget {
+			// Find the target control
+			if let target = device.controls.first(where: { $0.id == targetId }) {
+				var isOn: Bool
+
+				// Get target's state based on its type
+				switch target.type {
+				case .button, .litButton:
+					let state = instance.controlStates[target.id]?.asButton ?? (target.isPressed ?? false)
+					isOn = state
+				case .multiSwitch:
+					let currentIndex = instance.controlStates[target.id]?.asMulti ?? (target.selectedIndex ?? 0)
+					let wantIndex = control.linkOnIndex ?? 0
+					isOn = (currentIndex == wantIndex)
+				case .steppedKnob:
+					let currentIndex = instance.controlStates[target.id]?.asStepped ?? (target.stepIndex ?? 0)
+					isOn = currentIndex > 0
+				case .knob:
+					let value = instance.controlStates[target.id]?.asKnob ?? (target.value ?? 0)
+					isOn = value > 0.5
+				default:
+					isOn = false
+				}
+
+				// Apply inversion if configured
+				if control.linkInverted ?? false {
+					isOn.toggle()
+				}
+
+				return isOn
+			}
+		}
+
+		// Check instance state (runtime value from session) if no link
+		if let runtimeState = instance.controlStates[control.id]?.asLight {
+			return runtimeState
+		}
+
+		// Fallback to light's own isPressed state
+		return control.isPressed ?? false
 	}
 }
 
@@ -347,6 +405,7 @@ struct SteppedGlyph: View {
 
 struct SwitchGlyph: View {
 	let index: Int, count: Int
+
 	var body: some View {
 		HStack(spacing: 4) {
 			ForEach(0..<count, id: \.self) { i in
@@ -370,7 +429,7 @@ struct ButtonGlyph: View {
 struct BinarySquareGlyph: View {
 	let isOn: Bool
 	@Environment(\.displayScale) private var displayScale
-	
+
 	var body: some View {
 		GeometryReader { geo in
 			// square sized to the control box, pixel-snapped for crisp edges
@@ -396,20 +455,32 @@ struct BinarySquareGlyph: View {
 
 struct LightGlyph: View {
 	let isOn: Bool
+	let onColor: Color
+	let offColor: Color
+
 	var body: some View {
-		Circle().fill(isOn ? .green.opacity(0.9) : .white.opacity(0.15))
-			.padding(8)
+		ZStack {
+			Circle().fill(isOn ? onColor : offColor)
+			if isOn {
+				// Add glow effect when on
+				Circle().fill(onColor.opacity(0.5)).blur(radius: 3).scaleEffect(1.3)
+			}
+		}
+		.padding(8)
 	}
 }
 
 struct LitButtonGlyph: View {
 	let isOn: Bool
+	let color: Color
+
 	var body: some View {
 		ZStack {
-			Circle().fill(isOn ? .white.opacity(0.95) : .white.opacity(0.20))
+			Circle().fill(isOn ? color : color.opacity(0.20))
 			if isOn {
-				Circle().stroke(.white, lineWidth: 2).blur(radius: 0.5)
-				Circle().fill(.white.opacity(0.35)).blur(radius: 3).scaleEffect(1.25)
+				// Glow effect using the specified color
+				Circle().stroke(color, lineWidth: 2).blur(radius: 0.5)
+				Circle().fill(color.opacity(0.35)).blur(radius: 3).scaleEffect(1.25)
 			}
 		}
 		.padding(6)

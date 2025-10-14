@@ -1,0 +1,40 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Models/Controls.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%@: %@",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 1013
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@: %@",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 1054
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@: %@",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 1092
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@: %@",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 1114
+        }
+      }
+    ]
+  },
+  "version": 1
+}

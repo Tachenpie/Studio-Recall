@@ -20,10 +20,33 @@ struct Series500DropDelegate: DropDelegate {
 	@Binding var hoveredValid: Bool
 	
 	let library: DeviceLibrary
+	let session: Session?  // NEW: needed to find instances across all chassis
+	let sessionManager: SessionManager?  // NEW: needed to clear source on cross-chassis moves
 	var onCommit: (() -> Void)? = nil   // e.g., { sessionManager.saveSessions() }
 	
 	// MARK: - Helpers
-	
+
+	// NEW: Find an instance across all chassis in the session
+	private func findInstance(id: UUID) -> DeviceInstance? {
+		guard let session = session else { return nil }
+
+		// Search all racks
+		for rack in session.racks {
+			if let found = rack.slots.flatMap({ $0 }).compactMap({ $0 }).first(where: { $0.id == id }) {
+				return found
+			}
+		}
+
+		// Search all 500-series chassis
+		for chassis in session.series500Chassis {
+			if let found = chassis.slots.compactMap({ $0 }).first(where: { $0.id == id }) {
+				return found
+			}
+		}
+
+		return nil
+	}
+
 	private func targetIndex(from info: DropInfo) -> Int {
 		if let f = fixedIndex { return max(0, min(f, max(0, slots.count - 1))) }
 		if let map = indexFor { return max(0, min(map(info.location), max(0, slots.count - 1))) }
@@ -124,21 +147,34 @@ struct Series500DropDelegate: DropDelegate {
 				guard let device = library.device(for: payload.deviceId) else { return }
 				let span = anchorIndex ..< min(anchorIndex + width(of: device), slots.count)
 				guard canPlace(range: span, ignoring: payload.instanceId) else { return }
-				
+
 				if let moving = payload.instanceId {
-					// MOVE existing (preserve controlStates)
-					let instance =
-					slots.first(where: { $0?.id == moving }) ??
-					library.instances.first(where: { $0.id == moving })
-					guard let inst = instance else { return }
-					clearSpan(of: moving)
-					place(inst, range: span)
+					// Check if the instance exists in THIS chassis's slots
+					if let optionalInst = slots.first(where: { $0?.id == moving }), let inst = optionalInst {
+						// Same-chassis move: clear old position and place at new position
+						clearSpan(of: moving)
+						place(inst, range: span)
+					} else {
+						// Cross-chassis move: find the instance across all chassis to preserve controlStates
+						if let sourceInstance = findInstance(id: moving) {
+							// Create new instance with preserved controlStates
+							var newInst = DeviceInstance(deviceID: device.id, device: device)
+							newInst.controlStates = sourceInstance.controlStates  // Preserve control values!
+							place(newInst, range: span)
+							// Clear from source rack/chassis (this is a MOVE, not a COPY)
+							sessionManager?.clearInstanceFromCurrentSession(id: moving)
+						} else {
+							// Fallback: create fresh instance if source not found
+							let inst = library.createInstance(of: device)
+							place(inst, range: span)
+						}
+					}
 				} else {
 					// COPY new from library/palette
 					let inst = library.createInstance(of: device)
 					place(inst, range: span)
 				}
-				
+
 				onCommit?()
 			}
 		}

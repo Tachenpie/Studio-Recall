@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 @main
 struct Studio_RecallApp: App {
@@ -19,7 +20,10 @@ struct Studio_RecallApp: App {
     @State private var showingAddRack = false
     @State private var showingAddChassis = false
 	@State private var showingReviewChanges = false
-	@State private var showingSaveOptions = false
+	@State private var importingSession = false
+	@State private var exportingSession = false
+	@State private var exportingSessionSaveAs = false
+	@State private var showingSaveAsTemplate = false
     
     #if os(macOS)
     @Environment(\.openWindow) private var openWindow
@@ -43,7 +47,10 @@ struct Studio_RecallApp: App {
                     showingAddRack: $showingAddRack,
                     showingAddChassis: $showingAddChassis,
 					showingReviewChanges: $showingReviewChanges,
-					showingSaveOptions: $showingSaveOptions
+					importingSession: $importingSession,
+					exportingSession: $exportingSession,
+					exportingSessionSaveAs: $exportingSessionSaveAs,
+					showingSaveAsTemplate: $showingSaveAsTemplate
                 )
                 #else
                 RootView(
@@ -52,7 +59,10 @@ struct Studio_RecallApp: App {
                     showingAddChassis: $showingAddChassis,
                     showingLibraryEditor: $showingLibraryEditor,
 					showingReviewChanges: $showingReviewChanges,
-					showingSaveOptions: $showingSaveOptions
+					importingSession: $importingSession,
+					exportingSession: $exportingSession,
+					exportingSessionSaveAs: $exportingSessionSaveAs,
+					showingSaveAsTemplate: $showingSaveAsTemplate
                 )
                 #endif
             }
@@ -67,41 +77,11 @@ struct Studio_RecallApp: App {
 				showingAddRack: $showingAddRack,
 				showingAddChassis: $showingAddChassis,
 				showingReviewChanges: $showingReviewChanges,
-				showingSaveOptions: $showingSaveOptions
+				importingSession: $importingSession,
+				exportingSession: $exportingSession,
+				exportingSessionSaveAs: $exportingSessionSaveAs,
+				showingSaveAsTemplate: $showingSaveAsTemplate
 			)
-			
-			// File ▸ New from Template
-			CommandGroup(after: .newItem) {
-				Menu("New Session from Template") {
-					ForEach(sessionManager.templates) { t in
-						Button(t.name) { sessionManager.newSession(from: t) }
-					}
-					Divider()
-					Button("Blank Session") { sessionManager.newSession(from: nil) }
-				}
-			}
-			
-			// Templates menu
-			CommandMenu("Templates") {
-				Button("Save Current as Template…") {
-					sessionManager.saveCurrentSessionAsTemplate()
-				}
-				Divider()
-				Menu("Default Template") {
-					Button(sessionManager.defaultTemplateId == nil ? "• None" : "None") {
-						sessionManager.defaultTemplateId = nil
-					}
-					ForEach(sessionManager.templates) { t in
-						Button((sessionManager.defaultTemplateId == t.id ? "• " : "") + t.name) {
-							sessionManager.defaultTemplateId = t.id
-						}
-					}
-				}
-#if os(macOS)
-				Divider()
-				Button("Manage Templates…") { sessionManager.showTemplateManager = true }
-#endif
-			}
 		}
 
         
@@ -149,7 +129,7 @@ private struct LibraryMenuButton: View {
 #if os(macOS)
 private struct OpenLibraryWindowAction: View {
     @Environment(\.openWindow) private var openWindow
-    
+
     var body: some View {
         Color.clear
             .task {
@@ -159,16 +139,42 @@ private struct OpenLibraryWindowAction: View {
 }
 #endif
 
+// MARK: - FileDocument for session export
+struct SessionDocument: FileDocument {
+	static var readableContentTypes: [UTType] { [.json] }
+
+	let session: Session
+
+	init(session: Session) {
+		self.session = session
+	}
+
+	init(configuration: ReadConfiguration) throws {
+		guard let data = configuration.file.regularFileContents else {
+			throw CocoaError(.fileReadCorruptFile)
+		}
+		session = try JSONDecoder().decode(Session.self, from: data)
+	}
+
+	func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+		let data = try JSONEncoder().encode(session)
+		return FileWrapper(regularFileWithContents: data)
+	}
+}
+
 struct RootView: View {
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var library: DeviceLibrary
-    
+
     @Binding var showingNewSession: Bool
     @Binding var showingAddRack: Bool
     @Binding var showingAddChassis: Bool
 	@Binding var showingReviewChanges: Bool
-	@Binding var showingSaveOptions: Bool
-    
+	@Binding var importingSession: Bool
+	@Binding var exportingSession: Bool
+	@Binding var exportingSessionSaveAs: Bool
+	@Binding var showingSaveAsTemplate: Bool
+
     #if !os(macOS)
     @Binding var showingLibraryEditor: Bool
     #endif
@@ -195,21 +201,45 @@ struct RootView: View {
 			.sheet(isPresented: $showingReviewChanges) {
 				DiffReviewSheet().environmentObject(sessionManager)
 			}
-			.confirmationDialog("Save Session",
-								isPresented: $showingSaveOptions,
-								titleVisibility: .visible) {
-				Button("Save", role: .none) {
-					sessionManager.saveAll()    // persists sessions.json
+			.fileImporter(
+				isPresented: $importingSession,
+				allowedContentTypes: [.json],
+				allowsMultipleSelection: false
+			) { result in
+				switch result {
+				case .success(let urls):
+					guard let url = urls.first else { return }
+					sessionManager.openSession(from: url)
+				case .failure(let error):
+					print("❌ Import failed: \(error)")
 				}
-#if os(macOS)
-				Button("Save As…") {
-					sessionManager.saveCurrentSessionAs()
+			}
+			.fileExporter(
+				isPresented: $exportingSession,
+				document: sessionManager.currentSession.map { SessionDocument(session: $0) },
+				contentType: .json,
+				defaultFilename: (sessionManager.currentSession?.name ?? "Untitled") + ".session.json"
+			) { result in
+				if case .success(let url) = result {
+					sessionManager.currentSessionFileURL = url
+				} else if case .failure(let error) = result {
+					print("❌ Save failed: \(error)")
 				}
-				Button("Save As Template…") {
-					sessionManager.saveCurrentSessionAsTemplate()
+			}
+			.fileExporter(
+				isPresented: $exportingSessionSaveAs,
+				document: sessionManager.currentSession.map { SessionDocument(session: $0) },
+				contentType: .json,
+				defaultFilename: (sessionManager.currentSession?.name ?? "Untitled") + ".session.json"
+			) { result in
+				if case .success(let url) = result {
+					sessionManager.currentSessionFileURL = url
+				} else if case .failure(let error) = result {
+					print("❌ Save As failed: \(error)")
 				}
-#endif
-				Button("Cancel", role: .cancel) { }
+			}
+			.sheet(isPresented: $showingSaveAsTemplate) {
+				SaveTemplateNameSheet(sessionManager: sessionManager)
 			}
     }
 }

@@ -1,0 +1,120 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Controls/ControlEditorWindow.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Edit Controls",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 104
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 109
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 118
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 207
+        }
+      },
+      {
+        "comment": "",
+        "key": "No faceplate image",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 255
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 304
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Control",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 295
+        }
+      },
+      {
+        "comment": "",
+        "key": "Auto-Detect Controls",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 299
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset zoom & pan",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 367
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pan view (%@)",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 373
+        }
+      },
+      {
+        "comment": "",
+        "key": "Preview",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 386
+        }
+      },
+      {
+        "comment": "",
+        "key": "Preview controls using representative glyphs",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 392
+        }
+      },
+      {
+        "comment": "",
+        "key": "Photo",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 387
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rep",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 388
+        }
+      }
+    ]
+  },
+  "version": 1
+}

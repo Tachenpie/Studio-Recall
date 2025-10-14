@@ -16,13 +16,16 @@ import UIKit
 enum DeviceType: String, Codable, CaseIterable {
     case rack
     case series500
-    
+	case pedal
+
     var displayName: String {
         switch self {
         case .rack:
             return "Rack Gear"
         case .series500:
             return "500 Series Module"
+		case .pedal:
+			return "Effect Pedal"
         }
     }
 }
@@ -52,11 +55,15 @@ struct Device: Identifiable, Codable, Equatable {
     var controls: [Control] = []
     
     // Physical sizing
-    var rackUnits: Int? = 1       // e.g., 1U, 2U
-	var rackWidth: RackWidth = .full
-    var slotWidth: Int? = nil       // e.g., 1 slot, 2 slots
+    var rackUnits: Int? = 1       // e.g., 1U, 2U (for rack devices)
+	var rackWidth: RackWidth = .full  // for rack devices
+    var slotWidth: Int? = nil       // e.g., 1 slot, 2 slots (for 500-series)
 
-	var wingWidthInches: CGFloat = DeviceMetrics.wingWidth
+	var wingWidthInches: CGFloat = DeviceMetrics.wingWidth  // for rack devices
+
+	// Pedal dimensions (for pedal type only)
+	var pedalWidthInches: Double? = nil    // Width in inches
+	var pedalHeightInches: Double? = nil   // Height (depth) in inches
     
     var isFiller: Bool = false  // true = blank panel
     

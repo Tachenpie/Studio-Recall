@@ -9,6 +9,7 @@ import SwiftUI
 final class AppSettings: ObservableObject {
     @AppStorage("rackValidationEnabled") var rackValidationEnabled: Bool = false
     @AppStorage("rackAutoExpand") var rackAutoExpand: Bool = true
+	@AppStorage("useMetalRenderer") var useMetalRenderer: Bool = false
 	@Published var parentInteracting: Bool = false
 }
 

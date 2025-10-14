@@ -1,0 +1,16 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Helpers/MoveHandle.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Drag to move this device",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 22
+        }
+      }
+    ]
+  },
+  "version": 1
+}

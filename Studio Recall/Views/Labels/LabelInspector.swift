@@ -19,240 +19,337 @@ struct LabelInspector: View {
 	@State private var newPresetName: String = ""
 	@State private var families: [String] = NSFontManager.shared.availableFontFamilies.sorted()
 	@FocusState private var textFocused: Bool
-	
+
 	// Work on a draft; commit on Done
 	@State private var draft: SessionLabel = .init()
+
+	// Track selected preset for update functionality
+	@State private var selectedPresetId: UUID? = nil
+	@State private var originalPreset: UserLabelPreset? = nil
+	@State private var hasStyleChanged: Bool = false
 	
 	var body: some View {
 		VStack(alignment: .leading, spacing: 14) {
-			
-			// Header
 			Text("Label").font(.title2).bold()
-			
-			// Preview
-			VStack(alignment: .leading, spacing: 6) {
-				Text("Preview").font(.caption).foregroundStyle(.secondary)
-				LabelStylePreview(
-					text: draft.text,
-					style: draft.style,
-					scale: CGFloat(canvasZoom)
-				)
-				.accessibilityLabel("Label preview at \(Int((canvasZoom) * 100))%")
-			}
-			
-			// Text
-			VStack(alignment: .leading, spacing: 6) {
-				Text("Text").font(.caption).foregroundStyle(.secondary)
-				TextField("Label text", text: $draft.text)
-					.textFieldStyle(.roundedBorder)
-					.focused($textFocused)
-					.onAppear {
-						draft = label
-						textFocused = true
-					}
-					.frame(minWidth: 320)
-			}
-			
-			// Font family + size
-			VStack(alignment: .leading, spacing: 6) {
-				Text("Font").font(.caption).foregroundStyle(.secondary)
-				HStack(alignment: .firstTextBaseline, spacing: 8) {
-					Picker("", selection: $draft.style.fontName) {
-						if !families.contains(draft.style.fontName) {
-							Text(draft.style.fontName).tag(draft.style.fontName)
-							Divider()
-						}
-						ForEach(families, id: \.self) { fam in
-							Text(fam).tag(fam)
-						}
-					}
-					.labelsHidden()
-					.frame(width: 240)
-					
-					Stepper(value: $draft.style.fontSize, in: 8...64, step: 1) {
-						Text("\(Int(draft.style.fontSize)) pt").monospacedDigit()
-					}
-					.frame(minWidth: 120, alignment: .leading)
-				}
-			}
-			
-			// Colors
-			VStack(alignment: .leading, spacing: 8) {
-				Text("Colors").font(.caption).foregroundStyle(.secondary)
-				HStack {
-					ColorPicker("Text", selection: Binding(
-						get:{ draft.style.textColor.color },
-						set:{ draft.style.textColor = .init($0) }))
-					ColorPicker("Background", selection: Binding(
-						get:{ draft.style.background.color },
-						set:{ draft.style.background = .init($0) }))
-					ColorPicker("Border", selection: Binding(
-						get:{ draft.style.borderColor.color },
-						set:{ draft.style.borderColor = .init($0) }))
-				}
-			}
-			
-			// Shape / Border / Padding
-			VStack(alignment: .leading, spacing: 6) {
-				Text("Shape & Layout").font(.caption).foregroundStyle(.secondary)
-				HStack {
-					HStack(spacing: 6) {
-						Text("Corner").frame(width: 56, alignment: .leading)
-						Slider(value: $draft.style.cornerRadius, in: 0...12)
-						Text("\(Int(draft.style.cornerRadius))").monospacedDigit()
-							.frame(width: 32, alignment: .trailing)
-					}
-					HStack(spacing: 6) {
-						Text("Border").frame(width: 48, alignment: .leading)
-						Slider(value: $draft.style.borderWidth, in: 0...4)
-						Text(String(format: "%.1f", draft.style.borderWidth)).monospacedDigit()
-							.frame(width: 32, alignment: .trailing)
-					}
-				}
-				HStack {
-					HStack(spacing: 6) {
-						Text("Padding H").frame(width: 72, alignment: .leading)
-						Slider(value: $draft.style.paddingH, in: 0...24)
-						Text("\(Int(draft.style.paddingH))").monospacedDigit()
-							.frame(width: 32, alignment: .trailing)
-					}
-					HStack(spacing: 6) {
-						Text("Padding V").frame(width: 72, alignment: .leading)
-						Slider(value: $draft.style.paddingV, in: 0...16)
-						Text("\(Int(draft.style.paddingV))").monospacedDigit()
-							.frame(width: 32, alignment: .trailing)
-					}
-				}
-			}
-			
-			// Effects & Behavior — grid layout for better line rhythm
-			VStack(alignment: .leading, spacing: 6) {
-				Text("Effects & Behavior").font(.caption).foregroundStyle(.secondary)
-				
-				Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
-					GridRow {
-						Toggle("Scales with zoom", isOn: $draft.style.scalesWithZoom)
-						Toggle("Locked", isOn: $draft.isLocked)
-					}
-					GridRow {
-						HStack {
-							Text("Opacity")
-							Slider(value: $draft.style.opacity, in: 0.2...1)
-							Text(String(format: "%.0f%%", draft.style.opacity * 100))
-								.monospacedDigit().frame(width: 44, alignment: .trailing)
-						}
-						HStack {
-							Text("Shadow")
-							Slider(value: $draft.style.shadow, in: 0...6)
-							Text(String(format: "%.1f", draft.style.shadow))
-								.monospacedDigit().frame(width: 40, alignment: .trailing)
-						}
-					}
-				}
-			}
-			
-			// Presets row (taller so buttons don’t clip)
-			VStack(alignment: .leading, spacing: 6) {
-				Text("Presets").font(.caption).foregroundStyle(.secondary)
-				
-				ScrollView(.horizontal, showsIndicators: false) {
-					HStack(spacing: 8) {
-						// Built-ins
-						ForEach(LabelPreset.allCases) { p in
-							Button {
-								draft.style = .preset(p)
-							} label: {
-								PresetChip(title: p.displayName, style: .preset(p))
-							}
-							.buttonStyle(.bordered)
-							.controlSize(.large)
-						}
-						
-						// User presets
-						let customs = LabelPresetStore.load()
-						if !customs.isEmpty {
-							Divider().frame(height: 22)
-							ForEach(customs) { c in
-								Button {
-									draft.style = c.style
-								} label: {
-									PresetChip(title: c.name, style: c.style)
-								}
-								.buttonStyle(.borderedProminent)
-								.controlSize(.large)
-								.contextMenu {
-									Button("Delete", role: .destructive) {
-										LabelPresetStore.delete(id: c.id)
-									}
-								}
-							}
-						}
-					}
-					.frame(height: 44)
-				}
-				
-				HStack(spacing: 8) {
-					Button("Save Preset…") {
-						// Pre-fill with label text if available, fallback to readable style name.
-						newPresetName = draft.text.isEmpty ? "Preset \(Date().formatted(date: .numeric, time: .omitted))" : draft.text
-						showSavePresetSheet = true
-					}
-					.buttonStyle(.bordered)
-					
-					Button("Use as Default") {
-						LabelStyleDefaults.save(draft.style)
-					}
-					Button("Reset to App Default") {
-						draft.style = LabelStyleDefaults.load()
-					}
-					.help("Reload the saved default; use Reset in app preferences to reset to system defaults")
-					Spacer()
-				}
-			}
-			.sheet(isPresented: $showSavePresetSheet) {
-				VStack(alignment: .leading, spacing: 12) {
-					Text("Save Label Preset").font(.title2).bold()
-					TextField("Preset name", text: $newPresetName)
-						.textFieldStyle(.roundedBorder)
-						.frame(width: 300)
-					HStack {
-						Spacer()
-						Button("Cancel") { showSavePresetSheet = false }
-						Button("Save") {
-							LabelPresetStore.add(name: newPresetName, style: draft.style)
-							showSavePresetSheet = false
-						}
-						.keyboardShortcut(.defaultAction)
-					}
-				}
-				.padding(20)
-				.frame(minWidth: 360)
-			}
-			
+			previewSection
+			textSection
+			fontSection
+			colorSection
+			shapeSection
+			effectsSection
+			presetSection
 			Spacer(minLength: 8)
-			
-			// Bottom actions: Cancel / Done
+			actionButtons
+		}
+		.padding(16)
+		.frame(minWidth: 440)
+		.onChange(of: draft.style) { _, _ in
+			// Track if style has changed from original
+			if let original = originalPreset {
+				hasStyleChanged = (draft.style != original.style)
+			}
+		}
+	}
+
+	private var previewSection: some View {
+		VStack(alignment: .leading, spacing: 6) {
+			Text("Preview").font(.caption).foregroundStyle(.secondary)
+			LabelStylePreview(
+				text: draft.text,
+				style: draft.style,
+				scale: CGFloat(canvasZoom)
+			)
+			.accessibilityLabel("Label preview at \(Int((canvasZoom) * 100))%")
+		}
+	}
+
+	private var textSection: some View {
+		VStack(alignment: .leading, spacing: 6) {
+			Text("Text").font(.caption).foregroundStyle(.secondary)
+			TextField("Label text", text: $draft.text)
+				.textFieldStyle(.roundedBorder)
+				.focused($textFocused)
+				.onAppear {
+					draft = label
+					selectedPresetId = label.linkedPresetId
+
+					// Save original preset if this label is linked to one
+					if let presetId = label.linkedPresetId {
+						let presets = LabelPresetStore.load()
+						originalPreset = presets.first { $0.id == presetId }
+					}
+
+					textFocused = true
+				}
+				.frame(minWidth: 320)
+		}
+	}
+
+	private var fontSection: some View {
+		VStack(alignment: .leading, spacing: 6) {
+			Text("Font").font(.caption).foregroundStyle(.secondary)
+			HStack(alignment: .firstTextBaseline, spacing: 8) {
+				Picker("", selection: $draft.style.fontName) {
+					if !families.contains(draft.style.fontName) {
+						Text(draft.style.fontName).tag(draft.style.fontName)
+						Divider()
+					}
+					ForEach(families, id: \.self) { fam in
+						Text(fam).tag(fam)
+					}
+				}
+				.labelsHidden()
+				.frame(width: 240)
+
+				Stepper(value: $draft.style.fontSize, in: 8...64, step: 1) {
+					Text("\(Int(draft.style.fontSize)) pt").monospacedDigit()
+				}
+				.frame(minWidth: 120, alignment: .leading)
+			}
+		}
+	}
+
+	private var colorSection: some View {
+		VStack(alignment: .leading, spacing: 8) {
+			Text("Colors").font(.caption).foregroundStyle(.secondary)
+			HStack {
+				ColorPicker("Text", selection: Binding(
+					get:{ draft.style.textColor.color },
+					set:{ draft.style.textColor = .init($0) }))
+				ColorPicker("Background", selection: Binding(
+					get:{ draft.style.background.color },
+					set:{ draft.style.background = .init($0) }))
+				ColorPicker("Border", selection: Binding(
+					get:{ draft.style.borderColor.color },
+					set:{ draft.style.borderColor = .init($0) }))
+			}
+		}
+	}
+
+	private var shapeSection: some View {
+		VStack(alignment: .leading, spacing: 6) {
+			Text("Shape & Layout").font(.caption).foregroundStyle(.secondary)
+			HStack {
+				HStack(spacing: 6) {
+					Text("Corner").frame(width: 56, alignment: .leading)
+					Slider(value: $draft.style.cornerRadius, in: 0...12)
+					Text("\(Int(draft.style.cornerRadius))").monospacedDigit()
+						.frame(width: 32, alignment: .trailing)
+				}
+				HStack(spacing: 6) {
+					Text("Border").frame(width: 48, alignment: .leading)
+					Slider(value: $draft.style.borderWidth, in: 0...4)
+					Text(String(format: "%.1f", draft.style.borderWidth)).monospacedDigit()
+						.frame(width: 32, alignment: .trailing)
+				}
+			}
+			HStack {
+				HStack(spacing: 6) {
+					Text("Padding H").frame(width: 72, alignment: .leading)
+					Slider(value: $draft.style.paddingH, in: 0...24)
+					Text("\(Int(draft.style.paddingH))").monospacedDigit()
+						.frame(width: 32, alignment: .trailing)
+				}
+				HStack(spacing: 6) {
+					Text("Padding V").frame(width: 72, alignment: .leading)
+					Slider(value: $draft.style.paddingV, in: 0...16)
+					Text("\(Int(draft.style.paddingV))").monospacedDigit()
+						.frame(width: 32, alignment: .trailing)
+				}
+			}
+		}
+	}
+
+	private var effectsSection: some View {
+		VStack(alignment: .leading, spacing: 6) {
+			Text("Effects & Behavior").font(.caption).foregroundStyle(.secondary)
+			Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
+				GridRow {
+					Toggle("Scales with zoom", isOn: $draft.style.scalesWithZoom)
+					Toggle("Locked", isOn: $draft.isLocked)
+				}
+				GridRow {
+					HStack {
+						Text("Opacity")
+						Slider(value: $draft.style.opacity, in: 0.2...1)
+						Text(String(format: "%.0f%%", draft.style.opacity * 100))
+							.monospacedDigit().frame(width: 44, alignment: .trailing)
+					}
+					HStack {
+						Text("Shadow")
+						Slider(value: $draft.style.shadow, in: 0...6)
+						Text(String(format: "%.1f", draft.style.shadow))
+							.monospacedDigit().frame(width: 40, alignment: .trailing)
+					}
+				}
+			}
+		}
+	}
+
+	private var presetSection: some View {
+		VStack(alignment: .leading, spacing: 6) {
+			Text("Presets").font(.caption).foregroundStyle(.secondary)
+			presetScrollView
+			presetActionButtons
+		}
+		.sheet(isPresented: $showSavePresetSheet) {
+			savePresetSheet
+		}
+	}
+
+	private var presetScrollView: some View {
+		ScrollView(.horizontal, showsIndicators: false) {
+			HStack(spacing: 8) {
+				builtInPresets
+				userPresets
+			}
+			.frame(height: 44)
+		}
+	}
+
+	private var builtInPresets: some View {
+		ForEach(LabelPreset.allCases) { p in
+			Button {
+				draft.style = .preset(p)
+				selectedPresetId = nil
+				draft.linkedPresetId = nil
+			} label: {
+				PresetChip(title: p.displayName, style: .preset(p))
+			}
+			.buttonStyle(.bordered)
+			.controlSize(.large)
+		}
+	}
+
+	@ViewBuilder
+	private var userPresets: some View {
+		let customs = LabelPresetStore.load()
+		if !customs.isEmpty {
+			Divider().frame(height: 22)
+			ForEach(customs) { c in
+				userPresetButton(for: c)
+			}
+		}
+	}
+
+	@ViewBuilder
+	private func userPresetButton(for preset: UserLabelPreset) -> some View {
+		let isSelected = selectedPresetId == preset.id
+		let button = Button {
+			draft.style = preset.style
+			draft.linkedPresetId = preset.id
+			selectedPresetId = preset.id
+		} label: {
+			PresetChip(title: preset.name, style: preset.style, isSelected: isSelected)
+		}
+		.controlSize(.large)
+		.contextMenu {
+			Button("Delete", role: .destructive) {
+				LabelPresetStore.delete(id: preset.id)
+			}
+		}
+
+		if isSelected {
+			button.buttonStyle(.borderedProminent)
+		} else {
+			button.buttonStyle(.bordered)
+		}
+	}
+
+	private var presetActionButtons: some View {
+		VStack(alignment: .leading, spacing: 6) {
+			HStack(spacing: 8) {
+				Button("Save Preset…") {
+					newPresetName = draft.text.isEmpty ? "Preset \(Date().formatted(date: .numeric, time: .omitted))" : draft.text
+					showSavePresetSheet = true
+				}
+				.buttonStyle(.bordered)
+
+				Button("Use as Default") {
+					LabelStyleDefaults.save(draft.style)
+				}
+				.buttonStyle(.bordered)
+
+				Button("Reset to App Default") {
+					draft.style = LabelStyleDefaults.load()
+					selectedPresetId = nil
+					draft.linkedPresetId = nil
+				}
+				.buttonStyle(.bordered)
+				.help("Reload the saved default; use Reset in app preferences to reset to system defaults")
+				Spacer()
+			}
+		}
+	}
+
+	private var savePresetSheet: some View {
+		VStack(alignment: .leading, spacing: 12) {
+			Text("Save Label Preset").font(.title2).bold()
+			TextField("Preset name", text: $newPresetName)
+				.textFieldStyle(.roundedBorder)
+				.frame(width: 300)
 			HStack {
 				Spacer()
-				Button("Cancel") { dismiss() }
-				Button("Done") {
-					label = draft
-					sessionManager.saveSessions()
-					dismiss()
+				Button("Cancel") { showSavePresetSheet = false }
+				Button("Save") {
+					LabelPresetStore.add(name: newPresetName, style: draft.style)
+					showSavePresetSheet = false
 				}
 				.keyboardShortcut(.defaultAction)
 			}
 		}
-		.padding(16)
-		.frame(minWidth: 440)
+		.padding(20)
+		.frame(minWidth: 360)
+	}
+
+	private var actionButtons: some View {
+		HStack {
+			if let presetId = selectedPresetId {
+				Button("Update Preset") {
+					LabelPresetStore.update(id: presetId, style: draft.style)
+					sessionManager.updateLabelsWithPreset(id: presetId, newStyle: draft.style)
+					dismiss()
+				}
+				.buttonStyle(.bordered)
+				.disabled(!hasStyleChanged)
+				.help(hasStyleChanged ? "Update the selected preset and all labels using it" : "No changes to update")
+			}
+			Spacer()
+			Button("Cancel") {
+				// Revert preset to original if it was modified
+				if let original = originalPreset {
+					LabelPresetStore.update(id: original.id, style: original.style)
+					sessionManager.updateLabelsWithPreset(id: original.id, newStyle: original.style)
+				}
+				dismiss()
+			}
+			Button("Done") {
+				label = draft
+				sessionManager.saveSessions()
+				dismiss()
+			}
+			.keyboardShortcut(.defaultAction)
+		}
+	}
+
+	// Clear preset link when user manually modifies style
+	private func clearPresetLink() {
+		selectedPresetId = nil
+		draft.linkedPresetId = nil
 	}
 }
 
 private struct PresetChip: View {
 	var title: String
 	var style: LabelStyleSpec
+	var isSelected: Bool = false
 	var body: some View {
 		HStack(spacing: 6) {
+			if isSelected {
+				Image(systemName: "checkmark.circle.fill")
+					.font(.system(size: 12))
+					.foregroundStyle(.green)
+			}
 			Text(title)
 			RoundedRectangle(cornerRadius: 4)
 				.fill(style.background.color)

@@ -22,6 +22,7 @@ struct FaceplateCanvas: View {
 	@Binding var zoom: CGFloat
 	@Binding var pan: CGSize
 	@Binding var zoomFocusN: CGPoint?
+	@Binding var activeSidebarTab: ControlSidebarTab
 	
 	var renderStyle: RenderStyle = .photoreal
 	
@@ -33,15 +34,15 @@ struct FaceplateCanvas: View {
 	@State private var draggingControlId: UUID? = nil
 	
 	// tuning
-	private let gridStep: CGFloat = 0.0025
-	private let minRegion: CGFloat = 0.004
+	private let gridStep: CGFloat = 0.005   // Less strict snapping
+	private let minRegion: CGFloat = 0.002  // Smaller minimum size
 	
 	// Callback
 	var onNewControlDropped: ((UUID) -> Void)? = nil
 	
 	var body: some View {
 		let aspect = computeAspectRatio()
-		let showBadges = !(isEditingRegion || draggingControlId != nil)
+		let showBadges = !(isEditingRegion || draggingControlId != nil || activeSidebarTab == .inspector)
 		
 		CanvasViewport(
 			aspect: aspect,
@@ -77,7 +78,7 @@ struct FaceplateCanvas: View {
 									onlyRegionIndex: idx
 								)
 								.compositingGroup()
-								.mask { RegionClipShape(shape: region.shape) }
+								.mask { RegionClipShape(shape: region.shape, maskParams: region.maskParams) }
 								.allowsHitTesting(false)
 								.id(editableDevice.device.controls[i].renderKey)
 							}
@@ -122,7 +123,8 @@ struct FaceplateCanvas: View {
 								zoom: zoom,
 								controlType: sel.wrappedValue.type,
 								regionIndex: idx,
-								regions: sel.wrappedValue.regions
+								regions: sel.wrappedValue.regions,
+								maskParams: sel.wrappedValue.regions[idx].useAlphaMask ? sel.wrappedValue.regions[idx].maskParams : nil
 							)
 						}
 					}
@@ -365,7 +367,10 @@ private struct RepresentativeGlyphForEditor: View {
 			case .button:
 				BinarySquareGlyph(isOn: control.isPressed ?? false)
 			case .light:
-				LightGlyph(isOn: control.isPressed ?? false)
+				let isOn = control.isPressed ?? false
+				let onCol = control.lampOnColor?.color ?? control.ledColor?.color ?? control.onColor?.color ?? .green
+				let offCol = control.lampOffColor?.color ?? control.offColor?.color ?? .white.opacity(0.15)
+				LightGlyph(isOn: isOn, onColor: onCol, offColor: offCol)
 			case .concentricKnob:
 				ConcentricGlyphCanonical(
 					outer: control.outerValueNormalized ?? 0.5,
@@ -374,7 +379,9 @@ private struct RepresentativeGlyphForEditor: View {
 					sweepDeg: control.repSweepDeg ?? 270
 				)
 			case .litButton:
-				BinarySquareGlyph(isOn: control.isPressed ?? false) // placeholder
+				let isOn = control.isPressed ?? false
+				let color = (isOn ? control.onColor : control.offColor)?.color ?? .green
+				LitButtonGlyph(isOn: isOn, color: color)
 		}
 	}
 }

@@ -42,6 +42,20 @@ struct NewDeviceChooser: View {
             }
             .buttonStyle(.bordered)
 
+            Button {
+                let pedalDevice = Device(
+                    name: "New Effect Pedal",
+                    type: .pedal,
+                    pedalWidthInches: 3.0,
+                    pedalHeightInches: 5.0
+                )
+                onChoose(pedalDevice)
+            } label: {
+                Label("Effect Pedal", systemImage: "square.grid.3x1.below.line.grid.1x2")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+
             Spacer()
 
             Button("Cancel", role: .cancel) {
@@ -50,6 +64,6 @@ struct NewDeviceChooser: View {
             .padding(.bottom)
         }
         .padding()
-        .frame(width: 300, height: 220)
+        .frame(width: 300, height: 260)
     }
 }

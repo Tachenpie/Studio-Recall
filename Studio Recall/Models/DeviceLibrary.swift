@@ -99,10 +99,32 @@ final class DeviceLibrary: ObservableObject {
     }
     
     private func load() {
-        guard let data = try? Data(contentsOf: saveURL) else { return }
-       if let decoded = try? JSONDecoder().decode(SaveData.self, from: data) {
-           self.devices = decoded.devices
-           self.instances = decoded.instances
+        guard let data = try? Data(contentsOf: saveURL) else {
+            print("⚠️ DeviceLibrary: No file at \(saveURL.path)")
+            return
+        }
+
+        do {
+            let decoded = try JSONDecoder().decode(SaveData.self, from: data)
+            self.devices = decoded.devices
+            self.instances = decoded.instances
+            print("✅ DeviceLibrary: Loaded \(devices.count) devices and \(instances.count) instances")
+        } catch {
+            print("❌ DeviceLibrary: Failed to decode - \(error)")
+            if let decodingError = error as? DecodingError {
+                switch decodingError {
+                case .keyNotFound(let key, let context):
+                    print("   Missing key: \(key.stringValue) at \(context.codingPath)")
+                case .typeMismatch(let type, let context):
+                    print("   Type mismatch: expected \(type) at \(context.codingPath)")
+                case .valueNotFound(let type, let context):
+                    print("   Value not found: \(type) at \(context.codingPath)")
+                case .dataCorrupted(let context):
+                    print("   Data corrupted at \(context.codingPath): \(context.debugDescription)")
+                @unknown default:
+                    print("   Unknown decoding error")
+                }
+            }
         }
     }
     

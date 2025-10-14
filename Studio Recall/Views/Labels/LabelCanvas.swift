@@ -25,21 +25,33 @@ struct LabelCanvas: View {
     // For simple editing demo
     @State private var editing: SessionLabel? = nil
     @Environment(\.canvasZoom) private var zoom
+	@State private var dragStartOffsets: [UUID: CGPoint] = [:]
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             ForEach(indicesFor(anchor: anchor), id: \.self) { idx in
                 let binding = $labels[idx]
+
+				// Use .offset() instead of .position() to avoid centering behavior
                 LabelView(label: binding,
-                          onBeginDrag: {},
+                          onBeginDrag: {
+							  // Store the initial offset when drag begins
+							  dragStartOffsets[binding.wrappedValue.id] = binding.wrappedValue.offset
+						  },
                           onChanged: { delta in
-                              var p = binding.wrappedValue.offset
-                              p.x += delta.width / max(zoom, 0.0001)
-                              p.y += delta.height / max(zoom, 0.0001)
-                              binding.wrappedValue.offset = p
+							  // Apply delta from the stored start position, not accumulating
+							  if let startOffset = dragStartOffsets[binding.wrappedValue.id] {
+								  binding.wrappedValue.offset = CGPoint(
+									  x: startOffset.x + delta.width / max(zoom, 0.0001),
+									  y: startOffset.y + delta.height / max(zoom, 0.0001)
+								  )
+							  }
                           },
                           onEnd: {
-					// Absolute position in the session canvas space
+					// Clean up stored start offset
+					dragStartOffsets.removeValue(forKey: binding.wrappedValue.id)
+
+					// Absolute position in the session canvas space (top-left of label)
 					let abs = CGPoint(
 						x: parentOrigin.x + binding.wrappedValue.offset.x,
 						y: parentOrigin.y + binding.wrappedValue.offset.y
@@ -65,8 +77,8 @@ struct LabelCanvas: View {
 					labels.removeAll(where: { $0.id == id })
 				}
 				)
-                .position(x: parentOrigin.x + binding.wrappedValue.offset.x,
-                          y: parentOrigin.y + binding.wrappedValue.offset.y)
+				.offset(x: parentOrigin.x + binding.wrappedValue.offset.x,
+						y: parentOrigin.y + binding.wrappedValue.offset.y)
             }
         }
         .zIndex(100_000) // float above all

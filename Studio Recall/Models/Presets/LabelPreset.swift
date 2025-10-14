@@ -66,6 +66,14 @@ enum LabelPresetStore {
 		list.removeAll { $0.id == id }
 		save(list)
 	}
+
+	static func update(id: UUID, style: LabelStyleSpec) {
+		var list = load()
+		if let idx = list.firstIndex(where: { $0.id == id }) {
+			list[idx].style = style
+			save(list)
+		}
+	}
 }
 
 extension LabelStyleSpec {

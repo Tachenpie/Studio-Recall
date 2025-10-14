@@ -1,0 +1,48 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Controls/ControlPalette.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Search controls…",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 153
+        }
+      },
+      {
+        "comment": "",
+        "key": "Drag onto the faceplate",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 213
+        }
+      },
+      {
+        "comment": "",
+        "key": "No controls yet",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 236
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 347
+        }
+      },
+      {
+        "comment": "",
+        "key": "Name",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 312
+        }
+      }
+    ]
+  },
+  "version": 1
+}

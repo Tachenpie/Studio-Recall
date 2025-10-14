@@ -110,13 +110,29 @@ struct ControlInspector: View {
 						.textFieldStyle(.roundedBorder)
 						.focused($nameFocused)
 						.onAppear {
-							if focusNameForId == binding.id { nameFocused = true }
+							if focusNameForId == binding.id {
+								DispatchQueue.main.async {
+									nameFocused = true
+								}
+							}
 						}
 						.onChange(of: focusNameForId) { _, req in
-							if req == binding.id { nameFocused = true }
+							if req == binding.id {
+								DispatchQueue.main.async {
+									nameFocused = true
+								}
+							}
+						}
+						.onChange(of: selectedControlId) { _, newId in
+							// When this control is selected, focus its name field
+							if newId == binding.id {
+								DispatchQueue.main.async {
+									nameFocused = true
+								}
+							}
 						}
 				}
-				
+
 				HStack {
 					Picker("Type", selection: binding.type) {
 						ForEach(ControlType.allCases, id: \.self) { t in
@@ -124,7 +140,7 @@ struct ControlInspector: View {
 						}
 					}
 					.pickerStyle(.menu)   // dropdown, very compact
-					
+
 				}
 			}
 		}
@@ -248,12 +264,149 @@ struct ControlInspector: View {
 					
 					Picker("Shape", selection: Binding(
 						get: { regionBinding.wrappedValue.shape },
-						set: { regionBinding.wrappedValue.shape = $0 }
+						set: { newShape in
+							regionBinding.wrappedValue.shape = newShape
+							// Initialize mask parameters for parametric shapes
+							if [.wedge, .line, .dot, .pointer].contains(newShape) {
+								if regionBinding.wrappedValue.maskParams == nil {
+									regionBinding.wrappedValue.maskParams = MaskParameters()
+								}
+							}
+						}
 					)) {
 						Text("Rectangle").tag(ImageRegionShape.rect)
 						Text("Circle").tag(ImageRegionShape.circle)
+						Text("Wedge").tag(ImageRegionShape.wedge)
+						Text("Line").tag(ImageRegionShape.line)
+						Text("Dot").tag(ImageRegionShape.dot)
+						Text("Pointer").tag(ImageRegionShape.pointer)
 					}
-					.pickerStyle(.segmented)
+					.pickerStyle(.menu)
+
+					// Alpha mask toggle (for carved knob pointers)
+					if binding.wrappedValue.type == .knob || binding.wrappedValue.type == .concentricKnob || binding.wrappedValue.type == .steppedKnob {
+						Toggle("Use Alpha Mask (Carved Pointer)", isOn: Binding(
+							get: { regionBinding.wrappedValue.useAlphaMask },
+							set: { newValue in
+								regionBinding.wrappedValue.useAlphaMask = newValue
+								// Initialize mask parameters when enabling
+								if newValue && regionBinding.wrappedValue.maskParams == nil {
+									regionBinding.wrappedValue.maskParams = MaskParameters()
+								}
+							}
+						))
+						.help("When enabled, the knob pointer is carved from the background using a mask")
+
+						if regionBinding.wrappedValue.useAlphaMask {
+							VStack(alignment: .leading, spacing: 12) {
+								Text("Mask Parameters")
+									.font(.headline)
+
+								Text("Adjust sliders to paint the pointer shape. White = opaque (shows pointer), Black = transparent (shows background).")
+									.font(.caption)
+									.foregroundStyle(.secondary)
+
+								// Initialize mask parameters if needed
+								let maskParamsBinding = Binding<MaskParameters>(
+									get: { regionBinding.wrappedValue.maskParams ?? MaskParameters() },
+									set: { regionBinding.wrappedValue.maskParams = $0 }
+								)
+
+								// Pointer style picker
+								Picker("Pointer Style", selection: Binding(
+									get: { maskParamsBinding.wrappedValue.style },
+									set: { maskParamsBinding.wrappedValue.style = $0 }
+								)) {
+									Text("Line").tag(MaskPointerStyle.line)
+									Text("Wedge").tag(MaskPointerStyle.wedge)
+									Text("Dot").tag(MaskPointerStyle.dot)
+									Text("Rectangle").tag(MaskPointerStyle.rectangle)
+								}
+
+								// Angle offset
+								VStack(alignment: .leading, spacing: 4) {
+									Text("Angle Offset: \(Int(maskParamsBinding.wrappedValue.angleOffset))°")
+										.font(.caption)
+									Slider(value: Binding(
+										get: { maskParamsBinding.wrappedValue.angleOffset },
+										set: { maskParamsBinding.wrappedValue.angleOffset = $0 }
+									), in: -180...180, step: 1)
+								}
+
+								// Width
+								VStack(alignment: .leading, spacing: 4) {
+									Text("Width: \(String(format: "%.2f", maskParamsBinding.wrappedValue.width))")
+										.font(.caption)
+									Slider(value: Binding(
+										get: { maskParamsBinding.wrappedValue.width },
+										set: { maskParamsBinding.wrappedValue.width = $0 }
+									), in: 0.01...0.5, step: 0.01)
+								}
+
+								// Inner radius
+								VStack(alignment: .leading, spacing: 4) {
+									Text("Inner Radius: \(String(format: "%.2f", maskParamsBinding.wrappedValue.innerRadius))")
+										.font(.caption)
+									Slider(value: Binding(
+										get: { maskParamsBinding.wrappedValue.innerRadius },
+										set: { maskParamsBinding.wrappedValue.innerRadius = $0 }
+									), in: 0.0...1.0, step: 0.01)
+								}
+
+								// Outer radius
+								VStack(alignment: .leading, spacing: 4) {
+									Text("Outer Radius: \(String(format: "%.2f", maskParamsBinding.wrappedValue.outerRadius))")
+										.font(.caption)
+									Slider(value: Binding(
+										get: { maskParamsBinding.wrappedValue.outerRadius },
+										set: { maskParamsBinding.wrappedValue.outerRadius = $0 }
+									), in: 0.0...1.5, step: 0.01)  // Allow > 1.0 to extend beyond region
+								}
+
+								// Generate button
+								HStack {
+									Button("Apply Mask to Control") {
+										// Use actual pixel size (need to get from faceplate or use reasonable default)
+										// For now, use a fixed high-res size - the mask will scale
+										let size = CGSize(width: 512, height: 512)
+										print("💾 Generating mask at size: \(size)")
+										if let maskData = MaskGenerator.generateMask(params: maskParamsBinding.wrappedValue, size: size) {
+											regionBinding.wrappedValue.alphaMaskImage = maskData
+											print("✅ Mask saved! Data size: \(maskData.count) bytes")
+										} else {
+											print("❌ Failed to generate mask")
+										}
+									}
+									.buttonStyle(.borderedProminent)
+
+									if regionBinding.wrappedValue.alphaMaskImage != nil {
+										Button("Clear Mask") {
+											regionBinding.wrappedValue.alphaMaskImage = nil
+										}
+										.buttonStyle(.borderless)
+										.foregroundColor(.red)
+									}
+								}
+
+								Divider()
+
+								// Manual load option
+								Button("Load Custom Mask from File...") {
+#if os(macOS)
+									let panel = NSOpenPanel()
+									panel.allowedContentTypes = [.png, .jpeg, .tiff]
+									panel.allowsMultipleSelection = false
+									panel.message = "Select a mask image (white = shows background, black = blocks)"
+									if panel.runModal() == .OK, let url = panel.url, let data = try? Data(contentsOf: url) {
+										regionBinding.wrappedValue.alphaMaskImage = data
+									}
+#endif
+								}
+								.buttonStyle(.borderless)
+								.font(.caption)
+							}
+						}
+					}
 				}
 			}
 		}
@@ -615,34 +768,78 @@ struct ControlInspector: View {
 							get: { binding.isPressed.wrappedValue ?? false },
 							set: { binding.isPressed.wrappedValue = $0; editableDevice.bumpRevision() }
 						))
-						
-						HStack {
-							// small preview swatch
-							RoundedRectangle(cornerRadius: 4)
-								.fill((binding.onColor.wrappedValue ?? CodableColor(.green)).color)
-								.overlay(RoundedRectangle(cornerRadius: 4).stroke(.separator, lineWidth: 1))
-								.frame(width: 22, height: 14)
-								.accessibilityHidden(true)
-							
-							Text("On Color").frame(minWidth: 60, alignment: .leading)
-							CompactColorEditor(color: Binding(
-								get: { binding.onColor.wrappedValue ?? CodableColor(.green) },
-								set: { binding.onColor.wrappedValue = $0 }
-							))
-						}
-						HStack {
-							// small preview swatch
-							RoundedRectangle(cornerRadius: 4)
-								.fill((binding.offColor.wrappedValue ?? CodableColor(.green)).color)
-								.overlay(RoundedRectangle(cornerRadius: 4).stroke(.separator, lineWidth: 1))
-								.frame(width: 22, height: 14)
-								.accessibilityHidden(true)
-							
-							Text("Off Color").frame(minWidth: 60, alignment: .leading)
-							CompactColorEditor(color: Binding(
-								get: { binding.offColor.wrappedValue ?? CodableColor(.green) },
-								set: { binding.offColor.wrappedValue = $0 }
-							))
+
+						Toggle("Multi-color Mode", isOn: Binding(
+							get: { binding.useMultiColor.wrappedValue ?? false },
+							set: { binding.useMultiColor.wrappedValue = $0; editableDevice.bumpRevision() }
+						))
+						.help("Enable to use separate colors for on/off states (legacy mode)")
+
+						if binding.useMultiColor.wrappedValue == true {
+							// Legacy two-color mode
+							HStack {
+								RoundedRectangle(cornerRadius: 4)
+									.fill((binding.onColor.wrappedValue ?? CodableColor(.green)).color)
+									.overlay(RoundedRectangle(cornerRadius: 4).stroke(.separator, lineWidth: 1))
+									.frame(width: 22, height: 14)
+									.accessibilityHidden(true)
+
+								Text("On Color").frame(minWidth: 80, alignment: .leading)
+								CompactColorEditor(color: Binding(
+									get: { binding.onColor.wrappedValue ?? CodableColor(.green) },
+									set: { binding.onColor.wrappedValue = $0 }
+								))
+							}
+							HStack {
+								RoundedRectangle(cornerRadius: 4)
+									.fill((binding.offColor.wrappedValue ?? CodableColor(.gray)).color)
+									.overlay(RoundedRectangle(cornerRadius: 4).stroke(.separator, lineWidth: 1))
+									.frame(width: 22, height: 14)
+									.accessibilityHidden(true)
+
+								Text("Off Color").frame(minWidth: 80, alignment: .leading)
+								CompactColorEditor(color: Binding(
+									get: { binding.offColor.wrappedValue ?? CodableColor(.gray) },
+									set: { binding.offColor.wrappedValue = $0 }
+								))
+							}
+						} else {
+							// New brightness model
+							HStack {
+								RoundedRectangle(cornerRadius: 4)
+									.fill((binding.ledColor.wrappedValue ?? CodableColor(.green)).color)
+									.overlay(RoundedRectangle(cornerRadius: 4).stroke(.separator, lineWidth: 1))
+									.frame(width: 22, height: 14)
+									.accessibilityHidden(true)
+
+								Text("LED Color").frame(minWidth: 80, alignment: .leading)
+								CompactColorEditor(color: Binding(
+									get: { binding.ledColor.wrappedValue ?? CodableColor(.green) },
+									set: { binding.ledColor.wrappedValue = $0 }
+								))
+							}
+
+							HStack {
+								Text("On Brightness").frame(width: 100, alignment: .leading)
+								Slider(value: Binding(
+									get: { binding.onBrightness.wrappedValue ?? 1.0 },
+									set: { binding.onBrightness.wrappedValue = $0; editableDevice.bumpRevision() }
+								), in: 0...1)
+								Text(String(format: "%.0f%%", (binding.onBrightness.wrappedValue ?? 1.0) * 100))
+									.monospacedDigit()
+									.frame(width: 44, alignment: .trailing)
+							}
+
+							HStack {
+								Text("Off Brightness").frame(width: 100, alignment: .leading)
+								Slider(value: Binding(
+									get: { binding.offBrightness.wrappedValue ?? 0.15 },
+									set: { binding.offBrightness.wrappedValue = $0; editableDevice.bumpRevision() }
+								), in: 0...1)
+								Text(String(format: "%.0f%%", (binding.offBrightness.wrappedValue ?? 0.15) * 100))
+									.monospacedDigit()
+									.frame(width: 44, alignment: .trailing)
+							}
 						}
 						// Link this light to another control
 						Picker("Follow Control", selection: Binding(
@@ -806,34 +1003,78 @@ struct ControlInspector: View {
 							}
 						}
 						.padding(.horizontal)
-						
-						HStack {
-							// small preview swatch
-							RoundedRectangle(cornerRadius: 4)
-								.fill((binding.lampOnColor.wrappedValue ?? CodableColor(.green)).color)
-								.overlay(RoundedRectangle(cornerRadius: 4).stroke(.separator, lineWidth: 1))
-								.frame(width: 22, height: 14)
-								.accessibilityHidden(true)
-							
-							Text("On Color").frame(minWidth: 60, alignment: .leading)
-							CompactColorEditor(color: Binding(
-								get: { binding.lampOnColor.wrappedValue ?? CodableColor(.green) },
-								set: { binding.lampOnColor.wrappedValue = $0 }
-							))
-						}
-						HStack {
-							// small preview swatch
-							RoundedRectangle(cornerRadius: 4)
-								.fill((binding.lampOffColor.wrappedValue ?? CodableColor(.green)).color)
-								.overlay(RoundedRectangle(cornerRadius: 4).stroke(.separator, lineWidth: 1))
-								.frame(width: 22, height: 14)
-								.accessibilityHidden(true)
-							
-							Text("Off Color").frame(minWidth: 60, alignment: .leading)
-							CompactColorEditor(color: Binding(
-								get: { binding.lampOffColor.wrappedValue ?? CodableColor(.green) },
-								set: { binding.lampOffColor.wrappedValue = $0 }
-							))
+
+						Toggle("Multi-color Mode", isOn: Binding(
+							get: { binding.useMultiColor.wrappedValue ?? false },
+							set: { binding.useMultiColor.wrappedValue = $0; editableDevice.bumpRevision() }
+						))
+						.help("Enable to use separate colors for on/off states (legacy mode)")
+
+						if binding.useMultiColor.wrappedValue == true {
+							// Legacy two-color mode
+							HStack {
+								RoundedRectangle(cornerRadius: 4)
+									.fill((binding.lampOnColor.wrappedValue ?? CodableColor(.green)).color)
+									.overlay(RoundedRectangle(cornerRadius: 4).stroke(.separator, lineWidth: 1))
+									.frame(width: 22, height: 14)
+									.accessibilityHidden(true)
+
+								Text("On Color").frame(minWidth: 80, alignment: .leading)
+								CompactColorEditor(color: Binding(
+									get: { binding.lampOnColor.wrappedValue ?? CodableColor(.green) },
+									set: { binding.lampOnColor.wrappedValue = $0 }
+								))
+							}
+							HStack {
+								RoundedRectangle(cornerRadius: 4)
+									.fill((binding.lampOffColor.wrappedValue ?? CodableColor(.green)).color)
+									.overlay(RoundedRectangle(cornerRadius: 4).stroke(.separator, lineWidth: 1))
+									.frame(width: 22, height: 14)
+									.accessibilityHidden(true)
+
+								Text("Off Color").frame(minWidth: 80, alignment: .leading)
+								CompactColorEditor(color: Binding(
+									get: { binding.lampOffColor.wrappedValue ?? CodableColor(.green) },
+									set: { binding.lampOffColor.wrappedValue = $0 }
+								))
+							}
+						} else {
+							// New brightness model
+							HStack {
+								RoundedRectangle(cornerRadius: 4)
+									.fill((binding.ledColor.wrappedValue ?? CodableColor(.green)).color)
+									.overlay(RoundedRectangle(cornerRadius: 4).stroke(.separator, lineWidth: 1))
+									.frame(width: 22, height: 14)
+									.accessibilityHidden(true)
+
+								Text("LED Color").frame(minWidth: 80, alignment: .leading)
+								CompactColorEditor(color: Binding(
+									get: { binding.ledColor.wrappedValue ?? CodableColor(.green) },
+									set: { binding.ledColor.wrappedValue = $0 }
+								))
+							}
+
+							HStack {
+								Text("On Brightness").frame(width: 100, alignment: .leading)
+								Slider(value: Binding(
+									get: { binding.onBrightness.wrappedValue ?? 1.0 },
+									set: { binding.onBrightness.wrappedValue = $0; editableDevice.bumpRevision() }
+								), in: 0...1)
+								Text(String(format: "%.0f%%", (binding.onBrightness.wrappedValue ?? 1.0) * 100))
+									.monospacedDigit()
+									.frame(width: 44, alignment: .trailing)
+							}
+
+							HStack {
+								Text("Off Brightness").frame(width: 100, alignment: .leading)
+								Slider(value: Binding(
+									get: { binding.offBrightness.wrappedValue ?? 0.15 },
+									set: { binding.offBrightness.wrappedValue = $0; editableDevice.bumpRevision() }
+								), in: 0...1)
+								Text(String(format: "%.0f%%", (binding.offBrightness.wrappedValue ?? 0.15) * 100))
+									.monospacedDigit()
+									.frame(width: 44, alignment: .trailing)
+							}
 						}
 						// Link this light to another control
 						Picker("Follow Control", selection: Binding(
@@ -1009,6 +1250,9 @@ private struct MappingEditor: View {
 				}
 				
 				if let m = regionBinding.wrappedValue.mapping {
+					#if DEBUG
+					let _ = print("Region binding kind: \(m.kind)")
+					#endif
 					switch m.kind {
 						case .rotate:
 							VStack(alignment: .leading, spacing: 8) {
@@ -1090,7 +1334,8 @@ private struct MappingEditor: View {
 							}
 						case .brightness, .opacity:
 							ScalarEditor(mapping: Binding(
-								get: { regionBinding.wrappedValue.mapping! },
+//								get: { regionBinding.wrappedValue.mapping! },
+								get: { m },
 								set: { var r = regionBinding.wrappedValue; r.mapping = $0; regionBinding.wrappedValue = r }
 							))
 						case .translate:
@@ -1888,11 +2133,43 @@ private struct CompactColorEditor: View {
 	@State private var h: Double = 0       // 0...1
 	@State private var s: Double = 0       // 0...1
 	@State private var v: Double = 1       // 0...1
-	
+
+	// Common LED preset colors
+	private let presets: [(name: String, color: (Double, Double, Double))] = [
+		("Red",    (1.0, 0.0, 0.0)),
+		("Green",  (0.0, 1.0, 0.0)),
+		("Blue",   (0.0, 0.5, 1.0)),
+		("Yellow", (1.0, 1.0, 0.0)),
+		("Orange", (1.0, 0.5, 0.0)),
+		("White",  (1.0, 1.0, 1.0))
+	]
+
 	var body: some View {
-		HStack(spacing: 8) {
-			// S/V square
-			GeometryReader { geo in
+		VStack(spacing: 8) {
+			// Preset color swatches
+			HStack(spacing: 6) {
+				ForEach(presets, id: \.name) { preset in
+					Button {
+						let (r, g, b) = preset.color
+						color.r = r
+						color.g = g
+						color.b = b
+						color.a = 1.0
+						pullFromBinding()  // Sync h/s/v
+					} label: {
+						Circle()
+							.fill(Color(red: preset.color.0, green: preset.color.1, blue: preset.color.2))
+							.frame(width: 20, height: 20)
+							.overlay(Circle().stroke(.white.opacity(0.3), lineWidth: 1))
+					}
+					.buttonStyle(.plain)
+					.help(preset.name)
+				}
+			}
+
+			HStack(spacing: 8) {
+				// S/V square
+				GeometryReader { geo in
 				let w = geo.size.width, hgt = geo.size.height
 				ZStack {
 					// Base = value (vertical), overlay hue-tinted gradient for saturation (horizontal)
@@ -1953,8 +2230,9 @@ private struct CompactColorEditor: View {
 				)
 			}
 			.frame(width: 18)
+			}
+			.frame(height: 120)
 		}
-		.frame(height: 120)
 		.onAppear { pullFromBinding() }
 		.onChange(of: color) { _, _ in pullFromBinding() }  // external changes sync in
 	}

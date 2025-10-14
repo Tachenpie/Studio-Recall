@@ -1,0 +1,40 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Devices/NewDeviceChooser.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Choose Device Type",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 15
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 47
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rack Gear",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 27
+        }
+      },
+      {
+        "comment": "",
+        "key": "500-Series Module",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 40
+        }
+      }
+    ]
+  },
+  "version": 1
+}

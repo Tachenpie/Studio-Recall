@@ -205,7 +205,29 @@ extension VisualMapping {
 	}
 }
 
-enum ImageRegionShape: String, Codable { case rect, circle }
+enum ImageRegionShape: String, Codable {
+	case rect
+	case circle
+	case wedge       // Wedge pointer (uses maskParams for shape)
+	case line        // Line pointer (uses maskParams for shape)
+	case dot         // Dot pointer (uses maskParams for shape)
+	case pointer     // Rectangular pointer (uses maskParams for shape)
+}
+
+enum MaskPointerStyle: String, Codable, CaseIterable {
+	case wedge      // Triangular wedge from center
+	case line       // Thin line from center
+	case dot        // Small circle at radius
+	case rectangle  // Rectangular pointer
+}
+
+struct MaskParameters: Codable, Equatable {
+	var style: MaskPointerStyle = .line
+	var angleOffset: Double = -90  // degrees, 0 = right, -90 = top
+	var width: Double = 0.1        // 0...1, thickness of pointer
+	var innerRadius: Double = 0.0  // 0...1, where pointer starts
+	var outerRadius: Double = 1.0  // 0...1, where pointer ends
+}
 
 struct ImageRegion: Codable, Equatable {
 	/// Normalized rect (0–1) in canvas/view coordinates
@@ -213,6 +235,37 @@ struct ImageRegion: Codable, Equatable {
 	/// How to transform the cropped patch as the control changes
 	var mapping: VisualMapping?
 	var shape: ImageRegionShape = .circle
+	/// When true, uses an alpha mask to carve the pointer from the background
+	var useAlphaMask: Bool = false
+	/// PNG data for the alpha mask (white = transparent/shows background, black = opaque/blocks background)
+	/// If nil and useAlphaMask is true, generates mask from maskParams
+	var alphaMaskImage: Data? = nil
+	/// Parameters for auto-generating a simple geometric mask
+	var maskParams: MaskParameters? = nil
+
+	// Custom decoding for backward compatibility
+	enum CodingKeys: String, CodingKey {
+		case rect, mapping, shape, useAlphaMask, alphaMaskImage, maskParams
+	}
+
+	init(rect: CGRect, mapping: VisualMapping? = nil, shape: ImageRegionShape = .circle, useAlphaMask: Bool = false, alphaMaskImage: Data? = nil, maskParams: MaskParameters? = nil) {
+		self.rect = rect
+		self.mapping = mapping
+		self.shape = shape
+		self.useAlphaMask = useAlphaMask
+		self.alphaMaskImage = alphaMaskImage
+		self.maskParams = maskParams
+	}
+
+	init(from decoder: Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		rect = try container.decode(CGRect.self, forKey: .rect)
+		mapping = try container.decodeIfPresent(VisualMapping.self, forKey: .mapping)
+		shape = try container.decodeIfPresent(ImageRegionShape.self, forKey: .shape) ?? .circle
+		useAlphaMask = try container.decodeIfPresent(Bool.self, forKey: .useAlphaMask) ?? false
+		alphaMaskImage = try container.decodeIfPresent(Data.self, forKey: .alphaMaskImage)
+		maskParams = try container.decodeIfPresent(MaskParameters.self, forKey: .maskParams)
+	}
 }
 
 extension ImageRegion {
@@ -350,9 +403,16 @@ struct Control: Identifiable, Codable {
 	// If you want a lamp that can be set manually (rare), provide an override:
 	var lampOverrideOn: Bool? = nil     // when set, this wins
 	
-	// Light colors
+	// Light colors (legacy two-color system)
 	var onColor: CodableColor? = nil
 	var offColor: CodableColor? = nil
+
+	// LED brightness model (new, preferred)
+	var ledColor: CodableColor? = nil      // single LED color
+	var onBrightness: Double? = nil        // 0.0...1.0, default 1.0
+	var offBrightness: Double? = nil       // 0.0...1.0, default 0.15
+	var useMultiColor: Bool? = nil         // if true, use onColor/offColor instead of brightness
+
 	var linkTarget: UUID?		// for lamps that indicate control status
 	var linkInverted: Bool?		// also for lamps
 	var linkOnIndex: Int? = nil
@@ -433,6 +493,7 @@ struct Control: Identifiable, Codable {
 		
 		// light & lamp
 		case onColor, offColor
+		case ledColor, onBrightness, offBrightness, useMultiColor
 		case linkTarget, linkInverted, linkOnIndex
 		case lampOnColor, lampOffColor, lampFollowsPress, lampOverrideOn
 		
@@ -497,6 +558,10 @@ struct Control: Identifiable, Codable {
 		// light & lamp
 		onColor        = try c.decodeIfPresent(CodableColor.self, forKey: .onColor)
 		offColor       = try c.decodeIfPresent(CodableColor.self, forKey: .offColor)
+		ledColor       = try c.decodeIfPresent(CodableColor.self, forKey: .ledColor)
+		onBrightness   = try c.decodeIfPresent(Double.self, forKey: .onBrightness)
+		offBrightness  = try c.decodeIfPresent(Double.self, forKey: .offBrightness)
+		useMultiColor  = try c.decodeIfPresent(Bool.self, forKey: .useMultiColor)
 		linkTarget     = try c.decodeIfPresent(UUID.self, forKey: .linkTarget)
 		linkInverted   = try c.decodeIfPresent(Bool.self, forKey: .linkInverted)
 		linkOnIndex    = try c.decodeIfPresent(Int.self, forKey: .linkOnIndex)
@@ -572,6 +637,10 @@ struct Control: Identifiable, Codable {
 		// light & lamp
 		try c.encodeIfPresent(onColor,  forKey: .onColor)
 		try c.encodeIfPresent(offColor, forKey: .offColor)
+		try c.encodeIfPresent(ledColor, forKey: .ledColor)
+		try c.encodeIfPresent(onBrightness, forKey: .onBrightness)
+		try c.encodeIfPresent(offBrightness, forKey: .offBrightness)
+		try c.encodeIfPresent(useMultiColor, forKey: .useMultiColor)
 		try c.encodeIfPresent(linkTarget,   forKey: .linkTarget)
 		try c.encodeIfPresent(linkInverted, forKey: .linkInverted)
 		try c.encodeIfPresent(linkOnIndex,  forKey: .linkOnIndex)
@@ -684,31 +753,44 @@ extension Control {
 //		let loB = knobMin
 //		let hiB = knobMax
 		let taper = mapping?.taper ?? .linear
-		
+
 		switch taper {
 			case .decibel:
 				// value in dB → linear ratio, then normalize 0…1
-				let rVal: Double = pow(10.0, (v ?? self.value ?? 0) / 20.0)
-				
+				let rawValue = v ?? self.value ?? 0
+
+				// Guard against NaN and infinity
+				guard rawValue.isFinite else { return 0.5 }
+
+				let rVal: Double = pow(10.0, rawValue / 20.0)
+
 				// Safely unwrap bounds (use practical defaults if nil)
 				let minDb: Double = (knobMin?.resolve(default: -120)) ?? -120
 				let maxDb: Double = (knobMax?.resolve(default:    0)) ??   0
-				
+
+				// Guard against invalid bounds
+				guard minDb.isFinite && maxDb.isFinite && minDb < maxDb else { return 0.5 }
+
 				// If min == −∞, resolve() returns a very large negative, and pow(...) underflows to 0 → perfect.
 				let rMin: Double = pow(10.0, minDb / 20.0)   // 0 when minDb is −∞
 				let rMax: Double = pow(10.0, maxDb / 20.0)   // 1 when maxDb is 0 dB
-				
+
 				let denom = max(1e-12, rMax - rMin)
 				let t = (rVal - rMin) / denom
 				return min(max(t, 0), 1)
-				
+
 			case .linear:
 				// Use sensible defaults when bounds are missing (0…1),
 				// and only early-out if hi == lo (avoid divide-by-zero).
 				let lo = knobMin?.resolve(default: 0) ?? 0
 				let hi = knobMax?.resolve(default: 1) ?? 1
+				let rawValue = v ?? self.value ?? 0
+
+				// Guard against NaN and infinity in all values
+				guard lo.isFinite && hi.isFinite && rawValue.isFinite else { return 0.5 }
 				guard hi != lo else { return 0 }
-				let t = ((v ?? self.value ?? 0) - lo) / (hi - lo)
+
+				let t = (rawValue - lo) / (hi - lo)
 				return min(max(t, 0), 1)
 		}
 	}
@@ -749,6 +831,15 @@ extension Control {
 	/// The actual display color this light should use, based on `lightIsOn(...)`.
 	func displayColor(in device: Device) -> Color {
 		let on = lightIsOn(given: device)
+
+		// Use new brightness model if available
+		if useMultiColor != true, let baseColor = ledColor {
+			let brightness = on ? (onBrightness ?? 1.0) : (offBrightness ?? 0.15)
+			// Apply brightness by adjusting opacity
+			return baseColor.color.opacity(brightness)
+		}
+
+		// Fall back to legacy two-color system
 		let onC  = (onColor  ?? CodableColor(.green)).color
 		let offC = (offColor ?? CodableColor(.gray)).color
 		return on ? onC : offC
@@ -802,13 +893,21 @@ extension Control {
 	private func normalized(v: Double?, lo: Double?, hi: Double?, taper: ValueTaper) -> Double {
 		switch taper {
 			case .linear:
-				guard let lo, let hi, hi != lo else { return 0 }
+				guard let lo, let hi else { return 0 }
+				// Guard against infinite bounds and NaN values
+				guard lo.isFinite && hi.isFinite && (v ?? 0).isFinite else { return 0.5 }
+				guard hi != lo else { return 0 }
 				let t = ((v ?? 0) - lo) / (hi - lo)
 				return min(max(t, 0), 1)
 			case .decibel:
-				let val = pow(10.0, (v ?? 0) / 20.0)
+				let rawValue = v ?? 0
+				// Guard against NaN and infinity
+				guard rawValue.isFinite else { return 0.5 }
+				let val = pow(10.0, rawValue / 20.0)
 				let minDb = (lo ?? -120)
 				let maxDb = (hi ?? 0)
+				// Guard against invalid bounds
+				guard minDb.isFinite && maxDb.isFinite && minDb < maxDb else { return 0.5 }
 				let rMin = pow(10.0, minDb / 20.0)
 				let rMax = pow(10.0, maxDb / 20.0)
 				let denom = max(1e-12, rMax - rMin)
@@ -913,13 +1012,18 @@ extension VisualMapping {
 			case .linear:
 				let loV = (lo ?? .finite(0)).resolve(default: 0)
 				let hiV = (hi ?? .finite(1)).resolve(default: 1)
-				guard hiV != loV else { return a0 }
 				let v = value ?? loV
+				// Guard against infinite values and NaN
+				guard loV.isFinite && hiV.isFinite && v.isFinite else { return (a0 + a1) / 2 }
+				guard hiV != loV else { return a0 }
 				t = (v - loV) / (hiV - loV)
 			case .decibel:
 				let minDb = (lo ?? .finite(-120)).resolve(default: -120)
 				let maxDb = (hi ?? .finite(0)).resolve(default: 0)
-				let rVal = pow(10.0, (value ?? maxDb) / 20.0)
+				let rawValue = value ?? maxDb
+				// Guard against infinite values and NaN
+				guard minDb.isFinite && maxDb.isFinite && rawValue.isFinite && minDb < maxDb else { return (a0 + a1) / 2 }
+				let rVal = pow(10.0, rawValue / 20.0)
 				let rMin = pow(10.0, minDb / 20.0)
 				let rMax = pow(10.0, maxDb / 20.0)
 				t = (rVal - rMin) / max(1e-12, rMax - rMin)

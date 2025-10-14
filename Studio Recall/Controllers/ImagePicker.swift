@@ -5,8 +5,10 @@ struct ImagePicker: View {
 	@EnvironmentObject var settings: AppSettings
 	@Binding var imageData: Data?        // ← stores ORIGINAL image data
 	let isRack: Bool
-	@Binding var rackUnits: Int          // ← live-edited from either view
-	@Binding var slotWidth: Int
+	var rackUnits: Binding<Int>? = nil        // ← live-edited from either view
+	var slotWidth: Binding<Int>? = nil
+	var pedalWidth: Binding<Double>? = nil
+	var pedalHeight: Binding<Double>? = nil
 	let ppi: CGFloat
 	
 	var body: some View {

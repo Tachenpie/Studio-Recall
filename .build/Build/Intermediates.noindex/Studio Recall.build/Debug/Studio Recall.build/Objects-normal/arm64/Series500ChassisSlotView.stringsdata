@@ -1,0 +1,48 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Chassis/Series500ChassisSlotView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Edit Device...",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 120
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove from rack",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 124
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Device...",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 142
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove from rack",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 146
+        }
+      },
+      {
+        "comment": "",
+        "key": "Drag to move this module",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 249
+        }
+      }
+    ]
+  },
+  "version": 1
+}

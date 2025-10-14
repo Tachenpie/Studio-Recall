@@ -1,0 +1,120 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Chassis/RuntimeControlsOverlay.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 394
+        }
+      },
+      {
+        "comment": "",
+        "key": "Step %lld of %lld",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 407
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 408
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pos %lld of %lld",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 415
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 416
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pressed",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 422
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 425
+        }
+      },
+      {
+        "comment": "",
+        "key": "Lit",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 430
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 437
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pressed",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 442
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 453
+        }
+      },
+      {
+        "comment": "",
+        "key": "Outer",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 460
+        }
+      },
+      {
+        "comment": "",
+        "key": "Inner",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 467
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 474
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -29,7 +29,6 @@ struct LabelView: View {
 	
 	var body: some View {
 		let s = label.style
-		let z = max(CGFloat(zoom), 0.0001)
 
 		let font: Font = {
 			if s.fontName.hasPrefix(".") {
@@ -40,13 +39,11 @@ struct LabelView: View {
 		
 		Group {
 			if isEditingText {
-				// Cap editor to ~220 px *on screen*, converted to local coords.
-				// Clamp to a safe finite range so minWidth ≤ maxWidth.
-				let cap = max(80, min(220 / z, 1200))        // 80…1200 local points
-				let minW = min(120, cap)                     // never larger than cap
+				// Scale max width with font size, but keep it reasonable
+				let maxWidth = max(120, min(s.fontSize * 15, 300))
 
 				TextField("Label", text: $draftText, onCommit: commitEdit)
-					.textFieldStyle(.roundedBorder)
+					.textFieldStyle(.plain)
 					.foregroundStyle(.primary)
 					.font(font)
 					.focused($textFieldFocused)
@@ -54,23 +51,23 @@ struct LabelView: View {
 						draftText = label.text
 						textFieldFocused = true
 					}
-					.onExitCommand { cancelEdit() }     // ESC to cancel
+					.onExitCommand { cancelEdit() }
 					.disableAutocorrection(true)
 					.lineLimit(1)
-					.truncationMode(.tail)              // show ellipsis rather than expanding
+					.truncationMode(.tail)
 					.fixedSize(horizontal: false, vertical: true)
-					.frame(minWidth: minW, maxWidth: cap)
-					.padding(.horizontal, 8)
-					.padding(.vertical, 6)
+					.frame(maxWidth: maxWidth)
+					.padding(.horizontal, s.paddingH)
+					.padding(.vertical, s.paddingV)
 					.background(
-						RoundedRectangle(cornerRadius: 8)
+						RoundedRectangle(cornerRadius: s.cornerRadius)
 							.fill(Color(nsColor: .textBackgroundColor))
 							.overlay(
-								RoundedRectangle(cornerRadius: 8)
-									.stroke(Color.accentColor.opacity(0.35), lineWidth: 1)
+								RoundedRectangle(cornerRadius: s.cornerRadius)
+									.stroke(Color.accentColor, lineWidth: 2)
 							)
 					)
-					.clipShape(RoundedRectangle(cornerRadius: 8))
+					.clipShape(RoundedRectangle(cornerRadius: s.cornerRadius))
 			} else {
 				// Background with per-style opacity — text stays fully vector & crisp
 				let background = RoundedRectangle(cornerRadius: s.cornerRadius)
@@ -87,10 +84,20 @@ struct LabelView: View {
 					.padding(.vertical,   s.paddingV)
 					.background(background)
 					.shadow(radius: (zoom <= 1.0 ? s.shadow : 0))
+					.shadow(color: label.isNewlyCreated ? Color.accentColor.opacity(0.6) : .clear, radius: 12, x: 0, y: 0)
+					.shadow(color: label.isNewlyCreated ? Color.accentColor.opacity(0.4) : .clear, radius: 24, x: 0, y: 0)
 			}
 		}
 		.contentShape(Rectangle().inset(by: -hitPad))
 		.background(Color.black.opacity(0.001))
+		.onAppear {
+			// Clear the newly-created flag after a delay so the glow fades
+			if label.isNewlyCreated {
+				DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+					label.isNewlyCreated = false
+				}
+			}
+		}
 		
 		// DOUBLE-CLICK → inline edit (not the inspector)
 		.highPriorityGesture(
@@ -106,14 +113,14 @@ struct LabelView: View {
 		// CONTEXT MENU with human preset names
 		.contextMenu {
 			ForEach(LabelPreset.allCases) { p in
-				Button("\(p.icon)  \(p.displayName)") { commitStyle(style: .preset(p)) }//label.style = .preset(p) }
+				Button("\(p.icon)  \(p.displayName)") { commitStyle(style: .preset(p), presetId: nil) }
 			}
 			Divider()
 			let customs = LabelPresetStore.load()
 			if !customs.isEmpty {
 				Text("User Presets")
 				ForEach(customs) { c in
-					Button(c.name) { commitStyle(style: c.style) } //label.style = c.style }
+					Button(c.name) { commitStyle(style: c.style, presetId: c.id) }
 				}
 			}
 			Divider()
@@ -140,8 +147,9 @@ struct LabelView: View {
 	private func cancelEdit() {
 		isEditingText = false
 	}
-	private func commitStyle(style: LabelStyleSpec) {
+	private func commitStyle(style: LabelStyleSpec, presetId: UUID?) {
 		label.style = style
+		label.linkedPresetId = presetId
 		sessionManager.saveSessions()
 	}
 	

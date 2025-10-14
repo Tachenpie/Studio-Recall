@@ -1,0 +1,56 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Controls/ControlEditorView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Name",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 14
+        }
+      },
+      {
+        "comment": "",
+        "key": "Type",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 16
+        }
+      },
+      {
+        "comment": "",
+        "key": "Shape",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 22
+        }
+      },
+      {
+        "comment": "",
+        "key": "Options (comma separated)",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 43
+        }
+      },
+      {
+        "comment": "",
+        "key": "Circle",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 37
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rectangle",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 38
+        }
+      }
+    ]
+  },
+  "version": 1
+}

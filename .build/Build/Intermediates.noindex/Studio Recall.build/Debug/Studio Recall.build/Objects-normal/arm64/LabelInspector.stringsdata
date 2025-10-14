@@ -1,0 +1,336 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Labels/LabelInspector.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Label",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 33
+        }
+      },
+      {
+        "comment": "",
+        "key": "Preview",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 56
+        }
+      },
+      {
+        "comment": "",
+        "key": "Label preview at %lld%%",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 62
+        }
+      },
+      {
+        "comment": "",
+        "key": "Text",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "Label text",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "Font",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 90
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 92
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld pt",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 105
+        }
+      },
+      {
+        "comment": "",
+        "key": "Colors",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 114
+        }
+      },
+      {
+        "comment": "",
+        "key": "Text",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 116
+        }
+      },
+      {
+        "comment": "",
+        "key": "Background",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 119
+        }
+      },
+      {
+        "comment": "",
+        "key": "Border",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "Shape & Layout",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 131
+        }
+      },
+      {
+        "comment": "",
+        "key": "Corner",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 134
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 136
+        }
+      },
+      {
+        "comment": "",
+        "key": "Border",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 140
+        }
+      },
+      {
+        "comment": "",
+        "key": "Padding H",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 148
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 150
+        }
+      },
+      {
+        "comment": "",
+        "key": "Padding V",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 154
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 156
+        }
+      },
+      {
+        "comment": "",
+        "key": "Effects & Behavior",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 165
+        }
+      },
+      {
+        "comment": "",
+        "key": "Scales with zoom",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 168
+        }
+      },
+      {
+        "comment": "",
+        "key": "Locked",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 169
+        }
+      },
+      {
+        "comment": "",
+        "key": "Opacity",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 173
+        }
+      },
+      {
+        "comment": "",
+        "key": "Shadow",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 179
+        }
+      },
+      {
+        "comment": "",
+        "key": "Presets",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 191
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 247
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save Preset…",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 262
+        }
+      },
+      {
+        "comment": "",
+        "key": "Use as Default",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 268
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset to App Default",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 273
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reload the saved default; use Reset in app preferences to reset to system defaults",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 279
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save Label Preset",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 287
+        }
+      },
+      {
+        "comment": "",
+        "key": "Preset name",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 288
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 293
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 294
+        }
+      },
+      {
+        "comment": "",
+        "key": "Update Preset",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 308
+        }
+      },
+      {
+        "comment": "",
+        "key": "Update the selected preset and all labels using it",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 315
+        }
+      },
+      {
+        "comment": "",
+        "key": "No changes to update",
+        "location": {
+          "startingColumn": 84,
+          "startingLine": 315
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 318
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 326
+        }
+      },
+      {
+        "comment": "",
+        "key": "Aa",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 357
+        }
+      }
+    ]
+  },
+  "version": 1
+}

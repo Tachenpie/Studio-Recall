@@ -1,0 +1,80 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Devices/DeviceLibraryView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Device Library",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "Group By",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 72
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hardware Type",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 73
+        }
+      },
+      {
+        "comment": "",
+        "key": "Category",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 74
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create New Device",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 88
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lldU, %@ Rack",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 141
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld slots",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 145
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 158
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 163
+        }
+      }
+    ]
+  },
+  "version": 1
+}

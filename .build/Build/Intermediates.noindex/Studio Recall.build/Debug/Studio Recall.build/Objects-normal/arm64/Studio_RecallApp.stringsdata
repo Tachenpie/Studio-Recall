@@ -1,0 +1,32 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Studio_RecallApp.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Library Manager",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 89
+        }
+      },
+      {
+        "comment": "",
+        "key": "No device selected",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 102
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Library…",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 123
+        }
+      }
+    ]
+  },
+  "version": 1
+}

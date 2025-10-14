@@ -23,7 +23,7 @@ struct ControlPalette: View {
 	
 	var body: some View {
 		ScrollViewReader { outerProxy in
-			ScrollView {
+			Group {
 				if isWideFaceplate {
 					HStack(alignment: .top, spacing: 12) {
 						VStack {
@@ -304,21 +304,18 @@ private struct ExistingRow: View {
 	
 	var body: some View {
 		HStack(spacing: 8) {
-			// Leading “badge” area (fixed width so names line up)
+			// Leading "badge" area (fixed width so names line up)
 			HStack(spacing: 8) {
 				Image(systemName: iconForType(control.type))
 					.frame(width: 18, alignment: .leading)
-				
+
 				TextField("Name", text: nameBinding)
 					.textFieldStyle(.roundedBorder)
-					.onSubmit { onRename(nameBinding.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)) }                    // commit on Return
+					.onSubmit { onRename(nameBinding.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)) }
 					.lineLimit(1)
 					.truncationMode(.tail)
 					.focused(focused, equals: control.id)
 					.font(.callout)
-					.onAppear {
-						if isSelected { focused.wrappedValue = control.id }
-					}
 			}
 			.padding(.horizontal, 8)
 			.padding(.vertical, 6)
@@ -329,14 +326,14 @@ private struct ExistingRow: View {
 					RoundedRectangle(cornerRadius: 6, style: .continuous)
 						.fill(Color.accentColor)
 						.opacity((isSelected || isHovering) ? 0.12 : 0.0)
-					
+
 					RoundedRectangle(cornerRadius: 6, style: .continuous)
 						.stroke(.separator.opacity(0.35), lineWidth: 1)
 				}
 			)
-			
+
 			Spacer()
-			
+
 			// Actions
 			Button {
 				onDelete()
@@ -352,11 +349,21 @@ private struct ExistingRow: View {
 		.padding(.horizontal, 6)
 		.padding(.vertical, 4)
 		.contentShape(Rectangle())
-		.onTapGesture(perform: onSelect)
+		.onTapGesture {
+			onSelect()
+			// Immediately focus the textfield when selecting
+			DispatchQueue.main.async {
+				focused.wrappedValue = control.id
+			}
+		}
 		.onChange(of: isSelected) { _, now in
-			if now { focused.wrappedValue = control.id }
-			else if focused.wrappedValue == control.id { focused.wrappedValue = nil }
-		} // ← selection → focus
+			// When selected (from anywhere), focus the textfield
+			if now {
+				DispatchQueue.main.async {
+					focused.wrappedValue = control.id
+				}
+			}
+		}
 #if os(macOS)
 		.onHover { isHovering = $0 }
 #endif

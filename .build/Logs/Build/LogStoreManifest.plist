@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>logFormatVersion</key>
+	<integer>11</integer>
+	<key>logs</key>
+	<dict>
+		<key>6C1DE588-5DB0-4310-A3B7-BE965989982B</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>6C1DE588-5DB0-4310-A3B7-BE965989982B.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>Studio Recall project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>Studio Recall</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Cleaning project Studio Recall with scheme Studio Recall and configuration Debug</string>
+			<key>timeStartedRecording</key>
+			<real>781972222.603845</real>
+			<key>timeStoppedRecording</key>
+			<real>781972222.78340399</real>
+			<key>title</key>
+			<string>Cleaning project Studio Recall with scheme Studio Recall and configuration Debug</string>
+			<key>uniqueIdentifier</key>
+			<string>6C1DE588-5DB0-4310-A3B7-BE965989982B</string>
+		</dict>
+		<key>75918FE2-8B16-44EC-8E99-86022826600C</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>75918FE2-8B16-44EC-8E99-86022826600C.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>Studio Recall project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>Studio Recall</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Cleaning project Studio Recall with scheme Studio Recall and configuration Debug</string>
+			<key>timeStartedRecording</key>
+			<real>781972506.52475095</real>
+			<key>timeStoppedRecording</key>
+			<real>781972506.70283103</real>
+			<key>title</key>
+			<string>Cleaning project Studio Recall with scheme Studio Recall and configuration Debug</string>
+			<key>uniqueIdentifier</key>
+			<string>75918FE2-8B16-44EC-8E99-86022826600C</string>
+		</dict>
+		<key>77F27DE1-3141-4E33-9D07-E5EA1948999A</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>77F27DE1-3141-4E33-9D07-E5EA1948999A.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>Studio Recall project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>Studio Recall</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Cleaning project Studio Recall with scheme Studio Recall and configuration Debug</string>
+			<key>timeStartedRecording</key>
+			<real>781972352.67470503</real>
+			<key>timeStoppedRecording</key>
+			<real>781972352.85190403</real>
+			<key>title</key>
+			<string>Cleaning project Studio Recall with scheme Studio Recall and configuration Debug</string>
+			<key>uniqueIdentifier</key>
+			<string>77F27DE1-3141-4E33-9D07-E5EA1948999A</string>
+		</dict>
+		<key>AFC2AE1D-425D-4F3B-BD84-0FAA3D083BE0</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>AFC2AE1D-425D-4F3B-BD84-0FAA3D083BE0.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>Studio Recall project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>Studio Recall</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Cleaning project Studio Recall with scheme Studio Recall and configuration Debug</string>
+			<key>timeStartedRecording</key>
+			<real>781972713.66095304</real>
+			<key>timeStoppedRecording</key>
+			<real>781972713.84254205</real>
+			<key>title</key>
+			<string>Cleaning project Studio Recall with scheme Studio Recall and configuration Debug</string>
+			<key>uniqueIdentifier</key>
+			<string>AFC2AE1D-425D-4F3B-BD84-0FAA3D083BE0</string>
+		</dict>
+		<key>B1513F0D-9899-4387-9ACE-AA25531AC718</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>B1513F0D-9899-4387-9ACE-AA25531AC718.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>Studio Recall project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>Studio Recall</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Cleaning project Studio Recall with scheme Studio Recall and configuration Debug</string>
+			<key>timeStartedRecording</key>
+			<real>781972797.19892502</real>
+			<key>timeStoppedRecording</key>
+			<real>781972797.38087106</real>
+			<key>title</key>
+			<string>Cleaning project Studio Recall with scheme Studio Recall and configuration Debug</string>
+			<key>uniqueIdentifier</key>
+			<string>B1513F0D-9899-4387-9ACE-AA25531AC718</string>
+		</dict>
+		<key>D8B0B817-F1FF-4771-ACFF-DCFD2CECD204</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>D8B0B817-F1FF-4771-ACFF-DCFD2CECD204.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>Studio Recall project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>Studio Recall</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Cleaning project Studio Recall with scheme Studio Recall and configuration Debug</string>
+			<key>timeStartedRecording</key>
+			<real>781972605.70171702</real>
+			<key>timeStoppedRecording</key>
+			<real>781972605.88301098</real>
+			<key>title</key>
+			<string>Cleaning project Studio Recall with scheme Studio Recall and configuration Debug</string>
+			<key>uniqueIdentifier</key>
+			<string>D8B0B817-F1FF-4771-ACFF-DCFD2CECD204</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

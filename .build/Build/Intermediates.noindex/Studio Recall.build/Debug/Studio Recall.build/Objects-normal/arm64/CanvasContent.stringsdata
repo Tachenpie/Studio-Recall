@@ -1,0 +1,16 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Controls/CanvasContent.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "No Faceplate Image",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 30
+        }
+      }
+    ]
+  },
+  "version": 1
+}

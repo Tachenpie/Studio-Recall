@@ -1,0 +1,48 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Chassis/RackChassisSlotView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Edit Device…",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 467
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove from rack",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 468
+        }
+      },
+      {
+        "comment": "",
+        "key": "Drag to move this device. Right-click to edit or remove.",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 510
+        }
+      },
+      {
+        "comment": "",
+        "key": "Drag to move this device. Right-click to edit or remove.",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 584
+        }
+      },
+      {
+        "comment": "",
+        "key": "Device handle",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 587
+        }
+      }
+    ]
+  },
+  "version": 1
+}

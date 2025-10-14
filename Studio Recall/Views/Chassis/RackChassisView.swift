@@ -15,7 +15,8 @@ struct RackChassisView: View {
 	
 	@Environment(\.canvasZoom) private var canvasZoom
 	@Environment(\.isInteracting) private var isInteracting
-	
+	@Environment(\.collisionRects) private var collisionRects
+
 	@ObservedObject private var dragContext = DragContext.shared
 	
 	@State private var hoveredIndex: Int? = nil
@@ -25,13 +26,55 @@ struct RackChassisView: View {
 	@State private var dragStart: CGPoint? = nil
 	@State private var showEdit = false
 	@State private var editUnits: Int = 0
+	@State private var editName: String = ""
 	@State private var rowLayoutsCache: [[SlotLayout]] = []
 	
 	var onDelete: (() -> Void)? = nil
 	
 	private let rowSpacing: CGFloat = 1      // between U rows in the VStack
 	private let facePadding: CGFloat = 16    // .padding() around the chassis face
-	
+
+	// MARK: - Collision Resistance
+
+	/// Adjusts a proposed position to avoid collisions with other racks/chassis
+	private func collisionResistantPosition(_ proposed: CGPoint, selfRect: CGRect) -> CGPoint {
+		let pushDistance: CGFloat = 8 // minimum separation in world coordinates
+
+		// Filter out self from collision rects
+		let others = collisionRects.filter { $0.id != rack.id }
+
+		var adjusted = proposed
+		let testRect = CGRect(origin: proposed, size: selfRect.size)
+
+		// Check each collision rect and push away if overlapping
+		for other in others {
+			if testRect.intersects(other.rect) {
+				// Calculate overlap and push direction
+				let overlapX = min(testRect.maxX, other.rect.maxX) - max(testRect.minX, other.rect.minX)
+				let overlapY = min(testRect.maxY, other.rect.maxY) - max(testRect.minY, other.rect.minY)
+
+				// Push in direction of least overlap
+				if overlapX < overlapY {
+					// Push horizontally
+					if testRect.midX < other.rect.midX {
+						adjusted.x -= (overlapX + pushDistance)
+					} else {
+						adjusted.x += (overlapX + pushDistance)
+					}
+				} else {
+					// Push vertically
+					if testRect.midY < other.rect.midY {
+						adjusted.y -= (overlapY + pushDistance)
+					} else {
+						adjusted.y += (overlapY + pushDistance)
+					}
+				}
+			}
+		}
+
+		return adjusted
+	}
+
 	var body: some View {
 		// Pull common numbers out so the builder stays simple.
 		let ppi      = settings.pointsPerInch
@@ -49,17 +92,22 @@ struct RackChassisView: View {
 			DragStrip(
 				title: (rack.name?.isEmpty == false ? rack.name : "Rack"),
 				onBegan: { if dragStart == nil { dragStart = rack.position } },
-				onDrag: { screenDelta in
+				onDrag: { screenDelta, _ in  // Ignore screen location for racks (no preview needed)
 					let origin = dragStart ?? rack.position
 					let z = max(canvasZoom, 0.0001)
 					let worldDelta = CGSize(width: screenDelta.width  / z,
 											height: screenDelta.height / z)
-					rack.position = CGPoint(x: origin.x + worldDelta.width,
-											y: origin.y + worldDelta.height)
+					let proposedPos = CGPoint(x: origin.x + worldDelta.width,
+											  y: origin.y + worldDelta.height)
+
+					// Apply collision resistance
+					let selfRect = CGRect(origin: rack.position, size: CGSize(width: faceW, height: faceH))
+					rack.position = collisionResistantPosition(proposedPos, selfRect: selfRect)
 				},
 				onEnded: { dragStart = nil },
 				onEditRequested: {
 					editUnits = max(1, rack.rows)
+					editName = rack.name ?? ""
 					showEdit = true
 				},
 				onClearRequested: { clearAllRackDevices() },
@@ -194,20 +242,20 @@ struct RackChassisView: View {
 							let innerH = faceH - 2 * facePadding
 							let yT = facePadding
 							let yB = facePadding + innerH
-							
+
 							// Clamp pointer to the inner face
 							let p = CGPoint(
 								x: max(xL, min(pt.x, xR - 0.5)),
 								y: max(yT, min(pt.y, yB - 0.5))
 							)
-							
+
 							// Columns: simple width division
 							let c = Int(floor((p.x - xL) / colW))
-							
+
 							// Rows: use step = rowH + rowSpacing so the gaps map to the row ABOVE
 							let step = rowH + rowSpacing
 							let r = Int(floor((p.y - yT) / step))
-							
+
 							// Clamp to valid indices
 							let rr = max(0, min(r, rack.rows - 1))
 							let cc = max(0, min(c, RackGrid.columnsPerRow - 1))
@@ -222,6 +270,8 @@ struct RackChassisView: View {
 						hoveredRows:  $hoveredRows,
 						library: library,
 						kind: .rack,
+						session: sessionManager.currentSession,
+						sessionManager: sessionManager,
 						onCommit: {
 							sessionManager.saveSessions()
 							DragContext.shared.endDrag()
@@ -486,13 +536,27 @@ struct RackChassisView: View {
 	private var editSheet: some View {
 		VStack(alignment: .leading, spacing: 12) {
 			Text("Edit Rack").font(.headline)
+
+			TextField("Rack Name (optional)", text: $editName)
+				.textFieldStyle(.roundedBorder)
+
 			Stepper("Rack Units: \(rack.rows)", value: Binding(
 				get: { rack.rows },
 				set: { applyRackResize(to: $0) }
 			), in: 1...200)
+
 			HStack {
 				Spacer()
-				Button("Close") { showEdit = false }
+				Button("Cancel") {
+					showEdit = false
+				}
+				Button("Save") {
+					let trimmedName = editName.trimmingCharacters(in: .whitespacesAndNewlines)
+					rack.name = trimmedName.isEmpty ? nil : trimmedName
+					sessionManager.saveSessions()
+					showEdit = false
+				}
+				.keyboardShortcut(.defaultAction)
 			}
 		}
 		.padding(20)
@@ -501,15 +565,47 @@ struct RackChassisView: View {
 	
 	private func applyRackResize(to newRows: Int) {
 		guard newRows != rack.rows else { return }
+
+		// Racks grow/shrink from the bottom only
+		// Since slots are stored top-to-bottom (index 0 = top), we need to:
+		// - When shrinking: remove from the END (bottom rows)
+		// - When growing: append to the END (add bottom rows)
+		// This keeps the top position stable
+
 		if newRows < rack.rows {
+			// Shrinking: remove bottom rows
+			// Clear any devices that span into the removed rows
+			let keepRows = newRows
+			for r in 0..<min(keepRows, rack.slots.count) {
+				for c in 0..<RackGrid.columnsPerRow {
+					if let inst = rack.slots[r][c],
+					   let dev = library.device(for: inst.deviceID) {
+						let spanRows = max(1, dev.rackUnits ?? 1)
+						// If this device extends past the new size, remove it
+						if r + spanRows > keepRows {
+							// Clear entire span
+							for rr in r..<min(r + spanRows, rack.slots.count) {
+								for cc in 0..<RackGrid.columnsPerRow {
+									if rack.slots[rr][cc]?.id == inst.id {
+										rack.slots[rr][cc] = nil
+									}
+								}
+							}
+						}
+					}
+				}
+			}
 			rack.slots = Array(rack.slots.prefix(newRows))
 		} else {
+			// Growing: add empty rows at the bottom
 			let extra = Array(
 				repeating: Array<DeviceInstance?>(repeating: nil, count: RackGrid.columnsPerRow),
 				count: newRows - rack.rows
 			)
 			rack.slots.append(contentsOf: extra)
 		}
+
 		rack.rows = newRows
+		sessionManager.saveSessions()
 	}
 }

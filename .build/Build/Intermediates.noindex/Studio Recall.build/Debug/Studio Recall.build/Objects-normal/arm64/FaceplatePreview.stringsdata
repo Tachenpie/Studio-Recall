@@ -1,0 +1,16 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Devices/FaceplatePreview.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "No Image",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 45
+        }
+      }
+    ]
+  },
+  "version": 1
+}

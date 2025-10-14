@@ -1,0 +1,24 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Controls/ControlItemView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Duplicate",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 192
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 198
+        }
+      }
+    ]
+  },
+  "version": 1
+}

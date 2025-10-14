@@ -17,11 +17,12 @@ struct RegionOverlay: View {
 	let minRegion: CGFloat
 	let shape: ImageRegionShape
 	let zoom: CGFloat
-	
+
 	let controlType: ControlType
 	let regionIndex: Int
 	let regions: [ImageRegion]
-	
+	let maskParams: MaskParameters?    // For live preview
+
 	@Environment(\.isPanMode) private var isPanMode
 	
 	var body: some View {
@@ -41,9 +42,38 @@ struct RegionOverlay: View {
 		let showEdgeHandles = minSide >= 44   // hide edge handles when very small
 		
 		ZStack(alignment: .topLeading) {
-			// 1) Region-local container positioned at (x,y), sized (w,h)
-			let pair = concentricPairIndices(regions)
-			if isConcentricOuterRegion {
+			// Mask preview overlay at canvas level (before region-local container)
+			let _ = print("🔍 RegionOverlay: maskParams=\(maskParams != nil ? "EXISTS" : "NIL"), controlType=\(controlType)")
+			if let maskParams = maskParams,
+			   (controlType == .knob || controlType == .concentricKnob || controlType == .steppedKnob) {
+				let maskSize = CGSize(width: w, height: h)
+				if let maskData = MaskGenerator.generateMask(params: maskParams, size: maskSize),
+				   let maskImage = NSImage(data: maskData) {
+					// Show white areas with a bright color overlay
+					ZStack {
+						// Bright green tint where the mask is white (pointer areas)
+						Image(nsImage: maskImage)
+							.resizable()
+							.frame(width: w, height: h)
+							.colorMultiply(.green)
+							.opacity(0.5)
+
+						// Also show the mask itself with less opacity for reference
+						Image(nsImage: maskImage)
+							.resizable()
+							.frame(width: w, height: h)
+							.opacity(0.3)
+					}
+					.allowsHitTesting(false)
+					.position(x: x + w/2, y: y + h/2)
+					.zIndex(5) // Below handles but above strokes
+				}
+			}
+
+			ZStack(alignment: .topLeading) {
+				// 1) Region-local container positioned at (x,y), sized (w,h)
+				let pair = concentricPairIndices(regions)
+				if isConcentricOuterRegion {
 					let outerLocal = CGRect(x: 0, y: 0, width: w, height: h)
 					let innerNorm = regions[pair!.inner].rect.denormalized(to: canvasSize)
 					let innerLocal = CGRect(
@@ -56,7 +86,7 @@ struct RegionOverlay: View {
 						outerRect: outerLocal,
 						innerRect: innerLocal
 					)
-					
+
 					donut
 						.stroke(.black, style: StrokeStyle(lineWidth: hair, dash: dash))
 						.overlay(donut.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashUnit)))
@@ -73,20 +103,7 @@ struct RegionOverlay: View {
 						.contentShape(pathFor(shape: shape, in: CGRect(x: 0, y: 0, width: w, height: h)))
 						.zIndex(1)
 				}
-				// 1b) SINGLE hit surface (visual overlay is non-interactive)
-//				Rectangle()
-//					.fill(.clear)
-//					.frame(width: w, height: h)
-//					.contentShape(Rectangle())
-//					.zIndex(1)
 
-//				RegionClipShape(shape: shape)
-//					.strokeBorder(Color.accentColor, lineWidth: hair)
-//					.frame(width: w, height: h)
-//					.position(x: x + w/2, y: y + h/2)
-//					.contentShape(RegionClipShape(shape: shape)) // ensures hit area matches shape
-//					.zIndex(1)
-				
 				// 1c) Handles — tiny white squares with black hairline stroke
 				Group {
 					// corners
@@ -95,26 +112,26 @@ struct RegionOverlay: View {
 						.overlay(Rectangle().stroke(.black, lineWidth: hair))
 						.position(x: handleSize/2, y: handleSize/2) // TL
 						.allowsHitTesting(false)
-					
+
 					Rectangle().fill(.white)
 						.frame(width: handleSize, height: handleSize)
 						.overlay(Rectangle().stroke(.black, lineWidth: hair))
 						.position(x: w - handleSize/2, y: handleSize/2) // TR
 						.allowsHitTesting(false)
-					
+
 					Rectangle().fill(.white)
 						.frame(width: handleSize, height: handleSize)
 						.overlay(Rectangle().stroke(.black, lineWidth: hair))
 						.position(x: handleSize/2, y: h - handleSize/2) // BL
 						.allowsHitTesting(false)
-					
+
 					Rectangle().fill(.white)
 						.frame(width: handleSize, height: handleSize)
 						.overlay(Rectangle().stroke(.black, lineWidth: hair))
 						.position(x: w - handleSize/2, y: h - handleSize/2) // BR
 						.allowsHitTesting(false)
 				}
-				
+
 				if showEdgeHandles {
 					Group {
 						Rectangle().fill(.white)
@@ -122,19 +139,19 @@ struct RegionOverlay: View {
 							.overlay(Rectangle().stroke(.black, lineWidth: hair))
 							.position(x: w/2, y: handleSize/2) // top
 							.allowsHitTesting(false)
-						
+
 						Rectangle().fill(.white)
 							.frame(width: handleSize, height: handleSize)
 							.overlay(Rectangle().stroke(.black, lineWidth: hair))
 							.position(x: w/2, y: h - handleSize/2) // bottom
 							.allowsHitTesting(false)
-						
+
 						Rectangle().fill(.white)
 							.frame(width: handleSize, height: handleSize)
 							.overlay(Rectangle().stroke(.black, lineWidth: hair))
 							.position(x: handleSize/2, y: h/2) // left
 							.allowsHitTesting(false)
-						
+
 						Rectangle().fill(.white)
 							.frame(width: handleSize, height: handleSize)
 							.overlay(Rectangle().stroke(.black, lineWidth: hair))
@@ -144,8 +161,8 @@ struct RegionOverlay: View {
 				}
 			}
 			.frame(width: w, height: h, alignment: .topLeading)
-			.offset(x: x, y: y) // place the local container once
-//		}
+			.position(x: x + w/2, y: y + h/2)
+		}
 		.frame(width: canvasSize.width, height: canvasSize.height, alignment: .topLeading)
 		.zIndex(10)
 		.allowsHitTesting(false)
@@ -172,6 +189,9 @@ struct RegionOverlay: View {
 		switch shape {
 			case .rect:   return Path(rect)
 			case .circle: return Path(ellipseIn: rect)
+			case .wedge, .line, .dot, .pointer:
+				// For parametric shapes, use RegionClipShape to generate the path
+				return RegionClipShape(shape: shape, maskParams: maskParams).path(in: rect)
 		}
 	}
 	

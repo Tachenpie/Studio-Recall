@@ -18,6 +18,7 @@ struct RegionHitLayer: View {
 	let pan: CGSize
 	var isPanMode: Bool = false
 	let shape: ImageRegionShape
+	let maskParams: MaskParameters?  // For parametric shapes
 	let controlType: ControlType
 	let regionIndex: Int
 	let regions: [ImageRegion]
@@ -159,11 +160,10 @@ struct RegionHitLayer: View {
 				}
 				
 				// Parent px deltas → canvas-normalized deltas
-				let resizeScale = 1.0 / zoom
-				//				let (nx, ny) = parentDeltaToNormalized(dx: g.translation.width, dy: g.translation.height)
+				// Apply zoom compensation to translation to get consistent movement
 				let (nx, ny) = parentDeltaToNormalized(
-					dx: g.translation.width * resizeScale,
-					dy: g.translation.height * resizeScale
+					dx: g.translation.width / zoom,
+					dy: g.translation.height / zoom
 				)
 				var r = dragStartRect
 				

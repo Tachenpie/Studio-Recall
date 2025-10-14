@@ -1,0 +1,40 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Chassis/DragStrip.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Edit Chassis…",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 78
+        }
+      },
+      {
+        "comment": "",
+        "key": "New Label",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 91
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear All Devices",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 96
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Chassis",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 101
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,64 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Labels/LabelView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Label",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 45
+        }
+      },
+      {
+        "comment": "",
+        "key": "User Presets",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 121
+        }
+      },
+      {
+        "comment": "",
+        "key": "Unlock",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 127
+        }
+      },
+      {
+        "comment": "",
+        "key": "Lock",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 127
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit…",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 128
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@  %@",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 116
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Label",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 131
+        }
+      }
+    ]
+  },
+  "version": 1
+}

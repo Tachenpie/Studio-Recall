@@ -1,0 +1,16 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Labels/LabelCanvas.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Label not found",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 95
+        }
+      }
+    ]
+  },
+  "version": 1
+}

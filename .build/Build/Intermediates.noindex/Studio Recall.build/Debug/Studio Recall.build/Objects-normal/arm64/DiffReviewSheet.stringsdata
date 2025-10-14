@@ -1,0 +1,40 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Helpers/DiffReviewSheet.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Session Changes",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 43
+        }
+      },
+      {
+        "comment": "",
+        "key": "No changes from defaults",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 20
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ • %@",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 25
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 46
+        }
+      }
+    ]
+  },
+  "version": 1
+}

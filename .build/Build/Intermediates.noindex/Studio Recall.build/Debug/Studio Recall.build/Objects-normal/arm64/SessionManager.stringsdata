@@ -1,0 +1,192 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Managers/SessionManager.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "View",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 821
+        }
+      },
+      {
+        "comment": "",
+        "key": "Session",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 834
+        }
+      },
+      {
+        "comment": "",
+        "key": "New Session…",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 759
+        }
+      },
+      {
+        "comment": "",
+        "key": "New Session from Template",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 762
+        }
+      },
+      {
+        "comment": "",
+        "key": "Open Session…",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 772
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 779
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save As…",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 787
+        }
+      },
+      {
+        "comment": "",
+        "key": "Blank Session",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 767
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save Current as Template…",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 797
+        }
+      },
+      {
+        "comment": "",
+        "key": "Default Template",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 802
+        }
+      },
+      {
+        "comment": "",
+        "key": "Manage Templates…",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 814
+        }
+      },
+      {
+        "comment": "",
+        "key": "• None",
+        "location": {
+          "startingColumn": 54,
+          "startingLine": 803
+        }
+      },
+      {
+        "comment": "",
+        "key": "None",
+        "location": {
+          "startingColumn": 67,
+          "startingLine": 803
+        }
+      },
+      {
+        "comment": "",
+        "key": "Photoreal Mode",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 822
+        }
+      },
+      {
+        "comment": "",
+        "key": "Representative Mode",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 827
+        }
+      },
+      {
+        "comment": "",
+        "key": "Recent Sessions",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 851
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Rack…",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 835
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add 500 Series Chassis…",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 838
+        }
+      },
+      {
+        "comment": "",
+        "key": "Review Changes…",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 844
+        }
+      },
+      {
+        "comment": "",
+        "key": "Open",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 854
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete…",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 861
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 862
+        }
+      },
+      {
+        "comment": "",
+        "key": "Confirm Delete",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 863
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -261,10 +261,52 @@ enum ControlAutoDetect {
 			bands = [ makeBand(center: peaks[0], half: half) ]
 		}
 		
-		// --- 5) Fallback / correction: if bands are too central, force quartiles ---
+		// --- 5) Check if this is truly a single-row device (merge bands if appropriate) ---
+		// If we have 2 bands but the gap between them is mostly empty, it's likely a single-row device
+		// where the peak detection created artificial bands at top/bottom.
+		if bands.count == 2 {
+			let c0 = (bands[0].lowerBound + bands[0].upperBound) * 0.5
+			let c1 = (bands[1].lowerBound + bands[1].upperBound) * 0.5
+			let gapStart = Int(bands[0].upperBound)
+			let gapEnd = Int(bands[1].lowerBound)
+
+			// Sample the gap between bands to see if it's mostly empty
+			if gapEnd > gapStart {
+				var gapDensity = 0
+				for y in gapStart...gapEnd {
+					let base = y * w
+					for x in 0..<w {
+						if g[base + x] != 0 { gapDensity += 1 }
+					}
+				}
+				let gapArea = (gapEnd - gapStart + 1) * w
+				let gapFill = Double(gapDensity) / Double(max(1, gapArea))
+
+#if DEBUG
+				print("rowBands: gap analysis y=\(gapStart)..\(gapEnd) fill=\(String(format: "%.1f%%", gapFill*100))")
+#endif
+
+				// If gap is very sparse (< 5% filled), merge bands into single band
+				// Relaxed from 3% to 5% to catch more single-row devices
+				if gapFill < 0.05 {
+					let mergedCenter = (c0 + c1) * 0.5
+					let expandedHalf = max(half, Int(Double(interiorH) * 0.35))
+					bands = [makeBand(center: Int(mergedCenter), half: expandedHalf)]
+#if DEBUG
+					print("rowBands: merged 2 bands → 1 (gap was sparse)")
+#endif
+				}
+			}
+		}
+
+		// --- 6) Fallback / correction: if bands are too central, force quartiles ---
 		func frac(_ y: CGFloat) -> Double { Double((y - CGFloat(yMin)) / CGFloat(max(1, yMax - yMin))) }
 		let needFallback: Bool = {
-			guard bands.count == 2 else { return true } // 0 or 1 band → fallback
+			guard bands.count == 2 else {
+				// If we have 1 band, it's likely a single-row device - keep it!
+				// If we have 0 bands, we need a fallback.
+				return bands.count == 0
+			}
 			let c0 = (bands[0].lowerBound + bands[0].upperBound) * 0.5
 			let c1 = (bands[1].lowerBound + bands[1].upperBound) * 0.5
 			let f0 = frac(c0), f1 = frac(c1)
@@ -273,20 +315,28 @@ enum ControlAutoDetect {
 			let central = (f0 > 0.30 && f0 < 0.70) && (f1 > 0.30 && f1 < 0.70)
 			return central || !sepOK
 		}()
-		
+
 		if needFallback {
-			// place bands near top/bottom quartiles of the interior
-			let cTop = yMin + Int(Double(yMax - yMin) * 0.25)
-			let cBot = yMin + Int(Double(yMax - yMin) * 0.75)
-			var b0 = makeBand(center: cTop, half: half)
-			var b1 = makeBand(center: cBot, half: half)
-			if b0.upperBound > b1.lowerBound {
-				let ov = Int(b0.upperBound - b1.lowerBound)
-				let trim = (ov / 2) + 1
-				b0 = CGFloat(Int(b0.lowerBound)) ... CGFloat(Int(b0.upperBound) - trim)
-				b1 = CGFloat(Int(b1.lowerBound) + trim) ... CGFloat(Int(b1.upperBound))
+			// If we already have 1 band (single-row device), expand it to cover more area
+			if bands.count == 1 {
+				let existingCenter = (bands[0].lowerBound + bands[0].upperBound) * 0.5
+				// Make the band taller for single-row devices (≈ 50% of interior height)
+				let expandedHalf = max(half, Int(Double(interiorH) * 0.25))
+				bands = [makeBand(center: Int(existingCenter), half: expandedHalf)]
+			} else {
+				// No bands found - place bands near top/bottom quartiles of the interior
+				let cTop = yMin + Int(Double(yMax - yMin) * 0.25)
+				let cBot = yMin + Int(Double(yMax - yMin) * 0.75)
+				var b0 = makeBand(center: cTop, half: half)
+				var b1 = makeBand(center: cBot, half: half)
+				if b0.upperBound > b1.lowerBound {
+					let ov = Int(b0.upperBound - b1.lowerBound)
+					let trim = (ov / 2) + 1
+					b0 = CGFloat(Int(b0.lowerBound)) ... CGFloat(Int(b0.upperBound) - trim)
+					b1 = CGFloat(Int(b1.lowerBound) + trim) ... CGFloat(Int(b1.upperBound))
+				}
+				bands = [b0, b1]
 			}
-			bands = [b0, b1]
 		}
 		
 #if DEBUG
@@ -516,7 +566,8 @@ enum ControlAutoDetect {
 		limit: Bool
 	) -> Bool {
 		guard limit, !bands.isEmpty else { return true }
-		let tolFactor: CGFloat = 0.80
+		// For single-band (single-row) devices, be much more permissive
+		let tolFactor: CGFloat = bands.count == 1 ? 1.5 : 0.80
 		for (i, c) in centers.enumerated() {
 			// FIX: make the literal a CGFloat and use Swift.max to avoid overload ambiguity
 			let tol: CGFloat = Swift.max(10.0, tolFactor * halves[i] + 4.0)
@@ -570,12 +621,14 @@ enum ControlAutoDetect {
 		var bestC = c
 		var bestS: Float = -Float.greatestFiniteMagnitude
 		var bestR = Swift.max(4.0, rClamp * 0.90)
-		
+
 		let rInner: CGFloat = Swift.max(4.0, rClamp * 0.60)
 		let rOuter: CGFloat = Swift.max(rInner + 1.0, rClamp * 1.10)
-		
-		for dy in -2...2 {
-			for dx in -2...2 {
+
+		// Expanded search range from -2...2 to -4...4 for better alignment
+		let searchRange = max(2, Int(rClamp * 0.15))
+		for dy in -searchRange...searchRange {
+			for dx in -searchRange...searchRange {
 				let cc = CGPoint(x: c.x + CGFloat(dx), y: c.y + CGFloat(dy))
 				let inner = ringMeanLuma(buffer: buf, stride: stride, w: srcW, h: srcH, c: cc, r0: 0,       r1: rInner)
 				let outer = ringMeanLuma(buffer: buf, stride: stride, w: srcW, h: srcH, c: cc, r0: rOuter, r1: rOuter*1.35)
@@ -629,13 +682,14 @@ enum ControlAutoDetect {
 			
 			var upC = CGPoint(x: rect.midX * ctx.upX, y: rect.midY * ctx.upY)
 			var upR = 0.5 * min(rect.width*ctx.upX, rect.height*ctx.upY)
-			
-			// luminance gate
+
+			// luminance gate - be more lenient for buttons/switches since they may be flush with panel
 			var keep = true
 			if let (buf, stride) = ctx.rgba {
 				let inner = ringMeanLuma(buffer: buf, stride: stride, w: ctx.srcW, h: ctx.srcH, c: upC, r0: 0, r1: upR*0.60)
 				let outer = ringMeanLuma(buffer: buf, stride: stride, w: ctx.srcW, h: ctx.srcH, c: upC, r0: upR*1.05, r1: upR*1.40)
-				keep = (outer - inner) >= Float(0.06)
+				let contrastThreshold: Float = (kind == .button || kind == .multiSwitch) ? 0.03 : 0.06
+				keep = (outer - inner) >= contrastThreshold
 			}
 			let yScaled = rect.midY
 			guard keep,
@@ -667,10 +721,11 @@ enum ControlAutoDetect {
 				case .knob:           conf = 0.62
 				case .concentricKnob: conf = 0.64
 				case .light:          conf = 0.55
-				case .button:         conf = 0.45
-				default:              conf = 0.40
+				case .button:         conf = 0.58  // Raised from 0.45 to help buttons survive filtering
+				case .multiSwitch:    conf = 0.56  // Raised from 0.40 to help switches survive
+				default:              conf = 0.50  // Raised default floor
 			}
-			
+
 			// Append draft using computed kind/conf (not hard-coded)
 			drafts.append(ControlDraft(kind: kind,
 									   rect: rectPx.integral,
@@ -756,16 +811,18 @@ enum ControlAutoDetect {
 				
 				// radial agreement (coverage+alignment)
 				let (covRaw, aliRaw) = radialEdgeScore(rgba: ctx.rgba, srcW: ctx.srcW, srcH: ctx.srcH, center: upC, radius: upR)
-				
-				// Small-diameter tightening (kill printed “0”s/ticks); gentle boosts otherwise
+
+				// Tighten thresholds progressively based on diameter to reject text/glyphs
+				// Smaller circles need much stronger evidence since they're more likely to be glyphs
 				var covThresh: Float = ctx.config.covBase
 				var aliThresh: Float = ctx.config.aliBase
-				if diameter < 24.0 { covThresh += 0.12; aliThresh += 0.06 }
-				else if diameter < 36.0 { covThresh += 0.06; aliThresh += 0.03 }
-				else if diameter < 48.0 { covThresh += 0.02; aliThresh += 0.01 }
+				if diameter < 24.0 { covThresh += 0.16; aliThresh += 0.08 }  // Tightened from 0.12/0.06
+				else if diameter < 36.0 { covThresh += 0.09; aliThresh += 0.05 }  // Tightened from 0.06/0.03
+				else if diameter < 48.0 { covThresh += 0.04; aliThresh += 0.02 }  // Tightened from 0.02/0.01
+				else if diameter < 60.0 { covThresh += 0.02; aliThresh += 0.01 }  // NEW: medium size boost
 				if contrast < 0.05 { covThresh -= 0.03; aliThresh -= 0.02 }
 				if diameter > 90 { covThresh -= 0.02 }
-				
+
 				let passRadial = (covRaw >= covThresh && aliRaw >= aliThresh)
 				
 				// Printed glyph rings (very common on 500-series). Reject early.
@@ -875,23 +932,35 @@ enum ControlAutoDetect {
 	// MARK: - Stage 5: relaxed pass if sparse
 	private static func relaxedCirclePassIfSparse(_ ctx: inout DetectContext, current: [ControlDraft], debug: Bool) -> [ControlDraft] {
 		let neededMin = 6
-		guard ctx.config.limitSearchToBands,
-			  current.filter({ $0.kind == .knob }).count < neededMin
-		else { return [] }
-		
+		let currentKnobCount = current.filter({ $0.kind == .knob }).count
+
+		// Always run if we found absolutely nothing, otherwise respect band limits
+		let shouldRun = currentKnobCount < neededMin && (ctx.config.limitSearchToBands || current.isEmpty)
+
+		guard shouldRun else { return [] }
+
+#if DEBUG
+		print("relaxedCirclePassIfSparse: only \(currentKnobCount) knobs found, trying full-image scan...")
+#endif
+
 		let scaled = ctx.cgScaled
 		let ref = Swift.max(CGFloat(80.0), Swift.min(ctx.scaledHf, ctx.scaledWf))
 		let rMin: CGFloat = Swift.max(8.0,  ref * 0.08)
 		let rMax: CGFloat = Swift.min(120.0, ref * 0.22)
-		
+
+		// More aggressive parameters for sparse detection
 		let cfg = CircleFinder.Config(
 			maxSide: ctx.config.downscaleMax,
-			minRadius: rMin, maxRadius: rMax, radiusStep: 3,
-			edgePercentile: 0.52, voteThresholdFraction: 0.32,
-			maxResults: 96, nmsRadius: 16,
+			minRadius: rMin, maxRadius: rMax, radiusStep: 2,  // Reduced from 3 for finer search
+			edgePercentile: 0.40, voteThresholdFraction: 0.22,  // Very relaxed for difficult images
+			maxResults: 128, nmsRadius: 12,  // Increased max results, reduced NMS
 			enableNaiveAngleFallback: true
 		)
 		let circles = CircleFinder.find(in: scaled, cfg: cfg)
+
+#if DEBUG
+		print("relaxedCirclePassIfSparse: CircleFinder returned \(circles.count) circles with very relaxed params")
+#endif
 		
 		var out: [ControlDraft] = []
 		for c in circles {
@@ -1029,15 +1098,19 @@ enum ControlAutoDetect {
 			let halfStart = knobDs.count / 2
 			let topHalf = Array(knobDs[halfStart..<knobDs.count])
 			let medTopHalf = topHalf[topHalf.count / 2]
-			dynKnobFloor = max(ctx.config.knobMinDiameterPx, medTopHalf * 0.55)
+			// Relaxed from 0.55 to 0.45 to catch smaller knobs
+			dynKnobFloor = max(ctx.config.knobMinDiameterPx, medTopHalf * 0.45)
 		}
-		
+
 		// Remove tiny "knob" lookalikes according to learned floor
-		keep.removeAll {
-			if $0.kind == .knob, let r = $0.radius {
-				return (r * 2) < dynKnobFloor
+		// Only apply this if we have high confidence in the floor estimate
+		if knobDs.count >= 8 {
+			keep.removeAll {
+				if $0.kind == .knob, let r = $0.radius {
+					return (r * 2) < dynKnobFloor
+				}
+				return false
 			}
-			return false
 		}
 		guard !keep.isEmpty else { return keep }
 		
@@ -1075,7 +1148,9 @@ enum ControlAutoDetect {
 			var knobDiameters: [CGFloat] = []
 			var lightCount = 0
 			var concentricCount = 0
-			
+			var buttonCount = 0
+			var switchCount = 0
+
 			for j in col {
 				let d = keep[j]
 				switch d.kind {
@@ -1086,23 +1161,36 @@ enum ControlAutoDetect {
 						if let r = d.radius { knobDiameters.append(r*2) }
 					case .knob:
 						if let r = d.radius { knobDiameters.append(r*2) }
+					case .button, .litButton:
+						buttonCount += 1
+					case .multiSwitch:
+						switchCount += 1
 					default:
 						break
 				}
 			}
-			
+
 			knobDiameters.sort()
 			let medColKnob: CGFloat = knobDiameters.isEmpty ? 0 : knobDiameters[knobDiameters.count/2]
-			
+
+			// Relaxed column validation criteria
 			// A column is a valid LED column if it has several lights.
-			let isLEDColumn = lightCount >= 3
-			
+			let isLEDColumn = lightCount >= 2  // Reduced from 3 to 2
+
 			// A column is a valid knob column if its median knob diameter is "big enough".
-			let isKnobColumn = medColKnob >= dynKnobFloor
-			
+			// Relaxed threshold from dynKnobFloor to 0.85 * dynKnobFloor
+			let isKnobColumn = medColKnob >= (dynKnobFloor * 0.85)
+
+			// Keep column if it has any knobs at all (not just based on median)
+			let hasAnyKnobs = !knobDiameters.isEmpty
+
+			// NEW: Recognize button and switch columns as valid columns
+			let isButtonColumn = buttonCount >= 1
+			let isSwitchColumn = switchCount >= 1
+
 			// Always keep if we saw a concentric knob (robust signal).
-			let keepColumn = isLEDColumn || isKnobColumn || (concentricCount > 0)
-			
+			let keepColumn = isLEDColumn || isKnobColumn || (concentricCount > 0) || hasAnyKnobs || isButtonColumn || isSwitchColumn
+
 			if !keepColumn {
 				// Drop only the non-lights from this bad column (keep any lights just in case).
 				for j in col {
@@ -1175,19 +1263,20 @@ enum ControlAutoDetect {
 		return (maxC >= 0.38 && dom >= 0.10)
 	}
 
-	// Printed “0”/tick rings: bright ring with inner≈outer background — not a knob or LED.
+	// Printed "0"/tick rings: bright ring with inner≈outer background — not a knob or LED.
 	@inline(__always)
 	private static func isLikelyPrintedGlyph(inner: Float, ring: Float, outer: Float,
 											 diameter: CGFloat) -> Bool {
-		// Printed “0” / ticks are small bright rings drawn on the panel.
+		// Printed "0" / ticks / dial markings are small bright rings drawn on the panel.
 		// Heuristics:
 		//  • small diameter
 		//  • ring brighter than BOTH inner & outer
 		//  • inner and outer roughly the same (panel background)
-		if diameter > 64 { return false }                   // glyphs are small
+		if diameter > 68 { return false }                   // glyphs are small (relaxed slightly from 64)
 		let ringGain: Float = ring - max(inner, outer)      // how much the ring pops
-		let innerOuterClose = abs(inner - outer) <= 0.025   // background is same
-		return ringGain >= 0.09 && innerOuterClose
+		let innerOuterClose = abs(inner - outer) <= 0.030   // background is same (relaxed from 0.025)
+		// Tightened threshold from 0.09 to 0.07 to catch more printed text
+		return ringGain >= 0.07 && innerOuterClose
 	}
 
 	// MARK: - Stage 8: de-dupe by center

@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>files</key>
+	<dict>
+		<key>Resources/Black Plastic Switch - Down.png</key>
+		<data>
+		1bUdlUSgH9ru6K9gylf4ZaeZZgM=
+		</data>
+		<key>Resources/Black Plastic Switch - Up.png</key>
+		<data>
+		It0WbdlvW3Yq7+pCjmEtzYs9bvE=
+		</data>
+		<key>Resources/Black Plastic Switch_atlas_2x1.png</key>
+		<data>
+		5Ts/kcvIJBgCGaYDeHOlHXfEZms=
+		</data>
+		<key>Resources/Chrome Toggle Large - Down.png</key>
+		<data>
+		94HdYCBdndptKGbAidWR0ixc8AE=
+		</data>
+		<key>Resources/Chrome Toggle Large - Up.png</key>
+		<data>
+		SwfSCX6tdHybW5TmJeusU1TwPUI=
+		</data>
+		<key>Resources/Chrome Toggle Large Atlas.png</key>
+		<data>
+		6a7nnJCZEaJL9JjoM77yVsAnW74=
+		</data>
+		<key>Resources/Chrome Toggle Medium - Down.png</key>
+		<data>
+		hueqNYkblsZVfiH///yaMevzxzQ=
+		</data>
+		<key>Resources/Chrome Toggle Medium - Up.png</key>
+		<data>
+		lZeiOY1xFKIZZLkeiAGeKUXOO2M=
+		</data>
+		<key>Resources/Chrome Toggle Medium Atlas.png</key>
+		<data>
+		wkzAP0B85HvIXqUAxBWRpXH+m9M=
+		</data>
+		<key>Resources/Chrome Toggle Small - Down.png</key>
+		<data>
+		EweYJJ3eAZEGoElwD4zadOPbxc0=
+		</data>
+		<key>Resources/Chrome Toggle Small - Up.png</key>
+		<data>
+		NV1RddLb7W5LXGMmoI8qKHE3OHA=
+		</data>
+		<key>Resources/Chrome Toggle Small Atlas.png</key>
+		<data>
+		lXqT7BOnmsGw0UD4DNyC/7cCvv0=
+		</data>
+		<key>Resources/Flap Switch Large Black - Down.png</key>
+		<data>
+		xUAFnTO/8FqE/HdTNJSHELVBPvs=
+		</data>
+		<key>Resources/Flap Switch Large Black - Up.png</key>
+		<data>
+		rkgSGBXpGXzcVziiepJG7FEMzg0=
+		</data>
+		<key>Resources/Flap Switch Large Black_atlas_2x1.png</key>
+		<data>
+		F5LLbfSpBmx0L+QXAWYm/Yx/Z0A=
+		</data>
+		<key>Resources/Padded Switch Small - Down.png</key>
+		<data>
+		DkuSfiEFqLdAHv2pj4X7S5F48fs=
+		</data>
+		<key>Resources/Padded Switch Small - Up.png</key>
+		<data>
+		q+7NCuAafHPKlgheoOrd+B5pFJI=
+		</data>
+		<key>Resources/Padded Switch Small_atlas_2x1.png</key>
+		<data>
+		7wROwf9NXPlzReSA9mrNwnKLAfU=
+		</data>
+	</dict>
+	<key>files2</key>
+	<dict>
+		<key>MacOS/Studio Recall.debug.dylib</key>
+		<dict>
+			<key>cdhash</key>
+			<data>
+			bXw1pYa7MSSLNFRL/deXjpHEwpA=
+			</data>
+			<key>requirement</key>
+			<string>identifier "Studio Recall.debug" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: noahsloah@gmail.com (48RS8U8F5N)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
+		</dict>
+		<key>MacOS/__preview.dylib</key>
+		<dict>
+			<key>cdhash</key>
+			<data>
+			yUfqj78db8vgSpTXCKyq2nPUgDs=
+			</data>
+			<key>requirement</key>
+			<string>identifier "__preview" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: noahsloah@gmail.com (48RS8U8F5N)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
+		</dict>
+		<key>Resources/Black Plastic Switch - Down.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			gknvNrIgCvLzSHsTPwfuoeahtQDfTyhde8p1aaDFUlw=
+			</data>
+		</dict>
+		<key>Resources/Black Plastic Switch - Up.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			KbjGp0nD3W9TtgGBW1Gmh/mspxFBWR/cM0Y0hS2dl5A=
+			</data>
+		</dict>
+		<key>Resources/Black Plastic Switch_atlas_2x1.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			bFGOR0WGdFeMiXEmzua+7oGEOWieDXIDPv95KinRS88=
+			</data>
+		</dict>
+		<key>Resources/Chrome Toggle Large - Down.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			BN5jyEq2+eqXfF1vPQu4Ln5HVp5leq+0FWBbMZP0k8M=
+			</data>
+		</dict>
+		<key>Resources/Chrome Toggle Large - Up.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			jwXgAx6iPVxr5W7PFb2MHbx/hWbgorN1akYTSA97AnY=
+			</data>
+		</dict>
+		<key>Resources/Chrome Toggle Large Atlas.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			93boZ20AdfmHHSLbjZ+Z2RpT6jab2VRkLE5roZodl88=
+			</data>
+		</dict>
+		<key>Resources/Chrome Toggle Medium - Down.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			5xNGBu1ZJP8PDiu45Ly+qpxrlDFk1OBNFIQiCEx1U8M=
+			</data>
+		</dict>
+		<key>Resources/Chrome Toggle Medium - Up.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			qXJ9XDt4i/Qvr2+rfTwGu0mubMnYuJJGtM3aGthzRxE=
+			</data>
+		</dict>
+		<key>Resources/Chrome Toggle Medium Atlas.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			l8YBXIRvrr3ru5+t/xyuoeORp/hiVp46DBoE6QNJNwI=
+			</data>
+		</dict>
+		<key>Resources/Chrome Toggle Small - Down.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			ZSJ1UPptl5+WoZwNyqgH9HUIl1aZoqqAcqeGfyDFn5M=
+			</data>
+		</dict>
+		<key>Resources/Chrome Toggle Small - Up.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			06AtCPd/Yj90vU82TduX3WuzKCjq2E0Gm/vEGqgYmPM=
+			</data>
+		</dict>
+		<key>Resources/Chrome Toggle Small Atlas.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			xGpzykSBC5OEc5T3qWpTwP5z7aAt39RMdd6HSvsZ9Ag=
+			</data>
+		</dict>
+		<key>Resources/Flap Switch Large Black - Down.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			Qr7yf71oRaczDaWkJz41+bjGXxyocyVjTk32iHCTXes=
+			</data>
+		</dict>
+		<key>Resources/Flap Switch Large Black - Up.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			PBpU83Unuv3pWsPoTHSFv9WPFm4eeqZzzONDO5975Xs=
+			</data>
+		</dict>
+		<key>Resources/Flap Switch Large Black_atlas_2x1.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			l76+hMORGs3JRi3h4EU58MxD77s3/WnOghs40i3l86Y=
+			</data>
+		</dict>
+		<key>Resources/Padded Switch Small - Down.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			cEh3asJXaclW9IYfz/Cymeeln/yaUqiSUw0jjebSxnU=
+			</data>
+		</dict>
+		<key>Resources/Padded Switch Small - Up.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			CMcBKymrSTn3p/qFrWgOtCCy2ptn7hgALISQ6nAhUdY=
+			</data>
+		</dict>
+		<key>Resources/Padded Switch Small_atlas_2x1.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			jFw5Y/lksdfHX2j8+S6CBDfgXUqoThp2qYa6+T107bc=
+			</data>
+		</dict>
+	</dict>
+	<key>rules</key>
+	<dict>
+		<key>^Resources/</key>
+		<true/>
+		<key>^Resources/.*\.lproj/</key>
+		<dict>
+			<key>optional</key>
+			<true/>
+			<key>weight</key>
+			<real>1000</real>
+		</dict>
+		<key>^Resources/.*\.lproj/locversion.plist$</key>
+		<dict>
+			<key>omit</key>
+			<true/>
+			<key>weight</key>
+			<real>1100</real>
+		</dict>
+		<key>^Resources/Base\.lproj/</key>
+		<dict>
+			<key>weight</key>
+			<real>1010</real>
+		</dict>
+		<key>^version.plist$</key>
+		<true/>
+	</dict>
+	<key>rules2</key>
+	<dict>
+		<key>.*\.dSYM($|/)</key>
+		<dict>
+			<key>weight</key>
+			<real>11</real>
+		</dict>
+		<key>^(.*/)?\.DS_Store$</key>
+		<dict>
+			<key>omit</key>
+			<true/>
+			<key>weight</key>
+			<real>2000</real>
+		</dict>
+		<key>^(Frameworks|SharedFrameworks|PlugIns|Plug-ins|XPCServices|Helpers|MacOS|Library/(Automator|Spotlight|LoginItems))/</key>
+		<dict>
+			<key>nested</key>
+			<true/>
+			<key>weight</key>
+			<real>10</real>
+		</dict>
+		<key>^.*</key>
+		<true/>
+		<key>^Info\.plist$</key>
+		<dict>
+			<key>omit</key>
+			<true/>
+			<key>weight</key>
+			<real>20</real>
+		</dict>
+		<key>^PkgInfo$</key>
+		<dict>
+			<key>omit</key>
+			<true/>
+			<key>weight</key>
+			<real>20</real>
+		</dict>
+		<key>^Resources/</key>
+		<dict>
+			<key>weight</key>
+			<real>20</real>
+		</dict>
+		<key>^Resources/.*\.lproj/</key>
+		<dict>
+			<key>optional</key>
+			<true/>
+			<key>weight</key>
+			<real>1000</real>
+		</dict>
+		<key>^Resources/.*\.lproj/locversion.plist$</key>
+		<dict>
+			<key>omit</key>
+			<true/>
+			<key>weight</key>
+			<real>1100</real>
+		</dict>
+		<key>^Resources/Base\.lproj/</key>
+		<dict>
+			<key>weight</key>
+			<real>1010</real>
+		</dict>
+		<key>^[^/]+$</key>
+		<dict>
+			<key>nested</key>
+			<true/>
+			<key>weight</key>
+			<real>10</real>
+		</dict>
+		<key>^embedded\.provisionprofile$</key>
+		<dict>
+			<key>weight</key>
+			<real>20</real>
+		</dict>
+		<key>^version\.plist$</key>
+		<dict>
+			<key>weight</key>
+			<real>20</real>
+		</dict>
+	</dict>
+</dict>
+</plist>

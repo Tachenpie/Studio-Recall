@@ -36,6 +36,18 @@ struct DeviceEditorView: View {
 			set: { new in editableDevice.device.slotWidth = new }
 		)
 	}
+	private var pedalWidthBinding: Binding<Double> {
+		Binding(
+			get: { editableDevice.device.pedalWidthInches ?? 3.0 },
+			set: { new in editableDevice.device.pedalWidthInches = new }
+		)
+	}
+	private var pedalHeightBinding: Binding<Double> {
+		Binding(
+			get: { editableDevice.device.pedalHeightInches ?? 5.0 },
+			set: { new in editableDevice.device.pedalHeightInches = new }
+		)
+	}
 	
 	private var targetSize: CGSize {
 		let ppi = settings.pointsPerInch
@@ -44,10 +56,15 @@ struct DeviceEditorView: View {
 				width: 19 * ppi,
 				height: CGFloat(rackUnitsBinding.wrappedValue) * 1.75 * ppi
 			)
-		} else {
+		} else if editableDevice.device.type == .series500 {
 			return CGSize(
 				width: CGFloat(slotWidthBinding.wrappedValue) * 1.5 * ppi,
 				height: 5.25 * ppi
+			)
+		} else {
+			return CGSize(
+				width: CGFloat(pedalWidthBinding.wrappedValue) * ppi,
+				height: CGFloat(pedalHeightBinding.wrappedValue) * ppi
 			)
 		}
 	}
@@ -90,7 +107,7 @@ struct DeviceEditorView: View {
 								.labelsHidden()
 								.frame(maxWidth: 220, alignment: .leading)
 							}
-							
+
 							GridRow {
 								FieldLabel("Height")
 								Stepper(value: rackUnitsBinding, in: 1...10) {
@@ -100,13 +117,42 @@ struct DeviceEditorView: View {
 								}
 								.frame(maxWidth: 220, alignment: .leading)   // keeps it out of the far right
 							}
-						} else {
-							// 500-SERIES (non-rack)
+						} else if editableDevice.device.type == .series500 {
+							// 500-SERIES
 							GridRow {
 								FieldLabel("Width")
 								Stepper(value: slotWidthBinding, in: 1...10) {
 									Text("\(slotWidthBinding.wrappedValue) slot\(slotWidthBinding.wrappedValue == 1 ? "" : "s")")
 										.frame(width: 120, alignment: .leading)
+								}
+								.frame(maxWidth: 220, alignment: .leading)
+							}
+						} else {
+							// PEDAL
+							GridRow {
+								FieldLabel("Width")
+								HStack(spacing: 4) {
+									TextField("Width", value: pedalWidthBinding, format: .number)
+										.textFieldStyle(.roundedBorder)
+										.frame(width: 60)
+									Text("in")
+										.foregroundStyle(.secondary)
+									Stepper("", value: pedalWidthBinding, in: 1.0...10.0, step: 0.5)
+										.labelsHidden()
+								}
+								.frame(maxWidth: 220, alignment: .leading)
+							}
+
+							GridRow {
+								FieldLabel("Height")
+								HStack(spacing: 4) {
+									TextField("Height", value: pedalHeightBinding, format: .number)
+										.textFieldStyle(.roundedBorder)
+										.frame(width: 60)
+									Text("in")
+										.foregroundStyle(.secondary)
+									Stepper("", value: pedalHeightBinding, in: 1.0...10.0, step: 0.5)
+										.labelsHidden()
 								}
 								.frame(maxWidth: 220, alignment: .leading)
 							}
@@ -212,13 +258,23 @@ struct DeviceEditorView: View {
 				}
 				.padding(.horizontal)
 				
-				ImagePicker(
-					imageData: $editableDevice.device.imageData,
-					isRack: editableDevice.device.type == .rack,
-					rackUnits: rackUnitsBinding,
-					slotWidth: slotWidthBinding,
-					ppi: settings.pointsPerInch
-				)
+				if editableDevice.device.type == .pedal {
+					ImagePicker(
+						imageData: $editableDevice.device.imageData,
+						isRack: false,
+						pedalWidth: pedalWidthBinding,
+						pedalHeight: pedalHeightBinding,
+						ppi: settings.pointsPerInch
+					)
+				} else {
+					ImagePicker(
+						imageData: $editableDevice.device.imageData,
+						isRack: editableDevice.device.type == .rack,
+						rackUnits: rackUnitsBinding,
+						slotWidth: slotWidthBinding,
+						ppi: settings.pointsPerInch
+					)
+				}
 				
 				Spacer()
 			}
@@ -275,7 +331,7 @@ struct DeviceEditorView: View {
 	
 	private var previewSize: CGSize {
 		let ppi = settings.pointsPerInch
-		
+
 		if editableDevice.device.type == .rack {
 			// Faceplate art uses the BODY width (19 / 8.5 / 5.5 in), not the span.
 			let wIn = DeviceMetrics.bodyInches(for: editableDevice.device.rackWidth)
@@ -284,10 +340,18 @@ struct DeviceEditorView: View {
 				width:  DeviceMetrics.points(fromInches: wIn, ppi: ppi),
 				height: DeviceMetrics.points(fromInches: hIn, ppi: ppi)
 			)
-		} else {
+		} else if editableDevice.device.type == .series500 {
 			// 500-series (keep your constants unless you also expose them via DeviceMetrics)
 			let wIn = 1.5 * CGFloat(slotWidthBinding.wrappedValue)  // or DeviceMetrics.series500SlotWidthInches
 			let hIn = 5.25                                          // or DeviceMetrics.series500HeightInches
+			return CGSize(
+				width:  DeviceMetrics.points(fromInches: wIn, ppi: ppi),
+				height: DeviceMetrics.points(fromInches: hIn, ppi: ppi)
+			)
+		} else {
+			// Pedal
+			let wIn = CGFloat(pedalWidthBinding.wrappedValue)
+			let hIn = CGFloat(pedalHeightBinding.wrappedValue)
 			return CGSize(
 				width:  DeviceMetrics.points(fromInches: wIn, ppi: ppi),
 				height: DeviceMetrics.points(fromInches: hIn, ppi: ppi)

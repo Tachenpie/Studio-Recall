@@ -1,0 +1,1632 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Controls/ControlInspector.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Select a control on the faceplate or from Palette.",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 46
+        }
+      },
+      {
+        "comment": "",
+        "key": "Basics",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 105
+        }
+      },
+      {
+        "comment": "",
+        "key": "Regions",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 150
+        }
+      },
+      {
+        "comment": "",
+        "key": "Knob",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 382
+        }
+      },
+      {
+        "comment": "",
+        "key": "Stepped Knob",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 433
+        }
+      },
+      {
+        "comment": "",
+        "key": "Multi-Switch",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 561
+        }
+      },
+      {
+        "comment": "",
+        "key": "Button",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 599
+        }
+      },
+      {
+        "comment": "",
+        "key": "Status Light",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 628
+        }
+      },
+      {
+        "comment": "",
+        "key": "Concentric Knob",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 744
+        }
+      },
+      {
+        "comment": "",
+        "key": "Lit Button",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 840
+        }
+      },
+      {
+        "comment": "",
+        "key": "Image Mapping",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 279
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select a control on the faceplate or from Palette.",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 88
+        }
+      },
+      {
+        "comment": "",
+        "key": "Representative",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 295
+        }
+      },
+      {
+        "comment": "",
+        "key": "Name",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 108
+        }
+      },
+      {
+        "comment": "",
+        "key": "Label",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 109
+        }
+      },
+      {
+        "comment": "",
+        "key": "Type",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 137
+        }
+      },
+      {
+        "comment": "",
+        "key": "No region yet. Click Create to add one.",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 153
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 157
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit region",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 204
+        }
+      },
+      {
+        "comment": "",
+        "key": "Shape",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 265
+        }
+      },
+      {
+        "comment": "",
+        "key": "Outer",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 205
+        }
+      },
+      {
+        "comment": "",
+        "key": "Inner",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 206
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 256
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 258
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rectangle",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 269
+        }
+      },
+      {
+        "comment": "",
+        "key": "Circle",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 270
+        }
+      },
+      {
+        "comment": "",
+        "key": "Turn off “Edit Region” to adjust mapping.",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 282
+        }
+      },
+      {
+        "comment": "",
+        "key": "° start",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 309
+        }
+      },
+      {
+        "comment": "",
+        "key": "° sweep",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 312
+        }
+      },
+      {
+        "comment": "",
+        "key": "Orientation",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 297
+        }
+      },
+      {
+        "comment": "",
+        "key": "Top",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 301
+        }
+      },
+      {
+        "comment": "",
+        "key": "Right",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 302
+        }
+      },
+      {
+        "comment": "",
+        "key": "Bottom",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 303
+        }
+      },
+      {
+        "comment": "",
+        "key": "Left",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 304
+        }
+      },
+      {
+        "comment": "",
+        "key": "Custom…",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 305
+        }
+      },
+      {
+        "comment": "",
+        "key": "Duplicate",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 330
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Control",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 340
+        }
+      },
+      {
+        "comment": "",
+        "key": "Range",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 386
+        }
+      },
+      {
+        "comment": "",
+        "key": "…",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 388
+        }
+      },
+      {
+        "comment": "",
+        "key": "Value",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 405
+        }
+      },
+      {
+        "comment": "",
+        "key": "Labels",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 450
+        }
+      },
+      {
+        "comment": "",
+        "key": "e.g. 20Hz, 50Hz",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 451
+        }
+      },
+      {
+        "comment": "",
+        "key": "Steps",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 436
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 446
+        }
+      },
+      {
+        "comment": "",
+        "key": "Index",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 470
+        }
+      },
+      {
+        "comment": "",
+        "key": "Label",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 472
+        }
+      },
+      {
+        "comment": "",
+        "key": "Angle°",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 474
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 486
+        }
+      },
+      {
+        "comment": "",
+        "key": "Label #%lld",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 491
+        }
+      },
+      {
+        "comment": "",
+        "key": "0",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 507
+        }
+      },
+      {
+        "comment": "",
+        "key": "Value",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 531
+        }
+      },
+      {
+        "comment": "",
+        "key": "Current: %@",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 551
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 536
+        }
+      },
+      {
+        "comment": "",
+        "key": "Labels",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 563
+        }
+      },
+      {
+        "comment": "",
+        "key": "e.g. Slow, Fast",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 564
+        }
+      },
+      {
+        "comment": "",
+        "key": "Selected",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 581
+        }
+      },
+      {
+        "comment": "",
+        "key": "Current: %@",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 591
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 586
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pressed",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 601
+        }
+      },
+      {
+        "comment": "",
+        "key": "On Label",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 607
+        }
+      },
+      {
+        "comment": "",
+        "key": "On",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 608
+        }
+      },
+      {
+        "comment": "",
+        "key": "Off Label",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 615
+        }
+      },
+      {
+        "comment": "",
+        "key": "Off",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 616
+        }
+      },
+      {
+        "comment": "",
+        "key": "Manual On",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 630
+        }
+      },
+      {
+        "comment": "",
+        "key": "Multi-color Mode",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 635
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enable to use separate colors for on/off states (legacy mode)",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 639
+        }
+      },
+      {
+        "comment": "",
+        "key": "Follow Control",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 708
+        }
+      },
+      {
+        "comment": "",
+        "key": "On when option",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 724
+        }
+      },
+      {
+        "comment": "",
+        "key": "Invert Link",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 736
+        }
+      },
+      {
+        "comment": "",
+        "key": "On Color",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 650
+        }
+      },
+      {
+        "comment": "",
+        "key": "Off Color",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 663
+        }
+      },
+      {
+        "comment": "",
+        "key": "LED Color",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 678
+        }
+      },
+      {
+        "comment": "",
+        "key": "On Brightness",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 686
+        }
+      },
+      {
+        "comment": "",
+        "key": "Off Brightness",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 697
+        }
+      },
+      {
+        "comment": "",
+        "key": "None",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 712
+        }
+      },
+      {
+        "comment": "",
+        "key": "Outer",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 747
+        }
+      },
+      {
+        "comment": "",
+        "key": "Gain",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 748
+        }
+      },
+      {
+        "comment": "",
+        "key": "Inner",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 755
+        }
+      },
+      {
+        "comment": "",
+        "key": "Q",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 756
+        }
+      },
+      {
+        "comment": "",
+        "key": "Outer Range",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 764
+        }
+      },
+      {
+        "comment": "",
+        "key": "…",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 767
+        }
+      },
+      {
+        "comment": "",
+        "key": "Inner Range",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 775
+        }
+      },
+      {
+        "comment": "",
+        "key": "…",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 778
+        }
+      },
+      {
+        "comment": "",
+        "key": "Outer",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 792
+        }
+      },
+      {
+        "comment": "",
+        "key": "Inner",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 818
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pressed",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 842
+        }
+      },
+      {
+        "comment": "",
+        "key": "Lamp follows Press",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 846
+        }
+      },
+      {
+        "comment": "",
+        "key": "Multi-color Mode",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 870
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enable to use separate colors for on/off states (legacy mode)",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 874
+        }
+      },
+      {
+        "comment": "",
+        "key": "Follow Control",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 943
+        }
+      },
+      {
+        "comment": "",
+        "key": "On when option",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 959
+        }
+      },
+      {
+        "comment": "",
+        "key": "On Label",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 852
+        }
+      },
+      {
+        "comment": "",
+        "key": "On",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 853
+        }
+      },
+      {
+        "comment": "",
+        "key": "Off Label",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 860
+        }
+      },
+      {
+        "comment": "",
+        "key": "Off",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 861
+        }
+      },
+      {
+        "comment": "",
+        "key": "On Color",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 885
+        }
+      },
+      {
+        "comment": "",
+        "key": "Off Color",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 898
+        }
+      },
+      {
+        "comment": "",
+        "key": "LED Color",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 913
+        }
+      },
+      {
+        "comment": "",
+        "key": "On Brightness",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 921
+        }
+      },
+      {
+        "comment": "",
+        "key": "Off Brightness",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 932
+        }
+      },
+      {
+        "comment": "",
+        "key": "None",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 947
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create a region first, then choose a mapping.",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1103
+        }
+      },
+      {
+        "comment": "",
+        "key": "Kind",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1108
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 1109
+        }
+      },
+      {
+        "comment": "",
+        "key": "Preset",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 1132
+        }
+      },
+      {
+        "comment": "",
+        "key": "Switch (0° ↔︎ 180°)",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1133
+        }
+      },
+      {
+        "comment": "",
+        "key": "Preview",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 1146
+        }
+      },
+      {
+        "comment": "",
+        "key": "Min",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 1148
+        }
+      },
+      {
+        "comment": "",
+        "key": "Max",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 1163
+        }
+      },
+      {
+        "comment": "",
+        "key": "Center",
+        "location": {
+          "startingColumn": 17,
+          "startingLine": 1178
+        }
+      },
+      {
+        "comment": "",
+        "key": "Preset: Knob (Rotate)",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 1219
+        }
+      },
+      {
+        "comment": "",
+        "key": "Preset: Lamp (Opacity)",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 1220
+        }
+      },
+      {
+        "comment": "",
+        "key": "Preset: Flip Toggle (3D)",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 1221
+        }
+      },
+      {
+        "comment": "",
+        "key": "Taper",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1281
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 1282
+        }
+      },
+      {
+        "comment": "",
+        "key": "Linear",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1286
+        }
+      },
+      {
+        "comment": "",
+        "key": "Decibels (−∞…0 dB)",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1287
+        }
+      },
+      {
+        "comment": "",
+        "key": "Min°",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1293
+        }
+      },
+      {
+        "comment": "",
+        "key": "Max°",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1298
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pivot X",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1306
+        }
+      },
+      {
+        "comment": "",
+        "key": "Y",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1311
+        }
+      },
+      {
+        "comment": "",
+        "key": "Range",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 1327
+        }
+      },
+      {
+        "comment": "",
+        "key": "…",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 1332
+        }
+      },
+      {
+        "comment": "",
+        "key": "Translate (region-local, −1…+1 of region size)",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1345
+        }
+      },
+      {
+        "comment": "",
+        "key": "From X",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1348
+        }
+      },
+      {
+        "comment": "",
+        "key": "Y",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1355
+        }
+      },
+      {
+        "comment": "",
+        "key": "To X",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1365
+        }
+      },
+      {
+        "comment": "",
+        "key": "Y",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1372
+        }
+      },
+      {
+        "comment": "",
+        "key": "Preset: Horizontal 3-pos",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 1382
+        }
+      },
+      {
+        "comment": "",
+        "key": "Preset: Vertical 3-pos",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 1385
+        }
+      },
+      {
+        "comment": "",
+        "key": "Flip (3D) tips: Crop mostly the lever; set the Pivot at its hinge; for multiswitches, enter Tilts per option and pick which option the photo shows (Reference).",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 1400
+        }
+      },
+      {
+        "comment": "",
+        "key": "If you enter Tilts, those exact angles (relative to the Reference option = 0°) are used for each position. Min°/Max° are only used as a fallback curve when Tilts are empty (or for non-multiswitch controls).",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1464
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show pivot gizmo",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1431
+        }
+      },
+      {
+        "comment": "",
+        "key": "Min°",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1407
+        }
+      },
+      {
+        "comment": "",
+        "key": "Max°",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1412
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hinge",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1419
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 1420
+        }
+      },
+      {
+        "comment": "",
+        "key": "Up/Down",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1424
+        }
+      },
+      {
+        "comment": "",
+        "key": "Left/Right",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1425
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pivot X",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1436
+        }
+      },
+      {
+        "comment": "",
+        "key": "Y",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1443
+        }
+      },
+      {
+        "comment": "",
+        "key": "0 = left edge of the cropped patch, 1 = right edge. Place where the hinge sits horizontally.",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1441
+        }
+      },
+      {
+        "comment": "",
+        "key": "0 = top of the patch, 1 = bottom. Set near the lever’s hinge vertically (e.g. 0.85–0.92).",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1448
+        }
+      },
+      {
+        "comment": "",
+        "key": "Perspective",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1451
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tilts (°, by option)",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1469
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 1470
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reference option",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1487
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 1488
+        }
+      },
+      {
+        "comment": "",
+        "key": "Use current",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 1499
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sets the photographed faceplate pose (0°) to the currently selected option.",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 1503
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sprites show a pose image per switch position using a grid-based atlas. Set the pivot where the hinge meets the lever, then align the sprite’s pivot so the image sits correctly.",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 1567
+        }
+      },
+      {
+        "comment": "",
+        "key": "Source",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 1556
+        }
+      },
+      {
+        "comment": "",
+        "key": "Grid Atlas",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1560
+        }
+      },
+      {
+        "comment": "",
+        "key": "Individual Frames",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1561
+        }
+      },
+      {
+        "comment": "",
+        "key": "Library",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1572
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 1573
+        }
+      },
+      {
+        "comment": "",
+        "key": "Browse…",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 1584
+        }
+      },
+      {
+        "comment": "",
+        "key": "Choose from pre-installed and imported sprites",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 1586
+        }
+      },
+      {
+        "comment": "",
+        "key": "— none —",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1577
+        }
+      },
+      {
+        "comment": "",
+        "key": "Atlas",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1608
+        }
+      },
+      {
+        "comment": "",
+        "key": "Choose Image…",
+        "location": {
+          "startingColumn": 56,
+          "startingLine": 1609
+        }
+      },
+      {
+        "comment": "",
+        "key": "Replace Image…",
+        "location": {
+          "startingColumn": 76,
+          "startingLine": 1609
+        }
+      },
+      {
+        "comment": "",
+        "key": "Layout",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1639
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 1640
+        }
+      },
+      {
+        "comment": "",
+        "key": "Vertical",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1641
+        }
+      },
+      {
+        "comment": "",
+        "key": "Horizontal",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1642
+        }
+      },
+      {
+        "comment": "",
+        "key": "Grid",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1651
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cols: %lld",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 1652
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rows: %lld",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 1656
+        }
+      },
+      {
+        "comment": "",
+        "key": "Frames",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1673
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add…",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 1674
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear Frames",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 1707
+        }
+      },
+      {
+        "comment": "",
+        "key": "?",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 1752
+        }
+      },
+      {
+        "comment": "",
+        "key": "Index",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 1756
+        }
+      },
+      {
+        "comment": "",
+        "key": "X",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1770
+        }
+      },
+      {
+        "comment": "",
+        "key": "Y",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1777
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 1771
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 1778
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rotates the sprite around the Sprite Pivot by 90° steps. Use 90°/270° for horizontal switches.",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1820
+        }
+      },
+      {
+        "comment": "",
+        "key": "Region Pivot: 0…1 within the cropped patch (where the real hinge sits).",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1830
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sprite Pivot: 0…1 within a single frame image (e.g., bottom of lever). Make these two pivots coincide.",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1840
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rotate",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1808
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 1809
+        }
+      },
+      {
+        "comment": "",
+        "key": "0°",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1813
+        }
+      },
+      {
+        "comment": "",
+        "key": "90°",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1814
+        }
+      },
+      {
+        "comment": "",
+        "key": "180°",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1815
+        }
+      },
+      {
+        "comment": "",
+        "key": "270°",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1816
+        }
+      },
+      {
+        "comment": "",
+        "key": "Region Pivot",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1823
+        }
+      },
+      {
+        "comment": "",
+        "key": "Y",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1826
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sprite Pivot",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1833
+        }
+      },
+      {
+        "comment": "",
+        "key": "Y",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1836
+        }
+      },
+      {
+        "comment": "",
+        "key": "Frame Mapping",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 1852
+        }
+      },
+      {
+        "comment": "",
+        "key": "Frame %lld",
+        "location": {
+          "startingColumn": 9,
+          "startingLine": 1883
+        }
+      },
+      {
+        "comment": "",
+        "key": "Value",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1887
+        }
+      },
+      {
+        "comment": "",
+        "key": "Value %lld",
+        "location": {
+          "startingColumn": 11,
+          "startingLine": 1889
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sprite Library",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 1912
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 1914
+        }
+      },
+      {
+        "comment": "",
+        "key": "Search",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 1916
+        }
+      },
+      {
+        "comment": "",
+        "key": "Built-in",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 1940
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 1987
+        }
+      },
+      {
+        "comment": "",
+        "key": "Finite",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 2199
+        }
+      },
+      {
+        "comment": "",
+        "key": "−∞",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 2200
+        }
+      },
+      {
+        "comment": "",
+        "key": "+∞",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 2201
+        }
+      }
+    ]
+  },
+  "version": 1
+}

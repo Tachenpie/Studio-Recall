@@ -1,0 +1,240 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Views/Sessions/SessionView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Session",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 146
+        }
+      },
+      {
+        "comment": "",
+        "key": "No session loaded",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 142
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Rack (⌘⇧R)",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 154
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add 500-series Chassis (⌘⇧C)",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 161
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create Label (⌘L)",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 168
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Rack",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 152
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add 500-series Chassis",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 159
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create Label",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 166
+        }
+      },
+      {
+        "comment": "",
+        "key": "View",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 173
+        }
+      },
+      {
+        "comment": "",
+        "key": "Switch between photo faceplates and fast representative view (⌘1 / ⌘2)",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 178
+        }
+      },
+      {
+        "comment": "",
+        "key": "Photo",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 174
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rep.",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 175
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hide Minimap",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 188
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show Minimap",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 188
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hide Minimap",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 185
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show Minimap",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 185
+        }
+      },
+      {
+        "comment": "",
+        "key": "Zoom to Fit All (⌘0)",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 204
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset Zoom & Pan (⌘⇧0)",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 218
+        }
+      },
+      {
+        "comment": "",
+        "key": "Zoom to Fit All",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 202
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset Zoom & Pan",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 216
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save Current as Template…",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 230
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save Current as Template...",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 233
+        }
+      },
+      {
+        "comment": "",
+        "key": "Manage Templates…",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 235
+        }
+      },
+      {
+        "comment": "",
+        "key": "Manage Templates...",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 236
+        }
+      },
+      {
+        "comment": "",
+        "key": "Default Template",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 240
+        }
+      },
+      {
+        "comment": "",
+        "key": "• None",
+        "location": {
+          "startingColumn": 57,
+          "startingLine": 241
+        }
+      },
+      {
+        "comment": "",
+        "key": "None",
+        "location": {
+          "startingColumn": 70,
+          "startingLine": 241
+        }
+      },
+      {
+        "comment": "",
+        "key": "Templates",
+        "location": {
+          "startingColumn": 13,
+          "startingLine": 251
+        }
+      },
+      {
+        "comment": "",
+        "key": "Templates",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 252
+        }
+      }
+    ]
+  },
+  "version": 1
+}

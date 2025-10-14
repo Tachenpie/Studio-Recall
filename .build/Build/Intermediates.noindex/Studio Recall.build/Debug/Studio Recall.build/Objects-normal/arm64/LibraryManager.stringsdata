@@ -1,0 +1,24 @@
+{
+  "source": "/Volumes/Projects/Source/Studio Recall/Studio Recall/Managers/LibraryManager.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Library",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 13
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Library…",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 14
+        }
+      }
+    ]
+  },
+  "version": 1
+}

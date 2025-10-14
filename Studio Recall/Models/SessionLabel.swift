@@ -11,6 +11,7 @@ import SwiftUI
 enum LabelAnchor: Codable, Equatable {
     case session
     case rack(UUID)                // rack.id
+	case pedalboard(UUID)          // pedalboard.id
     case deviceInstance(UUID)      // DeviceInstance.id
 }
 
@@ -32,11 +33,44 @@ struct LabelStyleSpec: Codable, Equatable {
 struct SessionLabel: Identifiable, Codable, Equatable {
     var id: UUID = UUID()
     var anchor: LabelAnchor = .session
-    /// Position relative to the *parent’s local origin* in points.
+    /// Position relative to the *parent's local origin* in points.
     var offset: CGPoint = .zero
     var text: String = "Label"
     var style: LabelStyleSpec = .init()
     var isLocked: Bool = false
+    var isNewlyCreated: Bool = false  // Transient flag for glow effect
+    var linkedPresetId: UUID? = nil   // Links label to a user preset for updates
+
+    // Custom decoding for backward compatibility
+    enum CodingKeys: String, CodingKey {
+        case id, anchor, offset, text, style, isLocked, isNewlyCreated, linkedPresetId
+    }
+
+    init(id: UUID = UUID(), anchor: LabelAnchor = .session, offset: CGPoint = .zero,
+         text: String = "Label", style: LabelStyleSpec = .init(), isLocked: Bool = false,
+         isNewlyCreated: Bool = false, linkedPresetId: UUID? = nil) {
+        self.id = id
+        self.anchor = anchor
+        self.offset = offset
+        self.text = text
+        self.style = style
+        self.isLocked = isLocked
+        self.isNewlyCreated = isNewlyCreated
+        self.linkedPresetId = linkedPresetId
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        anchor = try container.decode(LabelAnchor.self, forKey: .anchor)
+        offset = try container.decode(CGPoint.self, forKey: .offset)
+        text = try container.decode(String.self, forKey: .text)
+        style = try container.decode(LabelStyleSpec.self, forKey: .style)
+        isLocked = try container.decode(Bool.self, forKey: .isLocked)
+        // New fields with backward compatibility
+        isNewlyCreated = try container.decodeIfPresent(Bool.self, forKey: .isNewlyCreated) ?? false
+        linkedPresetId = try container.decodeIfPresent(UUID.self, forKey: .linkedPresetId)
+    }
 }
 
 // Codable helper for Color
