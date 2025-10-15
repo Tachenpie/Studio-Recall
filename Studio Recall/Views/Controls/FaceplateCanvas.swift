@@ -32,7 +32,7 @@ struct FaceplateCanvas: View {
 	
 	// local state just for canvas content
 	@State private var draggingControlId: UUID? = nil
-	@State private var selectedShapeInstanceId: UUID? = nil
+	@Binding var selectedShapeInstanceId: UUID?
 	
 	// tuning
 	private let gridStep: CGFloat = 0.005   // Less strict snapping

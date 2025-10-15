@@ -25,6 +25,7 @@ struct ControlEditorWindow: View {
 	@State private var selectedControlId: UUID? = nil
 	@State private var isEditingRegion: Bool = false
 	@State private var activeRegionIndex: Int = 0
+	@State private var selectedShapeInstanceId: UUID? = nil
 	@State private var sidebarTab: ControlSidebarTab = .palette
 	@State private var zoom: CGFloat = 1.0
 	@State private var pan:  CGSize  = .zero
@@ -144,6 +145,7 @@ struct ControlEditorWindow: View {
 					pan: $pan,
 					zoomFocusN: $zoomFocusN,
 					activeSidebarTab: $sidebarTab,
+					selectedShapeInstanceId: $selectedShapeInstanceId,
 					renderStyle: previewStyle,
 					externalOverlay: { parentSize, canvasSize, zoom, pan in
 						// If we don’t have an image, skip.
@@ -276,6 +278,7 @@ struct ControlEditorWindow: View {
 								selectedControlId: $selectedControlId,
 								isEditingRegion: $isEditingRegion,
 								activeRegionIndex: $activeRegionIndex,
+								selectedShapeInstanceId: $selectedShapeInstanceId,
 								isWideFaceplate: isWideFaceplate
 							)
 							.frame(maxWidth: .infinity, alignment: .leading)

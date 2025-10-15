@@ -16,6 +16,7 @@ struct ControlInspector: View {
 	@Binding var selectedControlId: UUID?
 	@Binding var isEditingRegion: Bool
 	@Binding var activeRegionIndex: Int
+	@Binding var selectedShapeInstanceId: UUID?
 	var isWideFaceplate: Bool
 	var focusNameForId: UUID? = nil
 	
@@ -289,6 +290,8 @@ struct ControlInspector: View {
 									rotation: 0
 								)
 								regionBinding.wrappedValue.shapeInstances.append(newInstance)
+								// Automatically select the newly created shape
+								selectedShapeInstanceId = newInstance.id
 							}
 							.buttonStyle(.borderless)
 						}
