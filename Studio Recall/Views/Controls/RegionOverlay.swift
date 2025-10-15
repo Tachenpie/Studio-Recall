@@ -25,6 +25,9 @@ struct RegionOverlay: View {
 
 	@Environment(\.isPanMode) private var isPanMode
 	
+	// Animation state for marching ants
+	@State private var dashPhase: CGFloat = 0
+	
 	var body: some View {
 		// Canvas-pixel geometry
 		let z = max(zoom, 0.0001)
@@ -61,7 +64,7 @@ struct RegionOverlay: View {
 
 					donut
 						.stroke(.black, style: StrokeStyle(lineWidth: hair, dash: dash))
-						.overlay(donut.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashUnit)))
+						.overlay(donut.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashPhase)))
 						.contentShape(donut) // ✅ hit test only in the ring
 						.zIndex(1)
 				} else {
@@ -78,7 +81,7 @@ struct RegionOverlay: View {
 						.stroke(.black, style: StrokeStyle(lineWidth: hair, dash: dash))
 						.overlay(
 							Path { _ in outline }
-								.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashUnit))
+								.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashPhase))
 						)
 						.contentShape(outline)
 						.zIndex(1)
@@ -146,6 +149,14 @@ struct RegionOverlay: View {
 		.frame(width: canvasSize.width, height: canvasSize.height, alignment: .topLeading)
 		.zIndex(10)
 		.allowsHitTesting(false)
+		.onAppear {
+			// Start marching ants animation
+			let z = max(zoom, 0.0001)
+			let dashUnit: CGFloat = 6.0 / z
+			withAnimation(.linear(duration: 0.5).repeatForever(autoreverses: false)) {
+				dashPhase = dashUnit * 2 // Full cycle of the dash pattern
+			}
+		}
 	}
 	
 	// MARK: - Helpers

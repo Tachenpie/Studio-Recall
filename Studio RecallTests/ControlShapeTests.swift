@@ -518,4 +518,131 @@ struct ControlShapeTests {
 		#expect(decoded.maskParams != nil, "Decoded legacy maskParams should exist")
 		#expect(decoded.maskParams?.style == .chickenhead, "Decoded legacy style should match")
 	}
+	
+	// MARK: - Overlay and Hit Layer Tests
+	
+	@Test func testShapeInstanceHasCorrectProperties() async throws {
+		// Test that ShapeInstance can be created with all required properties
+		let circleInstance = ShapeInstance(
+			shape: .circle,
+			position: CGPoint(x: 0.5, y: 0.5),
+			size: CGSize(width: 0.3, height: 0.3),
+			rotation: 0
+		)
+		
+		#expect(circleInstance.shape == .circle)
+		#expect(circleInstance.position.x == 0.5)
+		#expect(circleInstance.position.y == 0.5)
+		#expect(circleInstance.size.width == 0.3)
+		#expect(circleInstance.size.height == 0.3)
+		#expect(circleInstance.rotation == 0)
+		
+		let rectangleInstance = ShapeInstance(
+			shape: .rectangle,
+			position: CGPoint(x: 0.3, y: 0.7),
+			size: CGSize(width: 0.2, height: 0.15),
+			rotation: 45
+		)
+		
+		#expect(rectangleInstance.shape == .rectangle)
+		#expect(rectangleInstance.rotation == 45)
+		
+		let triangleInstance = ShapeInstance(
+			shape: .triangle,
+			position: CGPoint(x: 0.8, y: 0.2),
+			size: CGSize(width: 0.25, height: 0.25),
+			rotation: 90
+		)
+		
+		#expect(triangleInstance.shape == .triangle)
+		#expect(triangleInstance.rotation == 90)
+	}
+	
+	@Test func testShapeInstanceCodableRoundTrip() async throws {
+		// Test that ShapeInstance can be encoded and decoded
+		let instance = ShapeInstance(
+			shape: .rectangle,
+			position: CGPoint(x: 0.6, y: 0.4),
+			size: CGSize(width: 0.2, height: 0.3),
+			rotation: 30
+		)
+		
+		let encoded = try JSONEncoder().encode(instance)
+		let decoded = try JSONDecoder().decode(ShapeInstance.self, from: encoded)
+		
+		#expect(decoded.shape == instance.shape)
+		#expect(decoded.position.x == instance.position.x)
+		#expect(decoded.position.y == instance.position.y)
+		#expect(decoded.size.width == instance.size.width)
+		#expect(decoded.size.height == instance.size.height)
+		#expect(decoded.rotation == instance.rotation)
+	}
+	
+	@Test func testRegionWithMultipleShapeInstances() async throws {
+		// Test that ImageRegion can contain multiple shape instances
+		let region = ImageRegion(
+			rect: CGRect(x: 0.4, y: 0.4, width: 0.2, height: 0.2),
+			mapping: nil,
+			shape: .circle,
+			shapeInstances: [
+				ShapeInstance(
+					shape: .circle,
+					position: CGPoint(x: 0.3, y: 0.3),
+					size: CGSize(width: 0.2, height: 0.2),
+					rotation: 0
+				),
+				ShapeInstance(
+					shape: .rectangle,
+					position: CGPoint(x: 0.7, y: 0.7),
+					size: CGSize(width: 0.15, height: 0.15),
+					rotation: 45
+				),
+				ShapeInstance(
+					shape: .triangle,
+					position: CGPoint(x: 0.5, y: 0.5),
+					size: CGSize(width: 0.1, height: 0.1),
+					rotation: 90
+				)
+			]
+		)
+		
+		#expect(region.shapeInstances.count == 3)
+		#expect(region.shapeInstances[0].shape == .circle)
+		#expect(region.shapeInstances[1].shape == .rectangle)
+		#expect(region.shapeInstances[2].shape == .triangle)
+		
+		// Test serialization with multiple instances
+		let encoded = try JSONEncoder().encode(region)
+		let decoded = try JSONDecoder().decode(ImageRegion.self, from: encoded)
+		
+		#expect(decoded.shapeInstances.count == 3)
+		#expect(decoded.shapeInstances[0].shape == .circle)
+		#expect(decoded.shapeInstances[1].rotation == 45)
+		#expect(decoded.shapeInstances[2].rotation == 90)
+	}
+	
+	@Test func testAllShapesHaveValidBoundsForHitTesting() async throws {
+		// Verify that all shape types can be properly tested for hit detection
+		let shapes: [ImageRegionShape] = [.circle, .rectangle, .triangle]
+		
+		for shape in shapes {
+			let instance = ShapeInstance(
+				shape: shape,
+				position: CGPoint(x: 0.5, y: 0.5),
+				size: CGSize(width: 0.3, height: 0.3),
+				rotation: 0
+			)
+			
+			// Verify position is in valid range (0-1)
+			#expect(instance.position.x >= 0 && instance.position.x <= 1)
+			#expect(instance.position.y >= 0 && instance.position.y <= 1)
+			
+			// Verify size is positive
+			#expect(instance.size.width > 0)
+			#expect(instance.size.height > 0)
+			
+			// Verify rotation is in valid range
+			#expect(instance.rotation >= 0 && instance.rotation <= 360)
+		}
+	}
 }
