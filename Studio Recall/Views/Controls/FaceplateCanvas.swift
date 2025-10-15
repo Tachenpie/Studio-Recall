@@ -32,6 +32,7 @@ struct FaceplateCanvas: View {
 	
 	// local state just for canvas content
 	@State private var draggingControlId: UUID? = nil
+	@State private var selectedShapeInstanceId: UUID? = nil
 	
 	// tuning
 	private let gridStep: CGFloat = 0.005   // Less strict snapping
@@ -132,6 +133,21 @@ struct FaceplateCanvas: View {
 								regions: sel.wrappedValue.regions,
 								maskParams: sel.wrappedValue.regions[idx].maskParams
 							)
+							
+							// Shape instance overlays for the active region
+							if activeRegionIndex == idx {
+								ForEach(sel.wrappedValue.regions[idx].shapeInstances.indices, id: \.self) { shapeIdx in
+									let shapeInstance = sel.wrappedValue.regions[idx].shapeInstances[shapeIdx]
+									if selectedShapeInstanceId == shapeInstance.id {
+										ShapeInstanceOverlay(
+											shapeInstance: shapeInstance,
+											regionRect: sel.wrappedValue.regions[idx].rect,
+											canvasSize: canvasSize,
+											zoom: zoom
+										)
+									}
+								}
+							}
 						}
 					}
 				}
@@ -162,6 +178,33 @@ struct FaceplateCanvas: View {
 									regions: sel.wrappedValue.regions,
 									isEnabled: activeRegionIndex == idx
 								)
+								
+								// Shape instance hit layers for the active region
+								if activeRegionIndex == idx {
+									ForEach(sel.wrappedValue.regions[idx].shapeInstances.indices, id: \.self) { shapeIdx in
+										let shapeInstance = sel.wrappedValue.regions[idx].shapeInstances[shapeIdx]
+										ShapeInstanceHitLayer(
+											shapeInstance: Binding(
+												get: { sel.wrappedValue.regions[idx].shapeInstances[shapeIdx] },
+												set: { newValue in
+													var control = sel.wrappedValue
+													control.regions[idx].shapeInstances[shapeIdx] = newValue
+													sel.wrappedValue = control
+												}
+											),
+											regionRect: sel.wrappedValue.regions[idx].rect,
+											parentSize: parentSize,
+											canvasSize: canvasSize,
+											zoom: zoom,
+											pan: pan,
+											isPanMode: isPanMode,
+											isEnabled: selectedShapeInstanceId == shapeInstance.id
+										)
+										.onTapGesture {
+											selectedShapeInstanceId = shapeInstance.id
+										}
+									}
+								}
 							}
 						}
 						
