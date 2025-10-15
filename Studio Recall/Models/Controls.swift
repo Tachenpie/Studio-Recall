@@ -206,37 +206,69 @@ extension VisualMapping {
 }
 
 enum ImageRegionShape: String, Codable {
-	case rect
 	case circle
-	case wedge       // Wedge pointer (uses maskParams for shape)
-	case line        // Line pointer (uses maskParams for shape)
-	case dot         // Dot pointer (uses maskParams for shape)
-	case pointer     // Rectangular pointer (uses maskParams for shape)
-	case chickenhead // Chickenhead knob pointer (uses maskParams for shape)
-	case knurl       // Knurled edge indicator (uses maskParams for shape)
-	case dLine       // D-shaped line pointer (uses maskParams for shape)
-	case trianglePointer  // Triangle pointer (uses maskParams for shape)
-	case arrowPointer     // Arrow pointer (uses maskParams for shape)
+	case rectangle
+	case triangle
+	
+	// MARK: - Deprecated shapes (for backward compatibility)
+	case rect
+	case wedge
+	case line
+	case dot
+	case pointer
+	case chickenhead
+	case knurl
+	case dLine
+	case trianglePointer
+	case arrowPointer
+	
+	/// Maps deprecated shapes to simplified equivalents
+	var simplified: ImageRegionShape {
+		switch self {
+		case .circle:
+			return .circle
+		case .rectangle, .rect, .line, .dot, .pointer, .chickenhead, .dLine, .arrowPointer:
+			return .rectangle
+		case .triangle, .wedge, .knurl, .trianglePointer:
+			return .triangle
+		}
+	}
 }
 
+/// **Deprecated**: Legacy mask pointer styles - use ImageRegionShape with multiple shape instances instead
 enum MaskPointerStyle: String, Codable, CaseIterable {
-	case wedge      // Triangular wedge from center
-	case line       // Thin line from center
-	case dot        // Small circle at radius
-	case rectangle  // Rectangular pointer
-	case chickenhead // Chickenhead knob pointer
-	case knurl      // Knurled edge indicator
-	case dLine      // D-shaped line pointer
-	case trianglePointer  // Triangle pointer
-	case arrowPointer     // Arrow pointer
+	case wedge
+	case line
+	case dot
+	case rectangle
+	case chickenhead
+	case knurl
+	case dLine
+	case trianglePointer
+	case arrowPointer
 }
 
+/// **Deprecated**: Legacy mask parameters - use ShapeInstance instead
 struct MaskParameters: Codable, Equatable {
 	var style: MaskPointerStyle = .line
-	var angleOffset: Double = -90  // degrees, 0 = right, -90 = top
-	var width: Double = 0.1        // 0...1, thickness of pointer
-	var innerRadius: Double = 0.0  // 0...1, where pointer starts
-	var outerRadius: Double = 1.0  // 0...1, where pointer ends
+	var angleOffset: Double = -90
+	var width: Double = 0.1
+	var innerRadius: Double = 0.0
+	var outerRadius: Double = 1.0
+}
+
+/// A single shape instance within a control region
+struct ShapeInstance: Codable, Equatable, Identifiable {
+	var id: UUID = UUID()
+	var shape: ImageRegionShape = .circle
+	/// Normalized position within region (0-1)
+	var position: CGPoint = CGPoint(x: 0.5, y: 0.5)
+	/// Normalized size within region (0-1)
+	var size: CGSize = CGSize(width: 0.3, height: 0.3)
+	/// Rotation angle in degrees
+	var rotation: Double = 0
+	/// Fill color (optional, will attempt to match faceplate if nil)
+	var fillColor: CodableColor?
 }
 
 struct ImageRegion: Codable, Equatable {
@@ -244,26 +276,26 @@ struct ImageRegion: Codable, Equatable {
 	var rect: CGRect
 	/// How to transform the cropped patch as the control changes
 	var mapping: VisualMapping?
+	/// **Deprecated**: Use shapeInstances instead for new functionality
 	var shape: ImageRegionShape = .circle
-	/// **Deprecated**: Legacy alpha mask system - use shape and maskParams instead
-	/// When true, uses an alpha mask to carve the pointer from the background
+	/// Multiple shape instances for masking (new approach)
+	var shapeInstances: [ShapeInstance] = []
+	/// **Deprecated**: Legacy alpha mask system - use shapeInstances instead
 	var useAlphaMask: Bool = false
-	/// **Deprecated**: Legacy alpha mask system - use shape and maskParams instead
-	/// PNG data for the alpha mask (white = transparent/shows background, black = opaque/blocks background)
-	/// If nil and useAlphaMask is true, generates mask from maskParams
+	/// **Deprecated**: Legacy alpha mask system - use shapeInstances instead
 	var alphaMaskImage: Data? = nil
-	/// Parameters for defining parametric shapes (wedge, line, dot, pointer, chickenhead, knurl, dLine, trianglePointer, arrowPointer)
+	/// **Deprecated**: Legacy parameters - use shapeInstances instead
 	var maskParams: MaskParameters? = nil
 
-	// Custom decoding for backward compatibility
 	enum CodingKeys: String, CodingKey {
-		case rect, mapping, shape, useAlphaMask, alphaMaskImage, maskParams
+		case rect, mapping, shape, shapeInstances, useAlphaMask, alphaMaskImage, maskParams
 	}
 
-	init(rect: CGRect, mapping: VisualMapping? = nil, shape: ImageRegionShape = .circle, useAlphaMask: Bool = false, alphaMaskImage: Data? = nil, maskParams: MaskParameters? = nil) {
+	init(rect: CGRect, mapping: VisualMapping? = nil, shape: ImageRegionShape = .circle, shapeInstances: [ShapeInstance] = [], useAlphaMask: Bool = false, alphaMaskImage: Data? = nil, maskParams: MaskParameters? = nil) {
 		self.rect = rect
 		self.mapping = mapping
 		self.shape = shape
+		self.shapeInstances = shapeInstances
 		self.useAlphaMask = useAlphaMask
 		self.alphaMaskImage = alphaMaskImage
 		self.maskParams = maskParams
@@ -274,6 +306,7 @@ struct ImageRegion: Codable, Equatable {
 		rect = try container.decode(CGRect.self, forKey: .rect)
 		mapping = try container.decodeIfPresent(VisualMapping.self, forKey: .mapping)
 		shape = try container.decodeIfPresent(ImageRegionShape.self, forKey: .shape) ?? .circle
+		shapeInstances = try container.decodeIfPresent([ShapeInstance].self, forKey: .shapeInstances) ?? []
 		useAlphaMask = try container.decodeIfPresent(Bool.self, forKey: .useAlphaMask) ?? false
 		alphaMaskImage = try container.decodeIfPresent(Data.self, forKey: .alphaMaskImage)
 		maskParams = try container.decodeIfPresent(MaskParameters.self, forKey: .maskParams)
@@ -337,6 +370,10 @@ struct CodableColor: Codable, Equatable {
 	// Always return an sRGB Color so SwiftUI renders consistently
 	var color: Color {
 		Color(.sRGB, red: r, green: g, blue: b, opacity: a)
+	}
+	
+	func toColor() -> Color {
+		return color
 	}
 }
 

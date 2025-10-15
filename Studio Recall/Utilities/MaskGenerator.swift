@@ -2,7 +2,11 @@
 //  MaskGenerator.swift
 //  Studio Recall
 //
-//  Generates alpha mask images for carved knob pointers
+//  **DEPRECATED**: This utility is kept only for backward compatibility
+//  with existing sessions that use alpha masks.
+//
+//  For new development, use ShapeInstance with automatic color fill matching.
+//  See IMPLEMENTATION_SimplifiedShapes.md for details.
 //
 
 import Foundation
@@ -16,9 +20,11 @@ import UIKit
 typealias PlatformImage = UIImage
 #endif
 
+/// **DEPRECATED**: Use ShapeInstance with color fill matching instead
 struct MaskGenerator {
-	/// Generate a mask image from parameters
+	/// **DEPRECATED**: Generate a mask image from parameters (kept for backward compatibility)
 	/// Returns PNG data (white = shows pointer/opaque, black = shows background/transparent)
+	@available(*, deprecated, message: "Use ShapeInstance with automatic color fill matching instead")
 	static func generateMask(params: MaskParameters, size: CGSize) -> Data? {
 		let width = Int(size.width)
 		let height = Int(size.height)

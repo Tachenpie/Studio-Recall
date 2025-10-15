@@ -80,8 +80,37 @@ struct ControlImageRenderer: View {
 							
 							GeometryReader { geo in
 								ZStack {
-									if region.useAlphaMask {
-										// Layer 1: Stationary background faceplate (always visible)
+									// Check if using new shape instances approach
+									if !region.shapeInstances.isEmpty {
+										// New approach: Show background faceplate with colored shape fills
+										Image(nsImage: faceplate)
+											.resizable()
+											.interpolation(.high)
+											.antialiased(true)
+											.scaledToFill()
+											.frame(width: canvasSize.width, height: canvasSize.height)
+											.offset(
+												x: -region.rect.midX * canvasSize.width + geo.size.width / 2,
+												y: -region.rect.midY * canvasSize.height + geo.size.height / 2
+											)
+										
+										// Overlay colored shapes that match the faceplate
+										ForEach(region.shapeInstances) { instance in
+											let fillColor = instance.fillColor?.toColor() ?? extractFaceplateColor(from: cg, region: region, canvasSize: canvasSize)
+											
+											shapePath(for: instance, in: geo.size)
+												.fill(fillColor)
+												.modifier(
+													VisualEffect(mapping: region.mapping,
+																 control: control,
+																 resolve: resolveControl,
+																 region: region,
+																 regionSize: geo.size,
+																 regionIndex: idx)
+												)
+										}
+									} else if region.useAlphaMask {
+										// Legacy: Alpha mask rendering
 										Image(nsImage: faceplate)
 											.resizable()
 											.interpolation(.high)
@@ -93,18 +122,14 @@ struct ControlImageRenderer: View {
 												y: -region.rect.midY * canvasSize.height + geo.size.height / 2
 											)
 
-										// Layer 2: Rotating patch visible only where mask is white (pointer areas)
 										if let maskData = region.alphaMaskImage,
 										   let maskImage = NSImage(data: maskData) {
-											let _ = print("🔄 Mask rotation mapping: \(region.mapping?.kind.rawValue ?? "nil"), control: \(control.type), stepIndex: \(control.stepIndex ?? -1), stepAngles: \(control.stepAngles?.description ?? "nil")")
 											patchImage
 												.resizable()
 												.interpolation(.high)
 												.antialiased(true)
 												.scaledToFill()
 												.mask {
-													// Mask: white areas = show patch, black = hide patch
-													// Our mask has white = pointer, so this shows patch only at pointer
 													Image(nsImage: maskImage)
 														.resizable()
 														.interpolation(.high)
@@ -121,7 +146,7 @@ struct ControlImageRenderer: View {
 												)
 										}
 									} else {
-										// Normal rendering when not using alpha mask
+										// Standard rendering
 										patchImage
 											.resizable()
 											.interpolation(.high)
@@ -166,15 +191,25 @@ struct ControlImageRenderer: View {
 											.fill(style: FillStyle(eoFill: true))
 									} else {
 										// Keep normal region clipping for knobs, lights, etc.
-										RegionClipShape(shape: region.shape, maskParams: region.maskParams)
-											.frame(width: geo.size.width, height: geo.size.height)
+										RegionClipShape(
+											shape: region.shape,
+											shapeInstances: region.shapeInstances.isEmpty ? nil : region.shapeInstances,
+											maskParams: region.maskParams
+										)
+										.frame(width: geo.size.width, height: geo.size.height)
 									}
 								}
 							}
 							.frame(width: regionW, height: regionH)
 							.position(x: regionPosX, y: regionPosY)
 							.compositingGroup()
-							.contentShape(RegionClipShape(shape: region.shape, maskParams: region.maskParams))
+							.contentShape(
+								RegionClipShape(
+									shape: region.shape,
+									shapeInstances: region.shapeInstances.isEmpty ? nil : region.shapeInstances,
+									maskParams: region.maskParams
+								)
+							)
 							.id(renderKey(control, regionIndex: idx))
 						} else {
 							EmptyView()
@@ -225,6 +260,94 @@ struct ControlImageRenderer: View {
 							  control.outerValue ?? 0,
 							  control.innerValue ?? 0)
 		}
+	}
+	
+	// MARK: - Shape Instance Helpers
+	
+	private func shapePath(for instance: ShapeInstance, in size: CGSize) -> Path {
+		let rect = CGRect(
+			x: instance.position.x * size.width - (instance.size.width * size.width) / 2,
+			y: instance.position.y * size.height - (instance.size.height * size.height) / 2,
+			width: instance.size.width * size.width,
+			height: instance.size.height * size.height
+		)
+		
+		var path = Path()
+		switch instance.shape.simplified {
+		case .circle:
+			path.addEllipse(in: rect)
+		case .rectangle:
+			path.addRect(rect)
+		case .triangle:
+			let top = CGPoint(x: rect.midX, y: rect.minY)
+			let bottomLeft = CGPoint(x: rect.minX, y: rect.maxY)
+			let bottomRight = CGPoint(x: rect.maxX, y: rect.maxY)
+			path.move(to: top)
+			path.addLine(to: bottomLeft)
+			path.addLine(to: bottomRight)
+			path.closeSubpath()
+		default:
+			path.addEllipse(in: rect)
+		}
+		
+		// Apply rotation
+		if instance.rotation != 0 {
+			let center = CGPoint(x: rect.midX, y: rect.midY)
+			let transform = CGAffineTransform(translationX: center.x, y: center.y)
+				.rotated(by: instance.rotation * .pi / 180)
+				.translatedBy(x: -center.x, y: -center.y)
+			path = path.applying(transform)
+		}
+		
+		return path
+	}
+	
+	private func extractFaceplateColor(from image: CGImage, region: ImageRegion, canvasSize: CGSize) -> Color {
+		// Sample color from the region center in the faceplate image
+		let centerX = Int(region.rect.midX * CGFloat(image.width))
+		let centerY = Int(region.rect.midY * CGFloat(image.height))
+		
+		// Clamp to image bounds
+		let x = max(0, min(image.width - 1, centerX))
+		let y = max(0, min(image.height - 1, centerY))
+		
+		// Sample a small area around the center and average
+		let sampleSize = 5
+		var red: CGFloat = 0
+		var green: CGFloat = 0
+		var blue: CGFloat = 0
+		var count: CGFloat = 0
+		
+		guard let dataProvider = image.dataProvider,
+			  let data = dataProvider.data,
+			  let bytes = CFDataGetBytePtr(data) else {
+			// Fallback to a neutral gray
+			return Color.gray
+		}
+		
+		let bytesPerRow = image.bytesPerRow
+		let bytesPerPixel = image.bitsPerPixel / 8
+		
+		for dy in -sampleSize...sampleSize {
+			for dx in -sampleSize...sampleSize {
+				let sampleX = max(0, min(image.width - 1, x + dx))
+				let sampleY = max(0, min(image.height - 1, y + dy))
+				let offset = sampleY * bytesPerRow + sampleX * bytesPerPixel
+				
+				if offset + 2 < CFDataGetLength(data) {
+					red += CGFloat(bytes[offset]) / 255.0
+					green += CGFloat(bytes[offset + 1]) / 255.0
+					blue += CGFloat(bytes[offset + 2]) / 255.0
+					count += 1
+				}
+			}
+		}
+		
+		if count > 0 {
+			return Color(red: Double(red / count), green: Double(green / count), blue: Double(blue / count))
+		}
+		
+		return Color.gray
 	}
 
 }

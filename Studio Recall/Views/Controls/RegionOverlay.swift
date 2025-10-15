@@ -66,13 +66,21 @@ struct RegionOverlay: View {
 						.zIndex(1)
 				} else {
 					// Inner or non-concentric case
-					let outline = Path { p in
-						p.addPath(pathFor(shape: shape, in: CGRect(x: 0, y: 0, width: w, height: h)))
-					}
-					outline
+					let localRect = CGRect(x: 0, y: 0, width: w, height: h)
+					let clipShape = RegionClipShape(
+						shape: shape,
+						shapeInstances: regions[regionIndex].shapeInstances.isEmpty ? nil : regions[regionIndex].shapeInstances,
+						maskParams: maskParams
+					)
+					let outline = clipShape.path(in: localRect)
+					
+					Path { _ in outline }
 						.stroke(.black, style: StrokeStyle(lineWidth: hair, dash: dash))
-						.overlay(outline.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashUnit)))
-						.contentShape(pathFor(shape: shape, in: CGRect(x: 0, y: 0, width: w, height: h)))
+						.overlay(
+							Path { _ in outline }
+								.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashUnit))
+						)
+						.contentShape(outline)
 						.zIndex(1)
 				}
 
@@ -158,13 +166,9 @@ struct RegionOverlay: View {
 	}
 	
 	private func pathFor(shape: ImageRegionShape, in rect: CGRect) -> Path {
-		switch shape {
-			case .rect:   return Path(rect)
-			case .circle: return Path(ellipseIn: rect)
-			case .wedge, .line, .dot, .pointer, .chickenhead, .knurl, .dLine, .trianglePointer, .arrowPointer:
-				// For parametric shapes, use RegionClipShape to generate the path
-				return RegionClipShape(shape: shape, maskParams: maskParams).path(in: rect)
-		}
+		// Use RegionClipShape for all shapes to ensure consistency
+		let instances = regions[regionIndex].shapeInstances.isEmpty ? nil : regions[regionIndex].shapeInstances
+		return RegionClipShape(shape: shape, shapeInstances: instances, maskParams: maskParams).path(in: rect)
 	}
 	
 	private var isConcentricOuterRegion: Bool {
