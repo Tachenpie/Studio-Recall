@@ -43,7 +43,7 @@ RegionClipShape(shape: shape, maskParams: maskParams)  // ✅ ADDED maskParams
     .fill(Color.clear)
     .frame(width: localSize.width, height: localSize.height)
     .position(x: regionFrame.midX, y: regionFrame.midY)
-    .contentShape(RegionClipShape(shape: shape, maskParams: maskParams))  // ✅ ADDED maskParams
+    .contentShape(RegionClipShape(shape: shape, maskParams: maskParams))  // ✅ Ensures hit testing matches actual shape geometry
     .gesture(...)
     .allowsHitTesting(isEnabled && !isPanMode)
 ```
@@ -53,7 +53,7 @@ RegionClipShape(shape: shape, maskParams: maskParams)  // ✅ ADDED maskParams
 #### ControlShapeTests.swift
 Added two new tests to verify the fix:
 
-1. **testComplexShapesHaveValidPathsForHitTesting**: Verifies that all complex shapes generate valid paths when `maskParams` are provided
+1. **testComplexShapesHaveValidPathsForHitTesting**: Verifies that all complex shapes generate valid, non-empty paths with properly formed geometry when `maskParams` are provided
 2. **testRegionWithComplexShapeAndMaskParamsIsEditable**: Verifies that regions with complex shapes and maskParams retain all properties through serialization
 
 ## Impact
@@ -76,10 +76,10 @@ Added two new tests to verify the fix:
 - ✅ Works with all existing control types (knob, steppedKnob, multiSwitch, button, light, concentricKnob, litButton)
 
 ## Related Files
-- `Studio Recall/Views/Controls/FaceplateCanvas.swift`
-- `Studio Recall/Views/Controls/RegionHitLayer.swift`
-- `Studio Recall/Views/Controls/RegionOverlay.swift` (already correct, used as reference)
-- `Studio Recall/Handlers/RegionClipShape.swift` (no changes needed)
+- `Studio Recall/Views/Controls/FaceplateCanvas.swift` (modified - now passes maskParams)
+- `Studio Recall/Views/Controls/RegionHitLayer.swift` (modified - now uses maskParams)
+- `Studio Recall/Views/Controls/RegionOverlay.swift` (reference implementation - already correctly passed maskParams to RegionClipShape for visual outlining)
+- `Studio Recall/Handlers/RegionClipShape.swift` (no changes needed - already supports maskParams)
 - `Studio RecallTests/ControlShapeTests.swift` (tests added)
 
 ## Testing
