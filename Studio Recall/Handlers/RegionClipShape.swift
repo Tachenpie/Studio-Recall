@@ -10,41 +10,38 @@ import SwiftUI
 /// Clips a view to various shapes at runtime.
 struct RegionClipShape: InsettableShape {
 	var shape: ImageRegionShape
-	var maskParams: MaskParameters?    // For parametric shapes (wedge, line, dot, pointer)
+	var shapeInstances: [ShapeInstance]?  // Multiple shape instances (new approach)
+	var maskParams: MaskParameters?       // Deprecated: For backward compatibility
 	private var insetAmount: CGFloat = 0
 
-	init(shape: ImageRegionShape, maskParams: MaskParameters? = nil) {
+	init(shape: ImageRegionShape, shapeInstances: [ShapeInstance]? = nil, maskParams: MaskParameters? = nil) {
 		self.shape = shape
+		self.shapeInstances = shapeInstances
 		self.maskParams = maskParams
 	}
 
 	func path(in rect: CGRect) -> Path {
 		let r = rect.insetBy(dx: insetAmount, dy: insetAmount)
-		switch shape {
-			case .rect:
+		
+		// New approach: use multiple shape instances
+		if let instances = shapeInstances, !instances.isEmpty {
+			return multiShapePath(in: r, instances: instances)
+		}
+		
+		// Legacy approach: single shape or deprecated complex shapes
+		let simplified = shape.simplified
+		switch simplified {
+			case .circle:
+				return Path(ellipseIn: r)
+			case .rectangle:
 				var p = Path()
 				p.addRect(r)
 				return p
-			case .circle:
-				return Path(ellipseIn: r)
-			case .wedge:
-				return wedgePath(in: r)
-			case .line:
-				return linePath(in: r)
-			case .dot:
-				return dotPath(in: r)
-			case .pointer:
-				return pointerPath(in: r)
-			case .chickenhead:
-				return chickenheadPath(in: r)
-			case .knurl:
-				return knurlPath(in: r)
-			case .dLine:
-				return dLinePath(in: r)
-			case .trianglePointer:
-				return trianglePointerPath(in: r)
-			case .arrowPointer:
-				return arrowPointerPath(in: r)
+			case .triangle:
+				return trianglePath(in: r)
+			default:
+				// Fallback for deprecated shapes
+				return legacyPath(in: r)
 		}
 	}
 
@@ -52,6 +49,99 @@ struct RegionClipShape: InsettableShape {
 		var s = self
 		s.insetAmount += amount
 		return s
+	}
+	
+	// MARK: - Multiple Shape Instances
+	
+	private func multiShapePath(in rect: CGRect, instances: [ShapeInstance]) -> Path {
+		var combinedPath = Path()
+		
+		for instance in instances {
+			// Calculate instance bounds within the region rect
+			let instanceRect = CGRect(
+				x: rect.minX + instance.position.x * rect.width - (instance.size.width * rect.width) / 2,
+				y: rect.minY + instance.position.y * rect.height - (instance.size.height * rect.height) / 2,
+				width: instance.size.width * rect.width,
+				height: instance.size.height * rect.height
+			)
+			
+			var shapePath = Path()
+			switch instance.shape.simplified {
+			case .circle:
+				shapePath.addEllipse(in: instanceRect)
+			case .rectangle:
+				shapePath.addRect(instanceRect)
+			case .triangle:
+				shapePath = instanceTrianglePath(in: instanceRect)
+			default:
+				shapePath.addEllipse(in: instanceRect)
+			}
+			
+			// Apply rotation if specified
+			if instance.rotation != 0 {
+				let center = CGPoint(x: instanceRect.midX, y: instanceRect.midY)
+				let transform = CGAffineTransform(translationX: center.x, y: center.y)
+					.rotated(by: instance.rotation * .pi / 180)
+					.translatedBy(x: -center.x, y: -center.y)
+				shapePath = shapePath.applying(transform)
+			}
+			
+			combinedPath.addPath(shapePath)
+		}
+		
+		return combinedPath
+	}
+	
+	private func instanceTrianglePath(in rect: CGRect) -> Path {
+		var path = Path()
+		// Equilateral triangle pointing up
+		let top = CGPoint(x: rect.midX, y: rect.minY)
+		let bottomLeft = CGPoint(x: rect.minX, y: rect.maxY)
+		let bottomRight = CGPoint(x: rect.maxX, y: rect.maxY)
+		
+		path.move(to: top)
+		path.addLine(to: bottomLeft)
+		path.addLine(to: bottomRight)
+		path.closeSubpath()
+		
+		return path
+	}
+	
+	private func trianglePath(in rect: CGRect) -> Path {
+		return instanceTrianglePath(in: rect)
+	}
+	
+	// MARK: - Legacy Path Support (for backward compatibility)
+	
+	private func legacyPath(in rect: CGRect) -> Path {
+		switch shape {
+			case .rect, .rectangle:
+				var p = Path()
+				p.addRect(rect)
+				return p
+			case .circle:
+				return Path(ellipseIn: rect)
+			case .triangle:
+				return trianglePath(in: rect)
+			case .wedge:
+				return wedgePath(in: rect)
+			case .line:
+				return linePath(in: rect)
+			case .dot:
+				return dotPath(in: rect)
+			case .pointer:
+				return pointerPath(in: rect)
+			case .chickenhead:
+				return chickenheadPath(in: rect)
+			case .knurl:
+				return knurlPath(in: rect)
+			case .dLine:
+				return dLinePath(in: rect)
+			case .trianglePointer:
+				return trianglePointerPath(in: rect)
+			case .arrowPointer:
+				return arrowPointerPath(in: rect)
+		}
 	}
 
 	// MARK: - Parametric Shape Paths

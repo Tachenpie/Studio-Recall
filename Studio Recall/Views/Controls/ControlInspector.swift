@@ -262,87 +262,128 @@ struct ControlInspector: View {
 						.buttonStyle(.borderless)
 					}
 					
-					Picker("Shape", selection: Binding(
+					// Legacy shape picker (for backward compatibility)
+					Picker("Legacy Shape", selection: Binding(
 						get: { regionBinding.wrappedValue.shape },
 						set: { newShape in
 							regionBinding.wrappedValue.shape = newShape
-							// Initialize mask parameters for parametric shapes
-							if [.wedge, .line, .dot, .pointer, .chickenhead, .knurl, .dLine, .trianglePointer, .arrowPointer].contains(newShape) {
-								if regionBinding.wrappedValue.maskParams == nil {
-									regionBinding.wrappedValue.maskParams = MaskParameters()
-								}
-							}
 						}
 					)) {
-						Text("Rectangle").tag(ImageRegionShape.rect)
 						Text("Circle").tag(ImageRegionShape.circle)
-						Text("Wedge").tag(ImageRegionShape.wedge)
-						Text("Line").tag(ImageRegionShape.line)
-						Text("Dot").tag(ImageRegionShape.dot)
-						Text("Pointer").tag(ImageRegionShape.pointer)
-						Text("Chickenhead").tag(ImageRegionShape.chickenhead)
-						Text("Knurl").tag(ImageRegionShape.knurl)
-						Text("D-Line").tag(ImageRegionShape.dLine)
-						Text("Triangle").tag(ImageRegionShape.trianglePointer)
-						Text("Arrow").tag(ImageRegionShape.arrowPointer)
+						Text("Rectangle").tag(ImageRegionShape.rectangle)
+						Text("Triangle").tag(ImageRegionShape.triangle)
 					}
-					.pickerStyle(.menu)
-
-					// Shape parameters for parametric shapes
-					if [.wedge, .line, .dot, .pointer, .chickenhead, .knurl, .dLine, .trianglePointer, .arrowPointer].contains(regionBinding.wrappedValue.shape) {
-						VStack(alignment: .leading, spacing: 12) {
-							Text("Shape Parameters")
+					.pickerStyle(.segmented)
+					
+					// Multiple shape instances (new approach)
+					VStack(alignment: .leading, spacing: 12) {
+						HStack {
+							Text("Shape Instances")
 								.font(.headline)
-
-							Text("Adjust the parameters to customize the shape appearance.")
+							Spacer()
+							Button("Add Shape") {
+								let newInstance = ShapeInstance(
+									shape: .circle,
+									position: CGPoint(x: 0.5, y: 0.5),
+									size: CGSize(width: 0.3, height: 0.3),
+									rotation: 0
+								)
+								regionBinding.wrappedValue.shapeInstances.append(newInstance)
+							}
+							.buttonStyle(.borderless)
+						}
+						
+						Text("Add multiple shapes to define the control mask area. Fill color will match the faceplate.")
+							.font(.caption)
+							.foregroundStyle(.secondary)
+						
+						ForEach(Array(regionBinding.wrappedValue.shapeInstances.enumerated()), id: \.element.id) { idx, instance in
+							VStack(alignment: .leading, spacing: 8) {
+								HStack {
+									Text("Shape \(idx + 1)")
+										.font(.subheadline)
+										.fontWeight(.medium)
+									Spacer()
+									Button("Remove") {
+										regionBinding.wrappedValue.shapeInstances.remove(at: idx)
+									}
+									.buttonStyle(.borderless)
+									.foregroundStyle(.red)
+								}
+								
+								let instanceBinding = Binding<ShapeInstance>(
+									get: { regionBinding.wrappedValue.shapeInstances[idx] },
+									set: { regionBinding.wrappedValue.shapeInstances[idx] = $0 }
+								)
+								
+								// Shape type picker
+								Picker("Type", selection: Binding(
+									get: { instanceBinding.wrappedValue.shape },
+									set: { instanceBinding.wrappedValue.shape = $0 }
+								)) {
+									Text("Circle").tag(ImageRegionShape.circle)
+									Text("Rectangle").tag(ImageRegionShape.rectangle)
+									Text("Triangle").tag(ImageRegionShape.triangle)
+								}
+								.pickerStyle(.segmented)
+								
+								// Position controls
+								VStack(alignment: .leading, spacing: 4) {
+									Text("Position X: \(String(format: "%.2f", instanceBinding.wrappedValue.position.x))")
+										.font(.caption)
+									Slider(value: Binding(
+										get: { instanceBinding.wrappedValue.position.x },
+										set: { instanceBinding.wrappedValue.position.x = $0 }
+									), in: 0.0...1.0, step: 0.01)
+								}
+								
+								VStack(alignment: .leading, spacing: 4) {
+									Text("Position Y: \(String(format: "%.2f", instanceBinding.wrappedValue.position.y))")
+										.font(.caption)
+									Slider(value: Binding(
+										get: { instanceBinding.wrappedValue.position.y },
+										set: { instanceBinding.wrappedValue.position.y = $0 }
+									), in: 0.0...1.0, step: 0.01)
+								}
+								
+								// Size controls
+								VStack(alignment: .leading, spacing: 4) {
+									Text("Width: \(String(format: "%.2f", instanceBinding.wrappedValue.size.width))")
+										.font(.caption)
+									Slider(value: Binding(
+										get: { instanceBinding.wrappedValue.size.width },
+										set: { instanceBinding.wrappedValue.size.width = $0 }
+									), in: 0.05...1.0, step: 0.01)
+								}
+								
+								VStack(alignment: .leading, spacing: 4) {
+									Text("Height: \(String(format: "%.2f", instanceBinding.wrappedValue.size.height))")
+										.font(.caption)
+									Slider(value: Binding(
+										get: { instanceBinding.wrappedValue.size.height },
+										set: { instanceBinding.wrappedValue.size.height = $0 }
+									), in: 0.05...1.0, step: 0.01)
+								}
+								
+								// Rotation control
+								VStack(alignment: .leading, spacing: 4) {
+									Text("Rotation: \(Int(instanceBinding.wrappedValue.rotation))°")
+										.font(.caption)
+									Slider(value: Binding(
+										get: { instanceBinding.wrappedValue.rotation },
+										set: { instanceBinding.wrappedValue.rotation = $0 }
+									), in: 0...360, step: 1)
+								}
+								
+								Divider()
+							}
+						}
+						
+						if regionBinding.wrappedValue.shapeInstances.isEmpty {
+							Text("No shape instances. Add shapes to define the mask area.")
 								.font(.caption)
 								.foregroundStyle(.secondary)
-
-							// Initialize mask parameters if needed
-							let maskParamsBinding = Binding<MaskParameters>(
-								get: { regionBinding.wrappedValue.maskParams ?? MaskParameters() },
-								set: { regionBinding.wrappedValue.maskParams = $0 }
-							)
-
-							// Angle offset
-							VStack(alignment: .leading, spacing: 4) {
-								Text("Angle Offset: \(Int(maskParamsBinding.wrappedValue.angleOffset))°")
-									.font(.caption)
-								Slider(value: Binding(
-									get: { maskParamsBinding.wrappedValue.angleOffset },
-									set: { maskParamsBinding.wrappedValue.angleOffset = $0 }
-								), in: -180...180, step: 1)
-							}
-
-							// Width
-							VStack(alignment: .leading, spacing: 4) {
-								Text("Width: \(String(format: "%.2f", maskParamsBinding.wrappedValue.width))")
-									.font(.caption)
-								Slider(value: Binding(
-									get: { maskParamsBinding.wrappedValue.width },
-									set: { maskParamsBinding.wrappedValue.width = $0 }
-								), in: 0.01...0.5, step: 0.01)
-							}
-
-							// Inner radius
-							VStack(alignment: .leading, spacing: 4) {
-								Text("Inner Radius: \(String(format: "%.2f", maskParamsBinding.wrappedValue.innerRadius))")
-									.font(.caption)
-								Slider(value: Binding(
-									get: { maskParamsBinding.wrappedValue.innerRadius },
-									set: { maskParamsBinding.wrappedValue.innerRadius = $0 }
-								), in: 0.0...1.0, step: 0.01)
-							}
-
-							// Outer radius
-							VStack(alignment: .leading, spacing: 4) {
-								Text("Outer Radius: \(String(format: "%.2f", maskParamsBinding.wrappedValue.outerRadius))")
-									.font(.caption)
-								Slider(value: Binding(
-									get: { maskParamsBinding.wrappedValue.outerRadius },
-									set: { maskParamsBinding.wrappedValue.outerRadius = $0 }
-								), in: 0.0...1.5, step: 0.01)  // Allow > 1.0 to extend beyond region
-							}
+								.italic()
 						}
 					}
 				}

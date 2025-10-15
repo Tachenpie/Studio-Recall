@@ -66,13 +66,21 @@ struct RegionOverlay: View {
 						.zIndex(1)
 				} else {
 					// Inner or non-concentric case
-					let outline = Path { p in
-						p.addPath(pathFor(shape: shape, in: CGRect(x: 0, y: 0, width: w, height: h)))
-					}
-					outline
+					let localRect = CGRect(x: 0, y: 0, width: w, height: h)
+					let clipShape = RegionClipShape(
+						shape: shape,
+						shapeInstances: regions[regionIndex].shapeInstances.isEmpty ? nil : regions[regionIndex].shapeInstances,
+						maskParams: maskParams
+					)
+					let outline = clipShape.path(in: localRect)
+					
+					Path { _ in outline }
 						.stroke(.black, style: StrokeStyle(lineWidth: hair, dash: dash))
-						.overlay(outline.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashUnit)))
-						.contentShape(pathFor(shape: shape, in: CGRect(x: 0, y: 0, width: w, height: h)))
+						.overlay(
+							Path { _ in outline }
+								.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashUnit))
+						)
+						.contentShape(outline)
 						.zIndex(1)
 				}
 

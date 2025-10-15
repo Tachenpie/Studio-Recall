@@ -80,11 +80,17 @@ struct RegionHitLayer: View {
 				let regionFrame = regionFrameInParent(rect: rect)
 				let localSize = regionFrame.size
 				
-				RegionClipShape(shape: shape, maskParams: maskParams)
+				let clipShape = RegionClipShape(
+					shape: shape,
+					shapeInstances: regions[regionIndex].shapeInstances.isEmpty ? nil : regions[regionIndex].shapeInstances,
+					maskParams: maskParams
+				)
+				
+				clipShape
 					.fill(Color.clear)
 					.frame(width: localSize.width, height: localSize.height)
 					.position(x: regionFrame.midX, y: regionFrame.midY)
-					.contentShape(RegionClipShape(shape: shape, maskParams: maskParams))   // ✅ hit testing matches shape
+					.contentShape(clipShape)   // ✅ hit testing matches shape
 					.gesture(isPanMode || !isEnabled ? nil : dragGesture(regionFrame: regionFrame, localSize: localSize))
 					.allowsHitTesting(isEnabled && !isPanMode)
 			}
