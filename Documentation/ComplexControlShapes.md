@@ -17,10 +17,12 @@ A classic pointer style found on many vintage audio equipment knobs. Features a 
 - Classic guitar amplifiers
 
 **Parameters:**
-- `width`: Controls the base width of the pointer (tip is automatically 1/6 of base width)
+- `width`: Controls the base width of the pointer (tip is automatically 1/6 of base width, fixed ratio)
 - `innerRadius`: Starting point of the pointer (typically 0.0)
 - `outerRadius`: End point of the pointer (typically 1.0)
 - `angleOffset`: Rotation angle in degrees (0° = right, -90° = up)
+
+**Note:** The 6:1 base-to-tip taper ratio is currently fixed for authentic vintage appearance. Future versions may allow customization.
 
 ### 2. Knurl
 **Type:** `ImageRegionShape.knurl`
@@ -36,6 +38,8 @@ Represents a knurled edge with multiple small notches around the perimeter, comm
 - `width`: Controls the thickness of individual notches
 - `outerRadius`: Controls the outer edge position
 - Note: Automatically generates 12 evenly-spaced notches
+
+**Current Limitation:** The notch count is fixed at 12 for optimal balance between visual detail and rendering performance. Future versions may allow user-configurable notch counts.
 
 ### 3. D-Line Pointer
 **Type:** `ImageRegionShape.dLine`
@@ -83,7 +87,9 @@ A sophisticated pointer with a narrow shaft and a distinct arrowhead tip.
 - `width`: Controls overall arrow width (shaft is 1/3, head is full width)
 - `innerRadius`: Start of shaft
 - `outerRadius`: Tip of arrowhead
-- Note: Arrow transition occurs at 60% of total length
+- Note: Arrow transition occurs at 60% of total length (fixed proportion)
+
+**Technical Note:** The shaft-to-head transition point at 60% and the 3:1 width ratio are currently fixed for professional appearance. These may become customizable in future versions.
 
 ## Usage
 

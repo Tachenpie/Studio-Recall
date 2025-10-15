@@ -92,11 +92,11 @@ width: Shape-specific dimension (0.0-1.0 scale)
 
 ### Shape-Specific Logic
 
-- **Chickenhead**: Uses 6:1 taper ratio (base:tip) for authentic vintage appearance
+- **Chickenhead**: Uses 6:1 taper ratio (base:tip) for authentic vintage appearance (tip = base/6)
 - **Knurl**: Fixed 12 notches for balance between detail and performance
 - **D-Line**: Semicircular arc drawn with `CGPath.addArc()`
 - **Triangle**: Isosceles triangle with base at innerRadius
-- **Arrow**: Shaft width = 1/3 of total width, transition at 60% length
+- **Arrow**: Shaft width = 1/3 of total width, transition point at 60% of total length
 
 ### Performance Considerations
 
@@ -174,9 +174,11 @@ No migration needed:
 
 ### Known Limitations
 
-- Knurl notch count is fixed at 12 (acceptable for most use cases)
-- Complex shapes don't affect representational view (by design)
-- Arrow and chickenhead proportions are fixed (may want user control)
+- Knurl notch count is fixed at 12 (acceptable for most use cases, future versions may allow customization)
+- Complex shapes don't affect representational view (by design - representational mode uses abstract glyphs)
+- Arrow and chickenhead proportions are fixed (shaft width, taper ratio, transition point - may become user-configurable in future versions)
+
+**Note:** These limitations are documented in the user-facing documentation to set proper expectations.
 
 ## References
 
