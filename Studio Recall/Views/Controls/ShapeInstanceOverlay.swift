@@ -26,6 +26,7 @@ struct ShapeInstanceOverlay: View {
 		let dashUnit: CGFloat = 6.0 / z
 		let dash: [CGFloat] = [dashUnit, dashUnit]
 		let handleSize: CGFloat = 8.0 / z
+		let rotHandleOffset: CGFloat = 20.0 / z
 		
 		ZStack(alignment: .topLeading) {
 			// Shape outline with marching ants
@@ -37,6 +38,7 @@ struct ShapeInstanceOverlay: View {
 					Path { _ in shapePath }
 						.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashPhase))
 				)
+				.frame(width: localSize.width, height: localSize.height)
 			
 			// Corner handles
 			Group {
@@ -79,7 +81,6 @@ struct ShapeInstanceOverlay: View {
 			}
 			
 			// Rotation handle (small circle above the shape)
-			let rotHandleOffset: CGFloat = 20.0 / z
 			Circle()
 				.fill(.white)
 				.frame(width: handleSize, height: handleSize)
@@ -94,6 +95,7 @@ struct ShapeInstanceOverlay: View {
 			.stroke(.black, style: StrokeStyle(lineWidth: hair, dash: [4.0/z, 2.0/z]))
 		}
 		.frame(width: localSize.width, height: localSize.height)
+		.clipped(false)
 		.rotationEffect(.degrees(shapeInstance.rotation), anchor: .center)
 		.position(x: instanceFrame.midX, y: instanceFrame.midY)
 		.frame(width: canvasSize.width, height: canvasSize.height, alignment: .topLeading)
