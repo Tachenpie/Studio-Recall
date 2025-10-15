@@ -275,6 +275,66 @@ struct ControlShapeTests {
 	
 	// MARK: - RegionHitLayer and RegionOverlay Tests
 	
+	// MARK: - ShapeInstance Tests
+	
+	@Test func testShapeInstanceCreation() async throws {
+		let instance = ShapeInstance(
+			shape: .circle,
+			position: CGPoint(x: 0.5, y: 0.5),
+			size: CGSize(width: 0.3, height: 0.3),
+			rotation: 45
+		)
+		
+		#expect(instance.shape == .circle, "Shape should be circle")
+		#expect(instance.position.x == 0.5, "Position X should be 0.5")
+		#expect(instance.position.y == 0.5, "Position Y should be 0.5")
+		#expect(instance.size.width == 0.3, "Width should be 0.3")
+		#expect(instance.size.height == 0.3, "Height should be 0.3")
+		#expect(instance.rotation == 45, "Rotation should be 45")
+	}
+	
+	@Test func testShapeInstanceCodable() async throws {
+		let instance = ShapeInstance(
+			shape: .rectangle,
+			position: CGPoint(x: 0.6, y: 0.4),
+			size: CGSize(width: 0.2, height: 0.4),
+			rotation: 90
+		)
+		
+		let encoded = try JSONEncoder().encode(instance)
+		let decoded = try JSONDecoder().decode(ShapeInstance.self, from: encoded)
+		
+		#expect(decoded.shape == .rectangle, "Shape should persist")
+		#expect(decoded.position.x == 0.6, "Position X should persist")
+		#expect(decoded.position.y == 0.4, "Position Y should persist")
+		#expect(decoded.size.width == 0.2, "Width should persist")
+		#expect(decoded.size.height == 0.4, "Height should persist")
+		#expect(decoded.rotation == 90, "Rotation should persist")
+	}
+	
+	@Test func testShapeInstancesInRegion() async throws {
+		let instance1 = ShapeInstance(shape: .circle, position: CGPoint(x: 0.5, y: 0.5), size: CGSize(width: 0.3, height: 0.3))
+		let instance2 = ShapeInstance(shape: .rectangle, position: CGPoint(x: 0.3, y: 0.7), size: CGSize(width: 0.2, height: 0.1))
+		
+		var region = ImageRegion(
+			rect: CGRect(x: 0.1, y: 0.1, width: 0.8, height: 0.8),
+			shape: .circle
+		)
+		region.shapeInstances = [instance1, instance2]
+		
+		#expect(region.shapeInstances.count == 2, "Should have 2 shape instances")
+		#expect(region.shapeInstances[0].shape == .circle, "First instance should be circle")
+		#expect(region.shapeInstances[1].shape == .rectangle, "Second instance should be rectangle")
+		
+		// Test encoding
+		let encoded = try JSONEncoder().encode(region)
+		let decoded = try JSONDecoder().decode(ImageRegion.self, from: encoded)
+		
+		#expect(decoded.shapeInstances.count == 2, "Shape instances should persist")
+		#expect(decoded.shapeInstances[0].shape == .circle, "First shape should persist")
+		#expect(decoded.shapeInstances[1].shape == .rectangle, "Second shape should persist")
+	}
+	
 	@Test func testSimplifiedShapesHaveValidPathsForHitTesting() async throws {
 		// Test that all simplified shapes generate valid paths for hit testing and outlining
 		let shapes: [ImageRegionShape] = [

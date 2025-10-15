@@ -327,53 +327,10 @@ struct ControlInspector: View {
 								}
 								.pickerStyle(.segmented)
 								
-								// Position controls
-								VStack(alignment: .leading, spacing: 4) {
-									Text("Position X: \(String(format: "%.2f", instanceBinding.wrappedValue.position.x))")
-										.font(.caption)
-									Slider(value: Binding(
-										get: { instanceBinding.wrappedValue.position.x },
-										set: { instanceBinding.wrappedValue.position.x = $0 }
-									), in: 0.0...1.0, step: 0.01)
-								}
-								
-								VStack(alignment: .leading, spacing: 4) {
-									Text("Position Y: \(String(format: "%.2f", instanceBinding.wrappedValue.position.y))")
-										.font(.caption)
-									Slider(value: Binding(
-										get: { instanceBinding.wrappedValue.position.y },
-										set: { instanceBinding.wrappedValue.position.y = $0 }
-									), in: 0.0...1.0, step: 0.01)
-								}
-								
-								// Size controls
-								VStack(alignment: .leading, spacing: 4) {
-									Text("Width: \(String(format: "%.2f", instanceBinding.wrappedValue.size.width))")
-										.font(.caption)
-									Slider(value: Binding(
-										get: { instanceBinding.wrappedValue.size.width },
-										set: { instanceBinding.wrappedValue.size.width = $0 }
-									), in: 0.05...1.0, step: 0.01)
-								}
-								
-								VStack(alignment: .leading, spacing: 4) {
-									Text("Height: \(String(format: "%.2f", instanceBinding.wrappedValue.size.height))")
-										.font(.caption)
-									Slider(value: Binding(
-										get: { instanceBinding.wrappedValue.size.height },
-										set: { instanceBinding.wrappedValue.size.height = $0 }
-									), in: 0.05...1.0, step: 0.01)
-								}
-								
-								// Rotation control
-								VStack(alignment: .leading, spacing: 4) {
-									Text("Rotation: \(Int(instanceBinding.wrappedValue.rotation))°")
-										.font(.caption)
-									Slider(value: Binding(
-										get: { instanceBinding.wrappedValue.rotation },
-										set: { instanceBinding.wrappedValue.rotation = $0 }
-									), in: 0...360, step: 1)
-								}
+								Text("Drag shape directly in the canvas to adjust position, size, and rotation.")
+									.font(.caption)
+									.foregroundStyle(.secondary)
+									.padding(.top, 4)
 								
 								Divider()
 							}
