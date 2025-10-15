@@ -18,7 +18,7 @@ struct ControlEditorView: View {
                     Text(type.displayName).tag(type)
                 }
             }
-			// Shape selector (Circle vs Rectangle)
+			// Shape selector (Circle vs Rectangle vs Complex shapes)
 			Picker("Shape", selection: Binding(
 				get: { control.region?.shape ?? .circle },
 				set: { newShape in
@@ -36,8 +36,13 @@ struct ControlEditorView: View {
 			)) {
 				Text("Circle").tag(ImageRegionShape.circle)
 				Text("Rectangle").tag(ImageRegionShape.rect)
+				Text("Chickenhead").tag(ImageRegionShape.chickenhead)
+				Text("Knurl").tag(ImageRegionShape.knurl)
+				Text("D-Line").tag(ImageRegionShape.dLine)
+				Text("Triangle").tag(ImageRegionShape.trianglePointer)
+				Text("Arrow").tag(ImageRegionShape.arrowPointer)
 			}
-			.pickerStyle(SegmentedPickerStyle())
+			.pickerStyle(MenuPickerStyle())
 
 			// Alpha mask toggle (for carved knob pointers)
 			if control.type == .knob || control.type == .concentricKnob {

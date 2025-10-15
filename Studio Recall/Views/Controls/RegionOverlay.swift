@@ -189,7 +189,7 @@ struct RegionOverlay: View {
 		switch shape {
 			case .rect:   return Path(rect)
 			case .circle: return Path(ellipseIn: rect)
-			case .wedge, .line, .dot, .pointer:
+			case .wedge, .line, .dot, .pointer, .chickenhead, .knurl, .dLine, .trianglePointer, .arrowPointer:
 				// For parametric shapes, use RegionClipShape to generate the path
 				return RegionClipShape(shape: shape, maskParams: maskParams).path(in: rect)
 		}
