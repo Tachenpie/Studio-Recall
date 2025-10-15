@@ -3,7 +3,7 @@
 ## Pull Request Overview
 
 **Branch**: `copilot/enable-editing-complex-shapes`
-**Base**: Latest main with complex shape support already implemented
+**Base**: `0de42c183a2fae6b03078ef4b65166307e00c53e` (Latest main with complex shape support already implemented)
 
 ## Problem Solved
 
@@ -232,10 +232,11 @@ Complete documentation available in:
 
 ## Commits
 
-1. `3bf2ad2` - Initial plan
-2. `0013101` - Add Shape Parameters UI and remove alpha mask toggle
-3. `f223db7` - Remove alpha mask code and fix maskParams passing
-4. `dd4e21a` - Add comprehensive documentation for alpha mask removal
+1. `3bf2ad2b5182c8df1e27bc23529845cb2a2f96a7` - Initial plan
+2. `00131014751a41d0a2dfd37a526a7292718481ea` - Add Shape Parameters UI and remove alpha mask toggle
+3. `f223db7a0294ccd767dd98388fe8bd1b11aaeda9` - Remove alpha mask code and fix maskParams passing
+4. `dd4e21aa37556f4d56815e7254d46d9f383e768b` - Add comprehensive documentation for alpha mask removal
+5. `81fae7d714c1b6bd74d900676d793232c31d58ba` - Add final summary of all changes
 
 ## Related Issues
 
