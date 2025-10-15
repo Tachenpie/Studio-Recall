@@ -352,13 +352,7 @@ struct ShapeInstanceHitLayer: View {
 	}
 }
 
-// MARK: - Extensions
-
-extension Comparable {
-	func clamped(to range: ClosedRange<Self>) -> Self {
-		return min(max(self, range.lowerBound), range.upperBound)
-	}
-}
+// MARK: - macOS cursors
 
 #if os(macOS)
 import AppKit
