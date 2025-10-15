@@ -220,4 +220,76 @@ struct ControlShapeTests {
 		#expect(decoded.regions[0].shape == .chickenhead, "First region should be chickenhead")
 		#expect(decoded.regions[1].shape == .knurl, "Second region should be knurl")
 	}
+	
+	// MARK: - RegionHitLayer and RegionOverlay Tests
+	
+	@Test func testComplexShapesHaveValidPathsForHitTesting() async throws {
+		// Test that all complex shapes generate valid paths for hit testing and outlining
+		let complexShapes: [ImageRegionShape] = [
+			.chickenhead, .knurl, .dLine, .trianglePointer, .arrowPointer
+		]
+		
+		let testRect = CGRect(x: 0, y: 0, width: 100, height: 100)
+		
+		for shape in complexShapes {
+			let maskParams = MaskParameters(
+				style: .line,  // Use a default style
+				angleOffset: -90,
+				width: 0.1,
+				innerRadius: 0.0,
+				outerRadius: 1.0
+			)
+			
+			// Test path generation with maskParams
+			let clipShape = RegionClipShape(shape: shape, maskParams: maskParams)
+			let path = clipShape.path(in: testRect)
+			
+			#expect(!path.isEmpty, "Path for \(shape) with maskParams should not be empty")
+			
+			// Test that the path can be used for content shape (hit testing)
+			let contentShape = RegionClipShape(shape: shape, maskParams: maskParams)
+			let contentPath = contentShape.path(in: testRect)
+			#expect(!contentPath.isEmpty, "Content path for \(shape) should not be empty")
+		}
+	}
+	
+	@Test func testRegionWithComplexShapeAndMaskParamsIsEditable() async throws {
+		// This test verifies that a region with complex shape and maskParams
+		// has all the necessary properties to be properly rendered and edited
+		let complexShapes: [ImageRegionShape] = [
+			.chickenhead, .knurl, .dLine, .trianglePointer, .arrowPointer
+		]
+		
+		for shape in complexShapes {
+			let maskParams = MaskParameters(
+				style: .chickenhead,
+				angleOffset: -90,
+				width: 0.1,
+				innerRadius: 0.0,
+				outerRadius: 1.0
+			)
+			
+			let region = ImageRegion(
+				rect: CGRect(x: 0.4, y: 0.4, width: 0.2, height: 0.2),
+				mapping: .rotate(min: -135, max: 135),
+				shape: shape,
+				useAlphaMask: true,
+				maskParams: maskParams
+			)
+			
+			// Verify all properties are set correctly
+			#expect(region.shape == shape, "Region shape should be \(shape)")
+			#expect(region.maskParams != nil, "Region should have maskParams")
+			#expect(region.maskParams?.angleOffset == -90, "MaskParams angleOffset should be preserved")
+			#expect(region.maskParams?.width == 0.1, "MaskParams width should be preserved")
+			
+			// Verify that the region can be serialized (important for editing persistence)
+			let encoded = try JSONEncoder().encode(region)
+			let decoded = try JSONDecoder().decode(ImageRegion.self, from: encoded)
+			
+			#expect(decoded.shape == shape, "Decoded shape should match")
+			#expect(decoded.maskParams != nil, "Decoded region should retain maskParams")
+			#expect(decoded.maskParams?.angleOffset == -90, "Decoded maskParams should retain angleOffset")
+		}
+	}
 }

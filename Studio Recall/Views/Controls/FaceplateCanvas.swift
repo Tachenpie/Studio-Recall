@@ -150,6 +150,7 @@ struct FaceplateCanvas: View {
 									pan: pan,
 									isPanMode: isPanMode,
 									shape: sel.wrappedValue.regions[idx].shape,
+									maskParams: sel.wrappedValue.regions[idx].maskParams,
 									controlType: sel.wrappedValue.type,
 									regionIndex: idx,
 									regions: sel.wrappedValue.regions,
