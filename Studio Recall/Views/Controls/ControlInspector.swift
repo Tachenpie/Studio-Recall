@@ -288,132 +288,60 @@ struct ControlInspector: View {
 					}
 					.pickerStyle(.menu)
 
-					// Alpha mask toggle (for carved knob pointers)
-					if binding.wrappedValue.type == .knob || binding.wrappedValue.type == .concentricKnob || binding.wrappedValue.type == .steppedKnob {
-						Toggle("Use Alpha Mask (Carved Pointer)", isOn: Binding(
-							get: { regionBinding.wrappedValue.useAlphaMask },
-							set: { newValue in
-								regionBinding.wrappedValue.useAlphaMask = newValue
-								// Initialize mask parameters when enabling
-								if newValue && regionBinding.wrappedValue.maskParams == nil {
-									regionBinding.wrappedValue.maskParams = MaskParameters()
-								}
-							}
-						))
-						.help("When enabled, the knob pointer is carved from the background using a mask")
+					// Shape parameters for parametric shapes
+					if [.wedge, .line, .dot, .pointer, .chickenhead, .knurl, .dLine, .trianglePointer, .arrowPointer].contains(regionBinding.wrappedValue.shape) {
+						VStack(alignment: .leading, spacing: 12) {
+							Text("Shape Parameters")
+								.font(.headline)
 
-						if regionBinding.wrappedValue.useAlphaMask {
-							VStack(alignment: .leading, spacing: 12) {
-								Text("Mask Parameters")
-									.font(.headline)
-
-								Text("Adjust sliders to paint the pointer shape. White = opaque (shows pointer), Black = transparent (shows background).")
-									.font(.caption)
-									.foregroundStyle(.secondary)
-
-								// Initialize mask parameters if needed
-								let maskParamsBinding = Binding<MaskParameters>(
-									get: { regionBinding.wrappedValue.maskParams ?? MaskParameters() },
-									set: { regionBinding.wrappedValue.maskParams = $0 }
-								)
-
-								// Pointer style picker
-								Picker("Pointer Style", selection: Binding(
-									get: { maskParamsBinding.wrappedValue.style },
-									set: { maskParamsBinding.wrappedValue.style = $0 }
-								)) {
-									Text("Line").tag(MaskPointerStyle.line)
-									Text("Wedge").tag(MaskPointerStyle.wedge)
-									Text("Dot").tag(MaskPointerStyle.dot)
-									Text("Rectangle").tag(MaskPointerStyle.rectangle)
-									Text("Chickenhead").tag(MaskPointerStyle.chickenhead)
-									Text("Knurl").tag(MaskPointerStyle.knurl)
-									Text("D-Line").tag(MaskPointerStyle.dLine)
-									Text("Triangle").tag(MaskPointerStyle.trianglePointer)
-									Text("Arrow").tag(MaskPointerStyle.arrowPointer)
-								}
-
-								// Angle offset
-								VStack(alignment: .leading, spacing: 4) {
-									Text("Angle Offset: \(Int(maskParamsBinding.wrappedValue.angleOffset))°")
-										.font(.caption)
-									Slider(value: Binding(
-										get: { maskParamsBinding.wrappedValue.angleOffset },
-										set: { maskParamsBinding.wrappedValue.angleOffset = $0 }
-									), in: -180...180, step: 1)
-								}
-
-								// Width
-								VStack(alignment: .leading, spacing: 4) {
-									Text("Width: \(String(format: "%.2f", maskParamsBinding.wrappedValue.width))")
-										.font(.caption)
-									Slider(value: Binding(
-										get: { maskParamsBinding.wrappedValue.width },
-										set: { maskParamsBinding.wrappedValue.width = $0 }
-									), in: 0.01...0.5, step: 0.01)
-								}
-
-								// Inner radius
-								VStack(alignment: .leading, spacing: 4) {
-									Text("Inner Radius: \(String(format: "%.2f", maskParamsBinding.wrappedValue.innerRadius))")
-										.font(.caption)
-									Slider(value: Binding(
-										get: { maskParamsBinding.wrappedValue.innerRadius },
-										set: { maskParamsBinding.wrappedValue.innerRadius = $0 }
-									), in: 0.0...1.0, step: 0.01)
-								}
-
-								// Outer radius
-								VStack(alignment: .leading, spacing: 4) {
-									Text("Outer Radius: \(String(format: "%.2f", maskParamsBinding.wrappedValue.outerRadius))")
-										.font(.caption)
-									Slider(value: Binding(
-										get: { maskParamsBinding.wrappedValue.outerRadius },
-										set: { maskParamsBinding.wrappedValue.outerRadius = $0 }
-									), in: 0.0...1.5, step: 0.01)  // Allow > 1.0 to extend beyond region
-								}
-
-								// Generate button
-								HStack {
-									Button("Apply Mask to Control") {
-										// Use actual pixel size (need to get from faceplate or use reasonable default)
-										// For now, use a fixed high-res size - the mask will scale
-										let size = CGSize(width: 512, height: 512)
-										print("💾 Generating mask at size: \(size)")
-										if let maskData = MaskGenerator.generateMask(params: maskParamsBinding.wrappedValue, size: size) {
-											regionBinding.wrappedValue.alphaMaskImage = maskData
-											print("✅ Mask saved! Data size: \(maskData.count) bytes")
-										} else {
-											print("❌ Failed to generate mask")
-										}
-									}
-									.buttonStyle(.borderedProminent)
-
-									if regionBinding.wrappedValue.alphaMaskImage != nil {
-										Button("Clear Mask") {
-											regionBinding.wrappedValue.alphaMaskImage = nil
-										}
-										.buttonStyle(.borderless)
-										.foregroundColor(.red)
-									}
-								}
-
-								Divider()
-
-								// Manual load option
-								Button("Load Custom Mask from File...") {
-#if os(macOS)
-									let panel = NSOpenPanel()
-									panel.allowedContentTypes = [.png, .jpeg, .tiff]
-									panel.allowsMultipleSelection = false
-									panel.message = "Select a mask image (white = shows background, black = blocks)"
-									if panel.runModal() == .OK, let url = panel.url, let data = try? Data(contentsOf: url) {
-										regionBinding.wrappedValue.alphaMaskImage = data
-									}
-#endif
-								}
-								.buttonStyle(.borderless)
+							Text("Adjust the parameters to customize the shape appearance.")
 								.font(.caption)
+								.foregroundStyle(.secondary)
+
+							// Initialize mask parameters if needed
+							let maskParamsBinding = Binding<MaskParameters>(
+								get: { regionBinding.wrappedValue.maskParams ?? MaskParameters() },
+								set: { regionBinding.wrappedValue.maskParams = $0 }
+							)
+
+							// Angle offset
+							VStack(alignment: .leading, spacing: 4) {
+								Text("Angle Offset: \(Int(maskParamsBinding.wrappedValue.angleOffset))°")
+									.font(.caption)
+								Slider(value: Binding(
+									get: { maskParamsBinding.wrappedValue.angleOffset },
+									set: { maskParamsBinding.wrappedValue.angleOffset = $0 }
+								), in: -180...180, step: 1)
+							}
+
+							// Width
+							VStack(alignment: .leading, spacing: 4) {
+								Text("Width: \(String(format: "%.2f", maskParamsBinding.wrappedValue.width))")
+									.font(.caption)
+								Slider(value: Binding(
+									get: { maskParamsBinding.wrappedValue.width },
+									set: { maskParamsBinding.wrappedValue.width = $0 }
+								), in: 0.01...0.5, step: 0.01)
+							}
+
+							// Inner radius
+							VStack(alignment: .leading, spacing: 4) {
+								Text("Inner Radius: \(String(format: "%.2f", maskParamsBinding.wrappedValue.innerRadius))")
+									.font(.caption)
+								Slider(value: Binding(
+									get: { maskParamsBinding.wrappedValue.innerRadius },
+									set: { maskParamsBinding.wrappedValue.innerRadius = $0 }
+								), in: 0.0...1.0, step: 0.01)
+							}
+
+							// Outer radius
+							VStack(alignment: .leading, spacing: 4) {
+								Text("Outer Radius: \(String(format: "%.2f", maskParamsBinding.wrappedValue.outerRadius))")
+									.font(.caption)
+								Slider(value: Binding(
+									get: { maskParamsBinding.wrappedValue.outerRadius },
+									set: { maskParamsBinding.wrappedValue.outerRadius = $0 }
+								), in: 0.0...1.5, step: 0.01)  // Allow > 1.0 to extend beyond region
 							}
 						}
 					}

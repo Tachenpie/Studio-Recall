@@ -124,7 +124,7 @@ struct FaceplateCanvas: View {
 								controlType: sel.wrappedValue.type,
 								regionIndex: idx,
 								regions: sel.wrappedValue.regions,
-								maskParams: sel.wrappedValue.regions[idx].useAlphaMask ? sel.wrappedValue.regions[idx].maskParams : nil
+								maskParams: sel.wrappedValue.regions[idx].maskParams
 							)
 						}
 					}

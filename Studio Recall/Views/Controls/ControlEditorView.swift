@@ -44,26 +44,6 @@ struct ControlEditorView: View {
 			}
 			.pickerStyle(MenuPickerStyle())
 
-			// Alpha mask toggle (for carved knob pointers)
-			if control.type == .knob || control.type == .concentricKnob {
-				Toggle("Use Alpha Mask (Carved Pointer)", isOn: Binding(
-					get: { control.region?.useAlphaMask ?? false },
-					set: { newValue in
-						if control.region == nil {
-							control.region = ImageRegion(
-								rect: .init(x: 0, y: 0, width: ImageRegion.defaultSize, height: ImageRegion.defaultSize),
-								mapping: nil,
-								shape: .circle,
-								useAlphaMask: newValue
-							)
-						} else {
-							control.region?.useAlphaMask = newValue
-						}
-					}
-				))
-				.help("When enabled, the knob pointer is carved from the background using the patch's alpha channel")
-			}
-
             if control.type == .multiSwitch {
                 TextField("Options (comma separated)", text: Binding(
                     get: { control.options?.joined(separator: ", ") ?? "" },
