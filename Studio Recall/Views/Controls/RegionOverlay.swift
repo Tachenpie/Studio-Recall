@@ -77,10 +77,10 @@ struct RegionOverlay: View {
 					)
 					let outline = clipShape.path(in: localRect)
 					
-					Path { _ in outline }
+					Path(outline)
 						.stroke(.black, style: StrokeStyle(lineWidth: hair, dash: dash))
 						.overlay(
-							Path { _ in outline }
+							Path(outline)
 								.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashPhase))
 						)
 						.contentShape(outline)

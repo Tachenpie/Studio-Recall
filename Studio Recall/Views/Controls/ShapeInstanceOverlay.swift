@@ -32,10 +32,10 @@ struct ShapeInstanceOverlay: View {
 			// Shape outline with marching ants
 			let shapePath = createShapePath(in: CGRect(origin: .zero, size: localSize))
 			
-			Path { _ in shapePath }
+			Path(shapePath)
 				.stroke(.black, style: StrokeStyle(lineWidth: hair, dash: dash))
 				.overlay(
-					Path { _ in shapePath }
+					Path(shapePath)
 						.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashPhase))
 				)
 				.frame(width: localSize.width, height: localSize.height)

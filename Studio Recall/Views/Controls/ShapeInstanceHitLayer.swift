@@ -36,10 +36,10 @@ struct ShapeInstanceHitLayer: View {
 			// Main shape hit area
 			let shapePath = createShapePath(in: CGRect(origin: .zero, size: localSize))
 			
-			Path { _ in shapePath }
+			Path(shapePath)
 				.fill(Color.clear)
 				.frame(width: localSize.width, height: localSize.height)
-				.contentShape(Path { _ in shapePath })
+				.contentShape(Path(shapePath))
 				.rotationEffect(.degrees(shapeInstance.rotation), anchor: .center)
 				.position(x: instanceFrame.midX, y: instanceFrame.midY)
 				.gesture(isPanMode ? nil : dragGesture(instanceFrame: instanceFrame, localSize: localSize))
