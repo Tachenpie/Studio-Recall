@@ -13,6 +13,9 @@ struct ShapeInstanceOverlay: View {
 	let canvasSize: CGSize
 	let zoom: CGFloat
 	
+	// Animation state for marching ants
+	@State private var dashPhase: CGFloat = 0
+	
 	var body: some View {
 		let instanceFrame = calculateInstanceFrame()
 		let localSize = instanceFrame.size
@@ -32,7 +35,7 @@ struct ShapeInstanceOverlay: View {
 				.stroke(.black, style: StrokeStyle(lineWidth: hair, dash: dash))
 				.overlay(
 					Path { _ in shapePath }
-						.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashUnit))
+						.stroke(.white, style: StrokeStyle(lineWidth: hair, dash: dash, dashPhase: dashPhase))
 				)
 			
 			// Corner handles
@@ -95,6 +98,14 @@ struct ShapeInstanceOverlay: View {
 		.position(x: instanceFrame.midX, y: instanceFrame.midY)
 		.frame(width: canvasSize.width, height: canvasSize.height, alignment: .topLeading)
 		.allowsHitTesting(false)
+		.onAppear {
+			// Start marching ants animation
+			let z = max(zoom, 0.0001)
+			let dashUnit: CGFloat = 6.0 / z
+			withAnimation(.linear(duration: 0.5).repeatForever(autoreverses: false)) {
+				dashPhase = dashUnit * 2 // Full cycle of the dash pattern
+			}
+		}
 	}
 	
 	private func handleSquare(size: CGFloat, hair: CGFloat) -> some View {
