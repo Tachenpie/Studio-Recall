@@ -183,6 +183,7 @@ struct FaceplateCanvas: View {
 								if activeRegionIndex == idx {
 									ForEach(sel.wrappedValue.regions[idx].shapeInstances.indices, id: \.self) { shapeIdx in
 										let shapeInstance = sel.wrappedValue.regions[idx].shapeInstances[shapeIdx]
+										let isSelected = selectedShapeInstanceId == shapeInstance.id
 										ShapeInstanceHitLayer(
 											shapeInstance: Binding(
 												get: { sel.wrappedValue.regions[idx].shapeInstances[shapeIdx] },
@@ -198,11 +199,11 @@ struct FaceplateCanvas: View {
 											zoom: zoom,
 											pan: pan,
 											isPanMode: isPanMode,
-											isEnabled: selectedShapeInstanceId == shapeInstance.id
+											isEnabled: isSelected,
+											onSelect: {
+												selectedShapeInstanceId = shapeInstance.id
+											}
 										)
-										.onTapGesture {
-											selectedShapeInstanceId = shapeInstance.id
-										}
 									}
 								}
 							}

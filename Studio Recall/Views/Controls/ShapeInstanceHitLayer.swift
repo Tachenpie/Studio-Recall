@@ -16,6 +16,7 @@ struct ShapeInstanceHitLayer: View {
 	let pan: CGSize
 	var isPanMode: Bool = false
 	var isEnabled: Bool = true
+	var onSelect: (() -> Void)? = nil
 	
 	// Drag state
 	@State private var dragStartInstance: ShapeInstance? = nil
@@ -41,18 +42,20 @@ struct ShapeInstanceHitLayer: View {
 				.contentShape(Path { _ in shapePath })
 				.rotationEffect(.degrees(shapeInstance.rotation), anchor: .center)
 				.position(x: instanceFrame.midX, y: instanceFrame.midY)
-				.gesture(isPanMode || !isEnabled ? nil : dragGesture(instanceFrame: instanceFrame, localSize: localSize))
+				.gesture(isPanMode ? nil : dragGesture(instanceFrame: instanceFrame, localSize: localSize))
 			
-			// Rotation handle
-			let rotHandleY = instanceFrame.minY - rotHandleOffsetPx / zoom
-			Circle()
-				.fill(Color.clear)
-				.frame(width: 16.0 / zoom, height: 16.0 / zoom)
-				.contentShape(Circle())
-				.position(x: instanceFrame.midX, y: rotHandleY)
-				.gesture(isPanMode || !isEnabled ? nil : rotationGesture(instanceFrame: instanceFrame))
+			// Rotation handle (only for selected shapes)
+			if isEnabled {
+				let rotHandleY = instanceFrame.minY - rotHandleOffsetPx / zoom
+				Circle()
+					.fill(Color.clear)
+					.frame(width: 16.0 / zoom, height: 16.0 / zoom)
+					.contentShape(Circle())
+					.position(x: instanceFrame.midX, y: rotHandleY)
+					.gesture(isPanMode ? nil : rotationGesture(instanceFrame: instanceFrame))
+			}
 		}
-		.allowsHitTesting(isEnabled && !isPanMode)
+		.allowsHitTesting(!isPanMode)
 	}
 	
 	// MARK: - Gestures
@@ -61,6 +64,9 @@ struct ShapeInstanceHitLayer: View {
 		DragGesture(minimumDistance: 0)
 			.onChanged { gesture in
 				if mode == .idle {
+					// Select this shape instance
+					onSelect?()
+					
 					// Start drag
 					mode = .dragging
 					dragStartInstance = shapeInstance
@@ -82,6 +88,9 @@ struct ShapeInstanceHitLayer: View {
 				}
 				
 				guard let startInstance = dragStartInstance else { return }
+				
+				// Only allow editing if shape is enabled/selected
+				guard isEnabled else { return }
 				
 				// Calculate delta in normalized region coordinates
 				let dx = gesture.translation.width / zoom / (regionRect.width * canvasSize.width)
@@ -112,12 +121,18 @@ struct ShapeInstanceHitLayer: View {
 		DragGesture(minimumDistance: 0)
 			.onChanged { gesture in
 				if mode == .idle {
+					// Select on start
+					onSelect?()
+					
 					mode = .rotating
 					dragStartInstance = shapeInstance
 #if os(macOS)
 					NSCursor.crosshair.push()
 #endif
 				}
+				
+				// Only allow rotation if shape is enabled/selected
+				guard isEnabled else { return }
 				
 				// Calculate angle from shape center to current drag point
 				let center = CGPoint(x: instanceFrame.midX, y: instanceFrame.midY)
