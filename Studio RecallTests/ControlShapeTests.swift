@@ -292,4 +292,79 @@ struct ControlShapeTests {
 			#expect(decoded.maskParams?.angleOffset == -90, "Decoded maskParams should retain angleOffset")
 		}
 	}
+	
+	// MARK: - Shape Parameters Editability Tests
+	
+	@Test func testComplexShapesHaveEditableMaskParameters() async throws {
+		// Verify that complex shapes can have their maskParams edited
+		let complexShapes: [ImageRegionShape] = [
+			.chickenhead, .knurl, .dLine, .trianglePointer, .arrowPointer
+		]
+		
+		for shape in complexShapes {
+			var region = ImageRegion(
+				rect: CGRect(x: 0.4, y: 0.4, width: 0.2, height: 0.2),
+				mapping: .rotate(min: -135, max: 135),
+				shape: shape,
+				maskParams: MaskParameters(
+					style: .chickenhead,
+					angleOffset: -90,
+					width: 0.1,
+					innerRadius: 0.0,
+					outerRadius: 1.0
+				)
+			)
+			
+			// Simulate editing the parameters
+			region.maskParams?.angleOffset = 45
+			region.maskParams?.width = 0.2
+			region.maskParams?.innerRadius = 0.2
+			region.maskParams?.outerRadius = 0.8
+			
+			// Verify the changes persisted
+			#expect(region.maskParams?.angleOffset == 45, "Angle offset should be updated")
+			#expect(region.maskParams?.width == 0.2, "Width should be updated")
+			#expect(region.maskParams?.innerRadius == 0.2, "Inner radius should be updated")
+			#expect(region.maskParams?.outerRadius == 0.8, "Outer radius should be updated")
+			
+			// Verify the changes persist through serialization
+			let encoded = try JSONEncoder().encode(region)
+			let decoded = try JSONDecoder().decode(ImageRegion.self, from: encoded)
+			
+			#expect(decoded.maskParams?.angleOffset == 45, "Decoded angle offset should match")
+			#expect(decoded.maskParams?.width == 0.2, "Decoded width should match")
+			#expect(decoded.maskParams?.innerRadius == 0.2, "Decoded inner radius should match")
+			#expect(decoded.maskParams?.outerRadius == 0.8, "Decoded outer radius should match")
+		}
+	}
+	
+	@Test func testMaskParametersIndependentFromAlphaMask() async throws {
+		// Verify that maskParams work independently of the deprecated useAlphaMask flag
+		let region = ImageRegion(
+			rect: CGRect(x: 0.4, y: 0.4, width: 0.2, height: 0.2),
+			mapping: .rotate(min: -135, max: 135),
+			shape: .chickenhead,
+			useAlphaMask: false,  // Deprecated flag set to false
+			maskParams: MaskParameters(
+				style: .chickenhead,
+				angleOffset: -90,
+				width: 0.15,
+				innerRadius: 0.1,
+				outerRadius: 0.9
+			)
+		)
+		
+		// Verify that maskParams are available even when useAlphaMask is false
+		#expect(region.maskParams != nil, "MaskParams should exist independent of useAlphaMask")
+		#expect(region.maskParams?.style == .chickenhead, "MaskParams style should be preserved")
+		#expect(region.maskParams?.width == 0.15, "MaskParams width should be preserved")
+		
+		// Verify serialization
+		let encoded = try JSONEncoder().encode(region)
+		let decoded = try JSONDecoder().decode(ImageRegion.self, from: encoded)
+		
+		#expect(decoded.maskParams != nil, "Decoded maskParams should exist")
+		#expect(decoded.maskParams?.style == .chickenhead, "Decoded style should match")
+		#expect(decoded.useAlphaMask == false, "Deprecated useAlphaMask should be false")
+	}
 }

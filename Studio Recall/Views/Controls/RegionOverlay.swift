@@ -42,34 +42,6 @@ struct RegionOverlay: View {
 		let showEdgeHandles = minSide >= 44   // hide edge handles when very small
 		
 		ZStack(alignment: .topLeading) {
-			// Mask preview overlay at canvas level (before region-local container)
-			let _ = print("🔍 RegionOverlay: maskParams=\(maskParams != nil ? "EXISTS" : "NIL"), controlType=\(controlType)")
-			if let maskParams = maskParams,
-			   (controlType == .knob || controlType == .concentricKnob || controlType == .steppedKnob) {
-				let maskSize = CGSize(width: w, height: h)
-				if let maskData = MaskGenerator.generateMask(params: maskParams, size: maskSize),
-				   let maskImage = NSImage(data: maskData) {
-					// Show white areas with a bright color overlay
-					ZStack {
-						// Bright green tint where the mask is white (pointer areas)
-						Image(nsImage: maskImage)
-							.resizable()
-							.frame(width: w, height: h)
-							.colorMultiply(.green)
-							.opacity(0.5)
-
-						// Also show the mask itself with less opacity for reference
-						Image(nsImage: maskImage)
-							.resizable()
-							.frame(width: w, height: h)
-							.opacity(0.3)
-					}
-					.allowsHitTesting(false)
-					.position(x: x + w/2, y: y + h/2)
-					.zIndex(5) // Below handles but above strokes
-				}
-			}
-
 			ZStack(alignment: .topLeading) {
 				// 1) Region-local container positioned at (x,y), sized (w,h)
 				let pair = concentricPairIndices(regions)

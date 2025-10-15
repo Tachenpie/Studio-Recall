@@ -166,7 +166,7 @@ struct ControlImageRenderer: View {
 											.fill(style: FillStyle(eoFill: true))
 									} else {
 										// Keep normal region clipping for knobs, lights, etc.
-										RegionClipShape(shape: region.shape)
+										RegionClipShape(shape: region.shape, maskParams: region.maskParams)
 											.frame(width: geo.size.width, height: geo.size.height)
 									}
 								}
@@ -174,7 +174,7 @@ struct ControlImageRenderer: View {
 							.frame(width: regionW, height: regionH)
 							.position(x: regionPosX, y: regionPosY)
 							.compositingGroup()
-							.contentShape(RegionClipShape(shape: region.shape))
+							.contentShape(RegionClipShape(shape: region.shape, maskParams: region.maskParams))
 							.id(renderKey(control, regionIndex: idx))
 						} else {
 							EmptyView()

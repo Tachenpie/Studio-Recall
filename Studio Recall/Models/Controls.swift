@@ -245,12 +245,14 @@ struct ImageRegion: Codable, Equatable {
 	/// How to transform the cropped patch as the control changes
 	var mapping: VisualMapping?
 	var shape: ImageRegionShape = .circle
+	/// **Deprecated**: Legacy alpha mask system - use shape and maskParams instead
 	/// When true, uses an alpha mask to carve the pointer from the background
 	var useAlphaMask: Bool = false
+	/// **Deprecated**: Legacy alpha mask system - use shape and maskParams instead
 	/// PNG data for the alpha mask (white = transparent/shows background, black = opaque/blocks background)
 	/// If nil and useAlphaMask is true, generates mask from maskParams
 	var alphaMaskImage: Data? = nil
-	/// Parameters for auto-generating a simple geometric mask
+	/// Parameters for defining parametric shapes (wedge, line, dot, pointer, chickenhead, knurl, dLine, trianglePointer, arrowPointer)
 	var maskParams: MaskParameters? = nil
 
 	// Custom decoding for backward compatibility
