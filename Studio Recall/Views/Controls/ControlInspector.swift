@@ -267,7 +267,7 @@ struct ControlInspector: View {
 						set: { newShape in
 							regionBinding.wrappedValue.shape = newShape
 							// Initialize mask parameters for parametric shapes
-							if [.wedge, .line, .dot, .pointer].contains(newShape) {
+							if [.wedge, .line, .dot, .pointer, .chickenhead, .knurl, .dLine, .trianglePointer, .arrowPointer].contains(newShape) {
 								if regionBinding.wrappedValue.maskParams == nil {
 									regionBinding.wrappedValue.maskParams = MaskParameters()
 								}
@@ -280,6 +280,11 @@ struct ControlInspector: View {
 						Text("Line").tag(ImageRegionShape.line)
 						Text("Dot").tag(ImageRegionShape.dot)
 						Text("Pointer").tag(ImageRegionShape.pointer)
+						Text("Chickenhead").tag(ImageRegionShape.chickenhead)
+						Text("Knurl").tag(ImageRegionShape.knurl)
+						Text("D-Line").tag(ImageRegionShape.dLine)
+						Text("Triangle").tag(ImageRegionShape.trianglePointer)
+						Text("Arrow").tag(ImageRegionShape.arrowPointer)
 					}
 					.pickerStyle(.menu)
 
@@ -321,6 +326,11 @@ struct ControlInspector: View {
 									Text("Wedge").tag(MaskPointerStyle.wedge)
 									Text("Dot").tag(MaskPointerStyle.dot)
 									Text("Rectangle").tag(MaskPointerStyle.rectangle)
+									Text("Chickenhead").tag(MaskPointerStyle.chickenhead)
+									Text("Knurl").tag(MaskPointerStyle.knurl)
+									Text("D-Line").tag(MaskPointerStyle.dLine)
+									Text("Triangle").tag(MaskPointerStyle.trianglePointer)
+									Text("Arrow").tag(MaskPointerStyle.arrowPointer)
 								}
 
 								// Angle offset

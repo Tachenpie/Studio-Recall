@@ -212,6 +212,11 @@ enum ImageRegionShape: String, Codable {
 	case line        // Line pointer (uses maskParams for shape)
 	case dot         // Dot pointer (uses maskParams for shape)
 	case pointer     // Rectangular pointer (uses maskParams for shape)
+	case chickenhead // Chickenhead knob pointer (uses maskParams for shape)
+	case knurl       // Knurled edge indicator (uses maskParams for shape)
+	case dLine       // D-shaped line pointer (uses maskParams for shape)
+	case trianglePointer  // Triangle pointer (uses maskParams for shape)
+	case arrowPointer     // Arrow pointer (uses maskParams for shape)
 }
 
 enum MaskPointerStyle: String, Codable, CaseIterable {
@@ -219,6 +224,11 @@ enum MaskPointerStyle: String, Codable, CaseIterable {
 	case line       // Thin line from center
 	case dot        // Small circle at radius
 	case rectangle  // Rectangular pointer
+	case chickenhead // Chickenhead knob pointer
+	case knurl      // Knurled edge indicator
+	case dLine      // D-shaped line pointer
+	case trianglePointer  // Triangle pointer
+	case arrowPointer     // Arrow pointer
 }
 
 struct MaskParameters: Codable, Equatable {
