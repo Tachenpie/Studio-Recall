@@ -155,6 +155,9 @@ Selected shapes display visual handles for manipulation:
 
 ### Manual Testing Checklist
 
+**Note**: This is a template checklist for QA testing. Record results in your test tracking system.
+
+**Visual Appearance**:
 - [ ] Marching ants animate smoothly at default zoom
 - [ ] Marching ants remain visible at 50% zoom
 - [ ] Marching ants remain visible at 200% zoom
@@ -162,12 +165,16 @@ Selected shapes display visual handles for manipulation:
 - [ ] Edge handles appear only for rectangles and triangles
 - [ ] Edge handles hidden for circles
 - [ ] Rotation handle appears for all shape types
+
+**Interaction**:
 - [ ] Movement works smoothly
 - [ ] Corner resize works for all shapes
 - [ ] Edge resize works for rectangles and triangles
 - [ ] Edge resize not available for circles
 - [ ] Rotation works smoothly
 - [ ] Handles scale correctly with zoom
+
+**Dynamic Updates**:
 - [ ] Overlay updates during movement
 - [ ] Overlay updates during resize
 - [ ] Overlay updates during rotation
@@ -190,7 +197,9 @@ See `Studio RecallTests/ControlShapeTests.swift`:
 
 // In body:
 .onAppear {
-    let dashUnit: CGFloat = 6.0 / zoom
+    let dashUnit: CGFloat = 6.0 / zoom  // Match the dash pattern unit (defined as 6.0 / zoom in body)
+    // Duration: 0.5s chosen for smooth, perceptible motion (not too fast, not too slow)
+    // dashUnit * 2: Complete cycle through one black dash + one white dash
     withAnimation(.linear(duration: 0.5).repeatForever(autoreverses: false)) {
         dashPhase = dashUnit * 2
     }
@@ -200,7 +209,7 @@ See `Studio RecallTests/ControlShapeTests.swift`:
 .stroke(.white, style: StrokeStyle(
     lineWidth: hair, 
     dash: dash, 
-    dashPhase: dashPhase  // Animated
+    dashPhase: dashPhase  // Animated value (oscillates between 0 and dashUnit*2)
 ))
 ```
 

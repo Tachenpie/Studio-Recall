@@ -99,7 +99,9 @@ The marching ants effect is achieved through SwiftUI's animation system:
 
 // Animation trigger
 .onAppear {
-    let dashUnit: CGFloat = 6.0 / zoom
+    let dashUnit: CGFloat = 6.0 / zoom  // Dash size in canvas pixels
+    // Duration 0.5s provides smooth, visible motion
+    // dashUnit * 2 = one full cycle through black and white segments
     withAnimation(.linear(duration: 0.5).repeatForever(autoreverses: false)) {
         dashPhase = dashUnit * 2  // One full cycle
     }
@@ -358,4 +360,4 @@ The features are ready for manual testing on macOS to verify visual appearance a
 **Implementation Date**: October 15, 2025  
 **Status**: ✅ Complete - Ready for Manual Testing  
 **Branch**: `copilot/update-marching-ants-feature`  
-**Commits**: 2 (initial analysis + implementation)
+**Note**: This document represents a snapshot at the time of initial implementation.
