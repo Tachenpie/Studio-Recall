@@ -78,7 +78,13 @@ struct FaceplateCanvas: View {
 									onlyRegionIndex: idx
 								)
 								.compositingGroup()
-								.mask { RegionClipShape(shape: region.shape, maskParams: region.maskParams) }
+								.mask { 
+									RegionClipShape(
+										shape: region.shape,
+										shapeInstances: region.shapeInstances.isEmpty ? nil : region.shapeInstances,
+										maskParams: region.maskParams
+									)
+								}
 								.allowsHitTesting(false)
 								.id(editableDevice.device.controls[i].renderKey)
 							}

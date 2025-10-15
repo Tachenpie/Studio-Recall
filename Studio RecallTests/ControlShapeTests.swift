@@ -18,7 +18,9 @@ struct ControlShapeTests {
 	@Test func testAllShapesCodable() async throws {
 		// Test that all shape types can be encoded and decoded
 		let shapes: [ImageRegionShape] = [
-			.rect, .circle, .wedge, .line, .dot, .pointer,
+			.circle, .rectangle, .triangle,
+			// Deprecated but still supported for backward compatibility
+			.rect, .wedge, .line, .dot, .pointer,
 			.chickenhead, .knurl, .dLine, .trianglePointer, .arrowPointer
 		]
 		
@@ -27,6 +29,20 @@ struct ControlShapeTests {
 			let decoded = try JSONDecoder().decode(ImageRegionShape.self, from: encoded)
 			#expect(decoded == shape, "Shape \(shape) should encode and decode correctly")
 		}
+	}
+	
+	@Test func testSimplifiedShapeMapping() async throws {
+		// Test that deprecated shapes map to simplified equivalents
+		#expect(ImageRegionShape.circle.simplified == .circle)
+		#expect(ImageRegionShape.rectangle.simplified == .rectangle)
+		#expect(ImageRegionShape.triangle.simplified == .triangle)
+		
+		// Deprecated shapes should map to simplified equivalents
+		#expect(ImageRegionShape.rect.simplified == .rectangle)
+		#expect(ImageRegionShape.line.simplified == .rectangle)
+		#expect(ImageRegionShape.chickenhead.simplified == .rectangle)
+		#expect(ImageRegionShape.wedge.simplified == .triangle)
+		#expect(ImageRegionShape.trianglePointer.simplified == .triangle)
 	}
 	
 	// MARK: - MaskPointerStyle Tests
@@ -72,17 +88,16 @@ struct ControlShapeTests {
 	
 	// MARK: - ImageRegion Tests
 	
-	@Test func testImageRegionWithComplexShapes() async throws {
+	@Test func testImageRegionWithSimplifiedShapes() async throws {
 		let shapes: [ImageRegionShape] = [
-			.chickenhead, .knurl, .dLine, .trianglePointer, .arrowPointer
+			.circle, .rectangle, .triangle
 		]
 		
 		for shape in shapes {
 			let region = ImageRegion(
 				rect: CGRect(x: 0.1, y: 0.1, width: 0.2, height: 0.2),
 				mapping: nil,
-				shape: shape,
-				useAlphaMask: false
+				shape: shape
 			)
 			
 			let encoded = try JSONEncoder().encode(region)
@@ -90,6 +105,36 @@ struct ControlShapeTests {
 			
 			#expect(decoded.shape == shape, "Region shape should persist through encoding")
 		}
+	}
+	
+	@Test func testImageRegionWithShapeInstances() async throws {
+		let instance1 = ShapeInstance(
+			shape: .circle,
+			position: CGPoint(x: 0.3, y: 0.3),
+			size: CGSize(width: 0.2, height: 0.2),
+			rotation: 0
+		)
+		let instance2 = ShapeInstance(
+			shape: .rectangle,
+			position: CGPoint(x: 0.7, y: 0.7),
+			size: CGSize(width: 0.15, height: 0.15),
+			rotation: 45
+		)
+		
+		let region = ImageRegion(
+			rect: CGRect(x: 0.1, y: 0.1, width: 0.8, height: 0.8),
+			mapping: nil,
+			shape: .circle,
+			shapeInstances: [instance1, instance2]
+		)
+		
+		let encoded = try JSONEncoder().encode(region)
+		let decoded = try JSONDecoder().decode(ImageRegion.self, from: encoded)
+		
+		#expect(decoded.shapeInstances.count == 2, "Should have two shape instances")
+		#expect(decoded.shapeInstances[0].shape == .circle, "First instance should be circle")
+		#expect(decoded.shapeInstances[1].shape == .rectangle, "Second instance should be rectangle")
+		#expect(decoded.shapeInstances[1].rotation == 45, "Second instance rotation should persist")
 	}
 	
 	@Test func testImageRegionWithMaskParameters() async throws {
@@ -146,25 +191,32 @@ struct ControlShapeTests {
 	
 	@Test func testRegionClipShapeGeneratesValidPaths() async throws {
 		let shapes: [ImageRegionShape] = [
-			.chickenhead, .knurl, .dLine, .trianglePointer, .arrowPointer
+			.circle, .rectangle, .triangle
 		]
 		
 		let testRect = CGRect(x: 0, y: 0, width: 100, height: 100)
-		let maskParams = MaskParameters(
-			style: .line,
-			angleOffset: -90,
-			width: 0.1,
-			innerRadius: 0.0,
-			outerRadius: 1.0
-		)
 		
 		for shape in shapes {
-			let clipShape = RegionClipShape(shape: shape, maskParams: maskParams)
+			let clipShape = RegionClipShape(shape: shape)
 			let path = clipShape.path(in: testRect)
 			
 			// Path should not be empty for valid shapes
 			#expect(!path.isEmpty, "Path for \(shape) should not be empty")
 		}
+	}
+	
+	@Test func testRegionClipShapeWithMultipleInstances() async throws {
+		let testRect = CGRect(x: 0, y: 0, width: 100, height: 100)
+		let instances = [
+			ShapeInstance(shape: .circle, position: CGPoint(x: 0.3, y: 0.3), size: CGSize(width: 0.2, height: 0.2)),
+			ShapeInstance(shape: .rectangle, position: CGPoint(x: 0.7, y: 0.7), size: CGSize(width: 0.15, height: 0.15)),
+			ShapeInstance(shape: .triangle, position: CGPoint(x: 0.5, y: 0.5), size: CGSize(width: 0.25, height: 0.25))
+		]
+		
+		let clipShape = RegionClipShape(shape: .circle, shapeInstances: instances)
+		let path = clipShape.path(in: testRect)
+		
+		#expect(!path.isEmpty, "Path with multiple instances should not be empty")
 	}
 	
 	// MARK: - Backward Compatibility Tests
@@ -223,128 +275,169 @@ struct ControlShapeTests {
 	
 	// MARK: - RegionHitLayer and RegionOverlay Tests
 	
-	@Test func testComplexShapesHaveValidPathsForHitTesting() async throws {
-		// Test that all complex shapes generate valid paths for hit testing and outlining
-		let complexShapes: [ImageRegionShape] = [
-			.chickenhead, .knurl, .dLine, .trianglePointer, .arrowPointer
+	@Test func testSimplifiedShapesHaveValidPathsForHitTesting() async throws {
+		// Test that all simplified shapes generate valid paths for hit testing and outlining
+		let shapes: [ImageRegionShape] = [
+			.circle, .rectangle, .triangle
 		]
 		
 		let testRect = CGRect(x: 0, y: 0, width: 100, height: 100)
 		
-		for shape in complexShapes {
-			let maskParams = MaskParameters(
-				style: .line,  // Use a default style
-				angleOffset: -90,
-				width: 0.1,
-				innerRadius: 0.0,
-				outerRadius: 1.0
-			)
-			
-			// Test path generation with maskParams
-			let clipShape = RegionClipShape(shape: shape, maskParams: maskParams)
+		for shape in shapes {
+			// Test path generation
+			let clipShape = RegionClipShape(shape: shape)
 			let path = clipShape.path(in: testRect)
 			
-			#expect(!path.isEmpty, "Path for \(shape) with maskParams should not be empty")
+			#expect(!path.isEmpty, "Path for \(shape) should not be empty")
 			
 			// Test that the path can be used for content shape (hit testing)
-			let contentShape = RegionClipShape(shape: shape, maskParams: maskParams)
+			let contentShape = RegionClipShape(shape: shape)
 			let contentPath = contentShape.path(in: testRect)
 			#expect(!contentPath.isEmpty, "Content path for \(shape) should not be empty")
 		}
 	}
 	
-	@Test func testRegionWithComplexShapeAndMaskParamsIsEditable() async throws {
-		// This test verifies that a region with complex shape and maskParams
-		// has all the necessary properties to be properly rendered and edited
-		let complexShapes: [ImageRegionShape] = [
+	@Test func testDeprecatedShapesStillGenerateValidPaths() async throws {
+		// Test backward compatibility with deprecated shapes
+		let deprecatedShapes: [ImageRegionShape] = [
+			.rect, .wedge, .line, .dot, .pointer,
 			.chickenhead, .knurl, .dLine, .trianglePointer, .arrowPointer
 		]
 		
-		for shape in complexShapes {
-			let maskParams = MaskParameters(
-				style: .chickenhead,
-				angleOffset: -90,
-				width: 0.1,
-				innerRadius: 0.0,
-				outerRadius: 1.0
-			)
+		let testRect = CGRect(x: 0, y: 0, width: 100, height: 100)
+		let maskParams = MaskParameters(
+			style: .line,
+			angleOffset: -90,
+			width: 0.1,
+			innerRadius: 0.0,
+			outerRadius: 1.0
+		)
+		
+		for shape in deprecatedShapes {
+			let clipShape = RegionClipShape(shape: shape, maskParams: maskParams)
+			let path = clipShape.path(in: testRect)
 			
-			let region = ImageRegion(
-				rect: CGRect(x: 0.4, y: 0.4, width: 0.2, height: 0.2),
-				mapping: .rotate(min: -135, max: 135),
-				shape: shape,
-				useAlphaMask: true,
-				maskParams: maskParams
-			)
-			
-			// Verify all properties are set correctly
-			#expect(region.shape == shape, "Region shape should be \(shape)")
-			#expect(region.maskParams != nil, "Region should have maskParams")
-			#expect(region.maskParams?.angleOffset == -90, "MaskParams angleOffset should be preserved")
-			#expect(region.maskParams?.width == 0.1, "MaskParams width should be preserved")
-			
-			// Verify that the region can be serialized (important for editing persistence)
-			let encoded = try JSONEncoder().encode(region)
-			let decoded = try JSONDecoder().decode(ImageRegion.self, from: encoded)
-			
-			#expect(decoded.shape == shape, "Decoded shape should match")
-			#expect(decoded.maskParams != nil, "Decoded region should retain maskParams")
-			#expect(decoded.maskParams?.angleOffset == -90, "Decoded maskParams should retain angleOffset")
+			#expect(!path.isEmpty, "Path for deprecated shape \(shape) should not be empty for backward compatibility")
 		}
+	}
+	
+	@Test func testRegionWithShapeInstancesIsEditable() async throws {
+		// Test that a region with multiple shape instances
+		// has all the necessary properties to be properly rendered and edited
+		let instance1 = ShapeInstance(
+			shape: .circle,
+			position: CGPoint(x: 0.3, y: 0.3),
+			size: CGSize(width: 0.2, height: 0.2),
+			rotation: 0
+		)
+		let instance2 = ShapeInstance(
+			shape: .triangle,
+			position: CGPoint(x: 0.7, y: 0.7),
+			size: CGSize(width: 0.15, height: 0.15),
+			rotation: 45
+		)
+		
+		let region = ImageRegion(
+			rect: CGRect(x: 0.4, y: 0.4, width: 0.6, height: 0.6),
+			mapping: .rotate(min: -135, max: 135),
+			shape: .circle,
+			shapeInstances: [instance1, instance2]
+		)
+		
+		// Verify all properties are set correctly
+		#expect(region.shape == .circle, "Region shape should be circle")
+		#expect(region.shapeInstances.count == 2, "Region should have 2 shape instances")
+		#expect(region.shapeInstances[0].shape == .circle, "First instance should be circle")
+		#expect(region.shapeInstances[1].shape == .triangle, "Second instance should be triangle")
+		#expect(region.shapeInstances[1].rotation == 45, "Second instance rotation should be 45")
+		
+		// Verify that the region can be serialized (important for editing persistence)
+		let encoded = try JSONEncoder().encode(region)
+		let decoded = try JSONDecoder().decode(ImageRegion.self, from: encoded)
+		
+		#expect(decoded.shape == .circle, "Decoded shape should match")
+		#expect(decoded.shapeInstances.count == 2, "Decoded region should retain shape instances")
+		#expect(decoded.shapeInstances[0].shape == .circle, "Decoded first instance should be circle")
+		#expect(decoded.shapeInstances[1].rotation == 45, "Decoded rotation should persist")
 	}
 	
 	// MARK: - Shape Parameters Editability Tests
 	
-	@Test func testComplexShapesHaveEditableMaskParameters() async throws {
-		// Verify that complex shapes can have their maskParams edited
-		let complexShapes: [ImageRegionShape] = [
-			.chickenhead, .knurl, .dLine, .trianglePointer, .arrowPointer
-		]
-		
-		for shape in complexShapes {
-			var region = ImageRegion(
-				rect: CGRect(x: 0.4, y: 0.4, width: 0.2, height: 0.2),
-				mapping: .rotate(min: -135, max: 135),
-				shape: shape,
-				maskParams: MaskParameters(
-					style: .chickenhead,
-					angleOffset: -90,
-					width: 0.1,
-					innerRadius: 0.0,
-					outerRadius: 1.0
+	@Test func testShapeInstancesAreEditable() async throws {
+		// Verify that shape instances can be edited
+		var region = ImageRegion(
+			rect: CGRect(x: 0.4, y: 0.4, width: 0.2, height: 0.2),
+			mapping: .rotate(min: -135, max: 135),
+			shape: .circle,
+			shapeInstances: [
+				ShapeInstance(
+					shape: .circle,
+					position: CGPoint(x: 0.5, y: 0.5),
+					size: CGSize(width: 0.2, height: 0.2),
+					rotation: 0
 				)
-			)
-			
-			// Simulate editing the parameters
-			region.maskParams?.angleOffset = 45
-			region.maskParams?.width = 0.2
-			region.maskParams?.innerRadius = 0.2
-			region.maskParams?.outerRadius = 0.8
-			
-			// Verify the changes persisted
-			#expect(region.maskParams?.angleOffset == 45, "Angle offset should be updated")
-			#expect(region.maskParams?.width == 0.2, "Width should be updated")
-			#expect(region.maskParams?.innerRadius == 0.2, "Inner radius should be updated")
-			#expect(region.maskParams?.outerRadius == 0.8, "Outer radius should be updated")
-			
-			// Verify the changes persist through serialization
-			let encoded = try JSONEncoder().encode(region)
-			let decoded = try JSONDecoder().decode(ImageRegion.self, from: encoded)
-			
-			#expect(decoded.maskParams?.angleOffset == 45, "Decoded angle offset should match")
-			#expect(decoded.maskParams?.width == 0.2, "Decoded width should match")
-			#expect(decoded.maskParams?.innerRadius == 0.2, "Decoded inner radius should match")
-			#expect(decoded.maskParams?.outerRadius == 0.8, "Decoded outer radius should match")
-		}
+			]
+		)
+		
+		// Simulate editing the instance
+		region.shapeInstances[0].position = CGPoint(x: 0.6, y: 0.6)
+		region.shapeInstances[0].size = CGSize(width: 0.3, height: 0.3)
+		region.shapeInstances[0].rotation = 90
+		region.shapeInstances[0].shape = .rectangle
+		
+		// Verify the changes persisted
+		#expect(region.shapeInstances[0].position.x == 0.6, "Position X should be updated")
+		#expect(region.shapeInstances[0].size.width == 0.3, "Size width should be updated")
+		#expect(region.shapeInstances[0].rotation == 90, "Rotation should be updated")
+		#expect(region.shapeInstances[0].shape == .rectangle, "Shape should be updated")
+		
+		// Verify the changes persist through serialization
+		let encoded = try JSONEncoder().encode(region)
+		let decoded = try JSONDecoder().decode(ImageRegion.self, from: encoded)
+		
+		#expect(decoded.shapeInstances[0].position.x == 0.6, "Decoded position X should match")
+		#expect(decoded.shapeInstances[0].size.width == 0.3, "Decoded size should match")
+		#expect(decoded.shapeInstances[0].rotation == 90, "Decoded rotation should match")
+		#expect(decoded.shapeInstances[0].shape == .rectangle, "Decoded shape should match")
 	}
 	
-	@Test func testMaskParametersIndependentFromAlphaMask() async throws {
-		// Verify that maskParams work independently of the deprecated useAlphaMask flag
+	@Test func testShapeInstancesWorkIndependentlyFromLegacySystem() async throws {
+		// Verify that shape instances work independently of deprecated useAlphaMask and maskParams
+		let region = ImageRegion(
+			rect: CGRect(x: 0.4, y: 0.4, width: 0.2, height: 0.2),
+			mapping: .rotate(min: -135, max: 135),
+			shape: .circle,
+			shapeInstances: [
+				ShapeInstance(
+					shape: .circle,
+					position: CGPoint(x: 0.5, y: 0.5),
+					size: CGSize(width: 0.2, height: 0.2),
+					rotation: 0
+				)
+			],
+			useAlphaMask: false
+		)
+		
+		// Verify that shape instances work even when useAlphaMask is false
+		#expect(region.shapeInstances.count == 1, "Shape instances should exist independent of useAlphaMask")
+		#expect(region.shapeInstances[0].shape == .circle, "Shape instance type should be preserved")
+		
+		// Verify serialization
+		let encoded = try JSONEncoder().encode(region)
+		let decoded = try JSONDecoder().decode(ImageRegion.self, from: encoded)
+		
+		#expect(decoded.shapeInstances.count == 1, "Decoded shape instances should exist")
+		#expect(decoded.shapeInstances[0].shape == .circle, "Decoded shape should match")
+		#expect(decoded.useAlphaMask == false, "Deprecated useAlphaMask should be false")
+	}
+	
+	@Test func testBackwardCompatibilityWithLegacyMaskParams() async throws {
+		// Verify that old sessions with maskParams still work
 		let region = ImageRegion(
 			rect: CGRect(x: 0.4, y: 0.4, width: 0.2, height: 0.2),
 			mapping: .rotate(min: -135, max: 135),
 			shape: .chickenhead,
-			useAlphaMask: false,  // Deprecated flag set to false
+			useAlphaMask: false,
 			maskParams: MaskParameters(
 				style: .chickenhead,
 				angleOffset: -90,
@@ -354,17 +447,15 @@ struct ControlShapeTests {
 			)
 		)
 		
-		// Verify that maskParams are available even when useAlphaMask is false
-		#expect(region.maskParams != nil, "MaskParams should exist independent of useAlphaMask")
-		#expect(region.maskParams?.style == .chickenhead, "MaskParams style should be preserved")
-		#expect(region.maskParams?.width == 0.15, "MaskParams width should be preserved")
+		// Verify that maskParams are still available for backward compatibility
+		#expect(region.maskParams != nil, "Legacy maskParams should be preserved")
+		#expect(region.maskParams?.style == .chickenhead, "Legacy maskParams style should be preserved")
 		
-		// Verify serialization
+		// Verify serialization for backward compatibility
 		let encoded = try JSONEncoder().encode(region)
 		let decoded = try JSONDecoder().decode(ImageRegion.self, from: encoded)
 		
-		#expect(decoded.maskParams != nil, "Decoded maskParams should exist")
-		#expect(decoded.maskParams?.style == .chickenhead, "Decoded style should match")
-		#expect(decoded.useAlphaMask == false, "Deprecated useAlphaMask should be false")
+		#expect(decoded.maskParams != nil, "Decoded legacy maskParams should exist")
+		#expect(decoded.maskParams?.style == .chickenhead, "Decoded legacy style should match")
 	}
 }
