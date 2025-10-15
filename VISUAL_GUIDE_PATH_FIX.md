@@ -3,7 +3,7 @@
 ## The Problem
 
 Swift's `Path` type has two initialization methods:
-1. `Path(cgPath: CGPath)` - Creates a Path from a CGPath
+1. `Path(cgPath)` - Creates a Path from a CGPath (direct initialization)
 2. `Path { path in ... }` - Creates a Path using a closure that builds it
 
 The code was incorrectly mixing these approaches:
